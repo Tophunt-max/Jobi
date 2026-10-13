@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Central Crest Shield Base -->
+    <path
+        android:fillColor="#FFB300"
+        android:pathData="M54,26 C66,26 76,30 76,43 C76,62 54,78 54,78 C54,78 32,62 32,43 C32,30 42,26 54,26 Z" />
+    
+    <!-- Inner Shield Contrast -->
+    <path
+        android:fillColor="#0A192F"
+        android:pathData="M54,29 C63,29 72,32.5 72,43 C72,59 54,73 54,73 C54,73 36,59 36,43 C36,32.5 45,29 54,29 Z" />
+
+    <!-- Central Dharma Chakra / Star emblem in Gold -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M54,41 A8,8 0 1,0 54,57 A8,8 0 1,0 54,41 Z" />
+    <path
+        android:fillColor="#0A192F"
+        android:pathData="M54,44 A5,5 0 1,0 54,54 A5,5 0 1,0 54,44 Z" />
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M54,47 A2,2 0 1,0 54,51 A2,2 0 1,0 54,47 Z" />
+        
+    <!-- Chakra Spokes -->
+    <path
+        android:strokeColor="#FFD54F"
+        android:strokeWidth="1"
+        android:pathData="M54,42 L54,56 M47,49 L61,49 M49,44 L59,54 M49,54 L59,44" />
+
+    <!-- Quill / Career Torch at the top of the shield -->
+    <path
+        android:fillColor="#FF9933"
+        android:pathData="M54,21 L57,27 L51,27 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,23 L55.5,27 L52.5,27 Z" />
+
+    <!-- Laurel Leaves (Left) -->
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M27,47 C29,43 32,44 32,47 C32,50 28,52 27,47 Z" />
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M28,56 C30,52 34,54 33,57 C32,60 28,60 28,56 Z" />
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M33,65 C36,62 39,64 38,68 C37,70 33,69 33,65 Z" />
+
+    <!-- Laurel Leaves (Right) -->
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M81,47 C79,43 76,44 76,47 C76,50 80,52 81,47 Z" />
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M80,56 C78,52 74,54 75,57 C76,60 80,60 80,56 Z" />
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M75,65 C72,62 69,64 70,68 C71,70 75,69 75,65 Z" />
+
+    <!-- Bottom Ribbon / Banner (Sarkari Portal) in Tricolor gradient layers -->
+    <!-- Saffron top bar -->
+    <path
+        android:fillColor="#FF9933"
+        android:pathData="M38,77 L70,77 L67,80 L41,80 Z" />
+    <!-- White center bar -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,80 L68,80 L66,83 L42,83 Z" />
+    <!-- Green bottom bar -->
+    <path
+        android:fillColor="#138808"
+        android:pathData="M42,83 L66,83 L63,86 L45,86 Z" />
+
+    <!-- Five Stars along the top arch -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M40,24 L41,26 L43,26 L41.5,27.5 L42,29.5 L40,28 L38,29.5 L38.5,27.5 L37,26 L39,26 Z" />
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M68,24 L69,26 L71,26 L69.5,27.5 L70,29.5 L68,28 L66,29.5 L66.5,27.5 L65,26 L67,26 Z" />
+</vector>
