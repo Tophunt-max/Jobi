@@ -30,7 +30,14 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Cloud
+import com.example.data.remote.firestore.SyncStatus
+import com.example.data.repository.CloudflareSyncState
+import com.example.ui.components.CloudflareStatusDialog
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -118,10 +125,24 @@ fun JobListingScreen(
     val allJobs by viewModel.allJobs.collectAsState()
     val admitCards by viewModel.admitCards.collectAsState()
     val results by viewModel.results.collectAsState()
+    val syncStatus by viewModel.syncStatus.collectAsState()
+    val cloudflareSyncState by viewModel.cloudflareSyncState.collectAsState()
+    val cloudflareWorkerUrl by viewModel.cloudflareWorkerUrl.collectAsState()
 
+    var showCloudflareDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf(uiState.searchQuery) }
-    var selectedCategoryFilter by remember { mutableStateOf("All") }
+    var selectedCategoryFilter by remember { mutableStateOf(if (uiState.selectedCategory.isNotBlank() && uiState.selectedCategory != "All Categories") uiState.selectedCategory else "All") }
     var selectedOrgFilter by remember { mutableStateOf("All Organizations") }
+
+    if (showCloudflareDialog) {
+        CloudflareStatusDialog(
+            currentWorkerUrl = cloudflareWorkerUrl,
+            syncState = cloudflareSyncState,
+            onDismiss = { showCloudflareDialog = false },
+            onSaveUrl = { viewModel.setCloudflareWorkerUrl(it) },
+            onSyncNow = { viewModel.syncCloudflareNow() }
+        )
+    }
 
     JobListingScreenContent(
         allJobs = allJobs,
@@ -133,11 +154,17 @@ fun JobListingScreen(
             viewModel.setSearchQuery(it)
         },
         selectedCategoryFilter = selectedCategoryFilter,
-        onCategoryFilterSelect = { selectedCategoryFilter = it },
+        onCategoryFilterSelect = {
+            selectedCategoryFilter = it
+            viewModel.setCategoryFilter(if (it == "All") "All Categories" else it)
+        },
         selectedOrgFilter = selectedOrgFilter,
         onOrgFilterSelect = { selectedOrgFilter = it },
         isRefreshing = uiState.isRefreshing,
+        syncStatus = syncStatus,
+        cloudflareSyncState = cloudflareSyncState,
         onRefresh = { viewModel.refreshData() },
+        onCloudflareClick = { showCloudflareDialog = true },
         onJobClick = onJobClick,
         onBookmarkToggle = { viewModel.toggleBookmark(it) },
         language = uiState.language,
@@ -157,7 +184,10 @@ fun JobListingScreenContent(
     selectedOrgFilter: String,
     onOrgFilterSelect: (String) -> Unit,
     isRefreshing: Boolean,
+    syncStatus: SyncStatus = SyncStatus.Idle,
+    cloudflareSyncState: CloudflareSyncState = CloudflareSyncState.Idle,
     onRefresh: () -> Unit,
+    onCloudflareClick: () -> Unit = {},
     onJobClick: (JobEntity) -> Unit,
     onBookmarkToggle: (JobEntity) -> Unit,
     language: AppLanguage,
@@ -165,13 +195,17 @@ fun JobListingScreenContent(
 ) {
     val context = LocalContext.current
 
-    // Category Filter Chips
+    // Category Filter Chips with Admit Card and Result
     val categoryChips = listOf(
         "All" to "🌐",
-        "Favorites" to "⭐",
-        "New Job" to "💼",
         "Admit Card" to "🎫",
-        "Results" to "🏆"
+        "Result" to "🏆",
+        "New Job" to "💼",
+        "Favorites" to "⭐",
+        "SSC" to "📑",
+        "UPSC" to "🏛️",
+        "Railways" to "🚆",
+        "Banking" to "🏦"
     )
 
     // Organization Filter Chips
@@ -197,23 +231,37 @@ fun JobListingScreenContent(
         return text.contains(target, ignoreCase = true)
     }
 
-    // Filtered Jobs
+    // Filtered Jobs via Firestore Service & Repository
     val filteredJobs = remember(allJobs, searchQuery, selectedCategoryFilter, selectedOrgFilter) {
-        if (selectedCategoryFilter != "All" && selectedCategoryFilter != "New Job" && selectedCategoryFilter != "Favorites") {
-            emptyList()
-        } else {
-            allJobs.filter { job ->
-                val matchesFavorites = if (selectedCategoryFilter == "Favorites") job.isBookmarked else true
-                val matchesSearch = searchQuery.isBlank() ||
-                    job.title.contains(searchQuery, ignoreCase = true) ||
-                    job.organization.contains(searchQuery, ignoreCase = true) ||
-                    job.advtNumber.contains(searchQuery, ignoreCase = true) ||
-                    job.category.contains(searchQuery, ignoreCase = true)
-
-                val matchesOrgFilter = matchesOrg("${job.organization} ${job.title} ${job.category}")
-
-                matchesFavorites && matchesSearch && matchesOrgFilter
+        allJobs.filter { job ->
+            val matchesCategory = when (selectedCategoryFilter) {
+                "All" -> true
+                "Favorites" -> job.isBookmarked
+                "New Job" -> !job.category.equals("Admit Card", ignoreCase = true) && !job.category.equals("Result", ignoreCase = true)
+                "Admit Card" -> job.category.equals("Admit Card", ignoreCase = true) ||
+                    job.title.contains("Admit Card", ignoreCase = true) ||
+                    job.title.contains("Hall Ticket", ignoreCase = true) ||
+                    job.title.contains("City Intimation", ignoreCase = true)
+                "Result", "Results" -> job.category.equals("Result", ignoreCase = true) ||
+                    job.title.contains("Result", ignoreCase = true) ||
+                    job.title.contains("Cutoff", ignoreCase = true) ||
+                    job.title.contains("Scorecard", ignoreCase = true) ||
+                    job.title.contains("Merit", ignoreCase = true)
+                else -> job.category.contains(selectedCategoryFilter, ignoreCase = true) ||
+                    job.organization.contains(selectedCategoryFilter, ignoreCase = true)
             }
+
+            val matchesSearch = searchQuery.isBlank() ||
+                job.title.contains(searchQuery, ignoreCase = true) ||
+                job.organization.contains(searchQuery, ignoreCase = true) ||
+                job.advtNumber.contains(searchQuery, ignoreCase = true) ||
+                job.category.contains(searchQuery, ignoreCase = true) ||
+                job.qualification.contains(searchQuery, ignoreCase = true) ||
+                job.stateOrAllIndia.contains(searchQuery, ignoreCase = true)
+
+            val matchesOrgFilter = matchesOrg("${job.organization} ${job.title} ${job.category}")
+
+            matchesCategory && matchesSearch && matchesOrgFilter
         }
     }
 
@@ -236,7 +284,7 @@ fun JobListingScreenContent(
 
     // Filtered Results
     val filteredResults = remember(results, searchQuery, selectedCategoryFilter, selectedOrgFilter) {
-        if (selectedCategoryFilter != "All" && selectedCategoryFilter != "Results") {
+        if (selectedCategoryFilter != "All" && selectedCategoryFilter != "Results" && selectedCategoryFilter != "Result") {
             emptyList()
         } else {
             results.filter { res ->
@@ -310,6 +358,98 @@ fun JobListingScreenContent(
                                     )
                                 }
                             }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            // Cloudflare Edge & D1 Status Pill
+                            Surface(
+                                onClick = onCloudflareClick,
+                                color = when (cloudflareSyncState) {
+                                    is CloudflareSyncState.Synced -> Color(0xFFFFF7ED)
+                                    is CloudflareSyncState.Syncing -> Color(0xFFFEF3C7)
+                                    is CloudflareSyncState.Error -> Color(0xFFF1F5F9)
+                                    else -> Color(0xFFFFF7ED)
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                modifier = Modifier.testTag("cloudflare_edge_badge")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Cloud,
+                                        contentDescription = "Cloudflare Edge",
+                                        tint = when (cloudflareSyncState) {
+                                            is CloudflareSyncState.Synced -> Color(0xFFEA580C)
+                                            is CloudflareSyncState.Syncing -> Color(0xFFB45309)
+                                            else -> Color(0xFFEA580C)
+                                        },
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = when (cloudflareSyncState) {
+                                            is CloudflareSyncState.Syncing -> "CF SYNCING..."
+                                            is CloudflareSyncState.Synced -> "D1+R2 ACTIVE"
+                                            is CloudflareSyncState.Error -> "OFFLINE CACHE"
+                                            else -> "CF EDGE"
+                                        },
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when (cloudflareSyncState) {
+                                            is CloudflareSyncState.Synced -> Color(0xFFEA580C)
+                                            is CloudflareSyncState.Syncing -> Color(0xFFB45309)
+                                            else -> Color(0xFFEA580C)
+                                        }
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            // Cloud Sync Indicator
+                            Surface(
+                                onClick = onCloudflareClick,
+                                color = when (syncStatus) {
+                                    is SyncStatus.Synced -> GreenContainer
+                                    is SyncStatus.Syncing -> Color(0xFFFEF3C7)
+                                    else -> Slate100
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                modifier = Modifier.testTag("cloud_sync_indicator")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = when (syncStatus) {
+                                            is SyncStatus.Synced -> Icons.Default.CloudDone
+                                            is SyncStatus.Syncing -> Icons.Default.CloudSync
+                                            else -> Icons.Default.CloudOff
+                                        },
+                                        contentDescription = null,
+                                        tint = when (syncStatus) {
+                                            is SyncStatus.Synced -> OnGreenContainer
+                                            is SyncStatus.Syncing -> Color(0xFFB45309)
+                                            else -> Slate500
+                                        },
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = when (syncStatus) {
+                                            is SyncStatus.Synced -> "CLOUD SYNCED"
+                                            is SyncStatus.Syncing -> "SYNCING..."
+                                            else -> "ROOM CACHE"
+                                        },
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when (syncStatus) {
+                                            is SyncStatus.Synced -> OnGreenContainer
+                                            is SyncStatus.Syncing -> Color(0xFFB45309)
+                                            else -> Slate600
+                                        }
+                                    )
+                                }
+                            }
                         }
                         Text(
                             text = "Central & State Vacancies, Admit Cards & Results",
@@ -354,7 +494,7 @@ fun JobListingScreenContent(
                     onValueChange = onSearchChange,
                     placeholder = {
                         Text(
-                            text = "Search by job title, commission, or advt number...",
+                            text = "Search by job, category ('Admit Card', 'Result'), or advt...",
                             fontSize = 13.sp,
                             color = Slate400
                         )
@@ -488,7 +628,10 @@ fun JobListingScreenContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
                 Box(
                     modifier = Modifier
                         .size(8.dp)
@@ -497,27 +640,64 @@ fun JobListingScreenContent(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "$totalItemCount Vacancies & Notices Found",
+                    text = if (selectedCategoryFilter != "All") {
+                        "$totalItemCount in '$selectedCategoryFilter'"
+                    } else {
+                        "$totalItemCount Openings & Notices"
+                    },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Slate700
                 )
+
+                if (selectedCategoryFilter != "All") {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        color = RoyalBlue.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "Firestore Filter",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = RoyalBlue,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
             }
 
             if (searchQuery.isNotEmpty() || selectedCategoryFilter != "All" || selectedOrgFilter != "All Organizations") {
-                Text(
-                    text = "Clear All Filters",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SaffronOrange,
-                    modifier = Modifier
-                        .clickable {
-                            onSearchChange("")
-                            onCategoryFilterSelect("All")
-                            onOrgFilterSelect("All Organizations")
-                        }
-                        .testTag("clear_all_filters_btn")
-                )
+                Surface(
+                    onClick = {
+                        onSearchChange("")
+                        onCategoryFilterSelect("All")
+                        onOrgFilterSelect("All Organizations")
+                    },
+                    color = Color(0xFFFEF2F2),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color(0xFFFECACA)),
+                    modifier = Modifier.testTag("clear_all_filters_btn")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = null,
+                            tint = Color(0xFFDC2626),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Reset Filters",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFDC2626)
+                        )
+                    }
+                }
             }
         }
 

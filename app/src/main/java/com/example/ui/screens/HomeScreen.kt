@@ -795,6 +795,8 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     val categories = listOf(
+                        "Admit Card" to "🎫",
+                        "Result" to "🏆",
                         "UPSC" to "🏛️",
                         "SSC" to "📝",
                         "Railways" to "🚆",

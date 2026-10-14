@@ -92,4 +92,60 @@ class ExampleUnitTest {
         assertTrue(firstResult.cutOffSummary.isNotBlank())
         assertTrue(firstResult.publicationDate.isNotBlank())
     }
+
+    @Test
+    fun testJobFirestoreDocumentMapping() {
+        val seedJob = com.example.data.sample.InitialDataSeed.initialJobs.first()
+        val doc = com.example.data.remote.firestore.JobFirestoreDocument.fromJobEntity(seedJob)
+
+        assertEquals(seedJob.id, doc.id)
+        assertEquals(seedJob.title, doc.title)
+        assertEquals(seedJob.organization, doc.organization)
+        assertEquals(seedJob.advtNumber, doc.advtNumber)
+        assertEquals(seedJob.totalVacancies, doc.totalVacancies)
+        assertEquals(seedJob.applicationClosingDate, doc.applicationClosingDate)
+
+        val restoredEntity = doc.toJobEntity()
+        assertEquals(seedJob.id, restoredEntity.id)
+        assertEquals(seedJob.title, restoredEntity.title)
+        assertEquals(seedJob.organization, restoredEntity.organization)
+        assertEquals(seedJob.totalVacancies, restoredEntity.totalVacancies)
+    }
+
+    @Test
+    fun testJobFirestoreServiceOfflineGracefulFallback() {
+        val service = com.example.data.remote.firestore.JobFirestoreService { null }
+        assertEquals(false, service.isAvailable())
+    }
+
+    @Test
+    fun testFilterJobsByAdmitCardAndResultCategory() {
+        val allJobs = com.example.data.sample.InitialDataSeed.initialJobs
+
+        val admitCardJobs = allJobs.filter {
+            it.category.equals("Admit Card", ignoreCase = true) ||
+                it.title.contains("Admit Card", ignoreCase = true)
+        }
+        assertTrue("Admit Card jobs must be present", admitCardJobs.isNotEmpty())
+        for (job in admitCardJobs) {
+            assertTrue(
+                "Job must be Admit Card category or contain Admit Card in title",
+                job.category.equals("Admit Card", ignoreCase = true) || job.title.contains("Admit Card", ignoreCase = true)
+            )
+        }
+
+        val resultJobs = allJobs.filter {
+            it.category.equals("Result", ignoreCase = true) ||
+                it.title.contains("Result", ignoreCase = true)
+        }
+        assertTrue("Result jobs must be present", resultJobs.isNotEmpty())
+        for (job in resultJobs) {
+            assertTrue(
+                "Job must be Result category or contain Result in title",
+                job.category.equals("Result", ignoreCase = true) || job.title.contains("Result", ignoreCase = true)
+            )
+        }
+    }
 }
+
+

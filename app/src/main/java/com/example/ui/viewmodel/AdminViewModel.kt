@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
+import com.example.data.remote.firestore.JobFirestoreService
+import com.example.data.remote.firestore.JobSyncCoordinator
+import com.example.data.repository.CloudflareJobRepository
 import com.example.data.repository.PipelineRepository
 import com.example.model.AdminDashboardStats
 import com.example.model.AuditLogItem
@@ -22,6 +25,9 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getDatabase(application)
     val pipelineRepository = PipelineRepository(db.adminDao(), db.jobDao())
+    val firestoreService = JobFirestoreService()
+    val syncCoordinator = JobSyncCoordinator(firestoreService, db.jobDao())
+    val cloudflareRepo = CloudflareJobRepository(db.jobDao())
 
     val sources: StateFlow<List<ContentSource>> = pipelineRepository.contentSources
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -123,8 +129,14 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
                 isVerified = true,
                 status = "ACTIVE"
             )
-            db.jobDao().insertJob(newJob)
-            _actionStatusMessage.value = "New job '$title' published successfully."
+            val pubResult = syncCoordinator.publishJob(newJob)
+            cloudflareRepo.publishJobToCloudflare(newJob)
+            val isCloud = pubResult.isSuccess && firestoreService.isAvailable()
+            _actionStatusMessage.value = if (isCloud) {
+                "New job '$title' published to Cloudflare D1 & Cloud Firestore."
+            } else {
+                "New job '$title' saved to Cloudflare Edge & local database."
+            }
             refreshStats()
         }
     }

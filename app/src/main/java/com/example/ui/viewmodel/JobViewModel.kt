@@ -5,6 +5,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.repository.JobRepository
+import com.example.data.remote.firestore.JobFirestoreService
+import com.example.data.remote.firestore.JobSyncCoordinator
+import com.example.data.remote.firestore.SyncStatus
+import com.example.data.remote.cloudflare.CloudflareConfig
+import com.example.data.repository.CloudflareJobRepository
+import com.example.data.repository.CloudflareSyncState
 import com.example.model.AdmitCardItem
 import com.example.model.AnswerKeyItem
 import com.example.model.AppLanguage
@@ -52,6 +58,13 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getDatabase(application)
     val repository = JobRepository(db.jobDao(), db.resultDao(), db.notificationDao())
+    val firestoreService = JobFirestoreService()
+    val syncCoordinator = JobSyncCoordinator(firestoreService, db.jobDao())
+    val syncStatus: StateFlow<SyncStatus> = syncCoordinator.syncStatus
+
+    val cloudflareRepo = CloudflareJobRepository(db.jobDao())
+    val cloudflareSyncState: StateFlow<CloudflareSyncState> = cloudflareRepo.syncState
+    val cloudflareWorkerUrl: StateFlow<String> = CloudflareConfig.workerUrlFlow
 
     private val _uiState = MutableStateFlow(JobUiState())
     val uiState: StateFlow<JobUiState> = _uiState.asStateFlow()
@@ -122,8 +135,13 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
+        CloudflareConfig.init(application)
         viewModelScope.launch {
             repository.initializeDatabaseIfEmpty()
+            // Start real-time Firestore synchronization
+            syncCoordinator.startRealtimeSync(viewModelScope)
+            // Synchronize with Cloudflare D1 Edge database in background
+            cloudflareRepo.syncJobsFromCloudflare()
             // Sync deadline reminders for bookmarked jobs
             repository.bookmarkedJobs.collect { bookmarks ->
                 if (bookmarks.isNotEmpty()) {
@@ -256,7 +274,25 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
     fun refreshData() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true)
+            syncCoordinator.syncNow()
+            cloudflareRepo.syncJobsFromCloudflare()
             repository.initializeDatabaseIfEmpty()
+            _uiState.value = _uiState.value.copy(isRefreshing = false)
+        }
+    }
+
+    fun setCloudflareWorkerUrl(newUrl: String) {
+        val app = getApplication<Application>()
+        CloudflareConfig.setWorkerUrl(app, newUrl)
+        viewModelScope.launch {
+            cloudflareRepo.syncJobsFromCloudflare()
+        }
+    }
+
+    fun syncCloudflareNow() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true)
+            cloudflareRepo.syncJobsFromCloudflare()
             _uiState.value = _uiState.value.copy(isRefreshing = false)
         }
     }

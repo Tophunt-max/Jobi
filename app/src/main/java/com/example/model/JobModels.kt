@@ -71,7 +71,9 @@ enum class JobCategory(val displayName: String, val iconCode: String) {
     TEACHING("Teaching & TET", "school"),
     STATE_PSC("State PSC", "state"),
     ENGINEERING("Engineering & PSUs", "engineering"),
-    TENTH_TWELFTH("10th / 12th Pass", "book")
+    TENTH_TWELFTH("10th / 12th Pass", "book"),
+    ADMIT_CARD("Admit Card", "card"),
+    RESULT("Result", "result")
 }
 
 data class IndianState(

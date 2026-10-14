@@ -82,6 +82,8 @@ fun JobCard(
 ) {
     // Dynamic brand badge colors based on organization category
     val (orgMonogram, gradientColors) = when {
+        job.category.contains("Admit Card", ignoreCase = true) || job.title.contains("Admit Card", ignoreCase = true) -> "CARD" to listOf(Color(0xFF7C3AED), Color(0xFF9333EA))
+        job.category.contains("Result", ignoreCase = true) || job.title.contains("Result", ignoreCase = true) -> "RSLT" to listOf(Color(0xFF059669), Color(0xFF10B981))
         job.organization.contains("UPSC", ignoreCase = true) -> "UPSC" to listOf(Color(0xFF1E3A8A), Color(0xFF2563EB))
         job.organization.contains("SSC", ignoreCase = true) -> "SSC" to listOf(Color(0xFF4338CA), Color(0xFF6366F1))
         job.organization.contains("Railway", ignoreCase = true) -> "RRB" to listOf(Color(0xFF0F766E), Color(0xFF14B8A6))
