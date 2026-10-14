@@ -121,6 +121,25 @@ class CloudflareJobRepository(
     }
 
     /**
+     * Fetch public list of verified official government portals (no admin key required)
+     */
+    suspend fun fetchPublicSources(state: String? = null): Result<List<CloudflareSourceDto>> = withContext(Dispatchers.IO) {
+        try {
+            val api = CloudflareClient.getService()
+            val response = api.getPublicSources(state)
+            if (response.success) {
+                _sources.value = response.sources
+                Result.success(response.sources)
+            } else {
+                Result.failure(Exception(response.message ?: "Failed to fetch public sources"))
+            }
+        } catch (e: Exception) {
+            Log.w(tag, "Failed to fetch public sources: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Trigger automated job import pipeline across enabled sources
      */
     suspend fun runAutomatedImport(sourceId: String? = null, adminKey: String? = null): Result<CloudflareImportSummaryDto> = withContext(Dispatchers.IO) {

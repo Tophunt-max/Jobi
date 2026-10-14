@@ -65,6 +65,7 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
     val cloudflareRepo = CloudflareJobRepository(db.jobDao())
     val cloudflareSyncState: StateFlow<CloudflareSyncState> = cloudflareRepo.syncState
     val cloudflareWorkerUrl: StateFlow<String> = CloudflareConfig.workerUrlFlow
+    val officialSources = cloudflareRepo.sources
 
     private val _uiState = MutableStateFlow(JobUiState())
     val uiState: StateFlow<JobUiState> = _uiState.asStateFlow()
@@ -142,6 +143,8 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
             syncCoordinator.startRealtimeSync(viewModelScope)
             // Synchronize with Cloudflare D1 Edge database in background
             cloudflareRepo.syncJobsFromCloudflare()
+            // Fetch verified official recruitment portals from Cloudflare
+            cloudflareRepo.fetchPublicSources()
             // Sync deadline reminders for bookmarked jobs
             repository.bookmarkedJobs.collect { bookmarks ->
                 if (bookmarks.isNotEmpty()) {
@@ -276,6 +279,7 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value = _uiState.value.copy(isRefreshing = true)
             syncCoordinator.syncNow()
             cloudflareRepo.syncJobsFromCloudflare()
+            cloudflareRepo.fetchPublicSources()
             repository.initializeDatabaseIfEmpty()
             _uiState.value = _uiState.value.copy(isRefreshing = false)
         }

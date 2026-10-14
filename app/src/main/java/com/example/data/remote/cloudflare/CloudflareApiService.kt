@@ -33,6 +33,11 @@ interface CloudflareApiService {
         @Path("id") id: String
     ): CloudflareSingleResponse
 
+    @GET("api/sources")
+    suspend fun getPublicSources(
+        @Query("state") state: String? = null
+    ): CloudflareSourcesResponse
+
     @POST("api/jobs")
     suspend fun createOrUpdateJob(
         @Body job: CloudflareJobDto,

@@ -602,6 +602,28 @@ object InitialDataSeed {
             totalDiscovered = 14
         ),
         ContentSource(
+            id = "src-rbi",
+            name = "Reserve Bank of India Opportunities (RBI)",
+            officialDomain = "rbi.org.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://opportunities.rbi.org.in/",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Today, 08:30 AM",
+            isActive = true,
+            totalDiscovered = 8
+        ),
+        ContentSource(
+            id = "src-nabard",
+            name = "National Bank for Agriculture and Rural Development (NABARD)",
+            officialDomain = "nabard.org",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://www.nabard.org/careers-notices.aspx",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Yesterday, 06:00 PM",
+            isActive = true,
+            totalDiscovered = 5
+        ),
+        ContentSource(
             id = "src-kvs",
             name = "Kendriya Vidyalaya Sangathan (KVS)",
             officialDomain = "kvsangathan.nic.in",
@@ -612,6 +634,140 @@ object InitialDataSeed {
             isActive = true,
             totalDiscovered = 6
         ),
+        ContentSource(
+            id = "src-nvs",
+            name = "Navodaya Vidyalaya Samiti (NVS)",
+            officialDomain = "navodaya.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://navodaya.gov.in/nvs/en/Recruitment/Recruitment-Notices/",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Today, 09:00 AM",
+            isActive = true,
+            totalDiscovered = 7
+        ),
+        ContentSource(
+            id = "src-indiapost",
+            name = "India Post GDS Recruitment Portal",
+            officialDomain = "indiapostgdsonline.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://indiapostgdsonline.gov.in/",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 06:30 AM",
+            isActive = true,
+            totalDiscovered = 32
+        ),
+        ContentSource(
+            id = "src-drdo",
+            name = "Defence Research & Development Organisation (DRDO / CEPTAM)",
+            officialDomain = "drdo.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://www.drdo.gov.in/careers",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Yesterday, 05:00 PM",
+            isActive = true,
+            totalDiscovered = 9
+        ),
+        ContentSource(
+            id = "src-isro",
+            name = "Indian Space Research Organisation (ISRO / ICRB)",
+            officialDomain = "isro.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://www.isro.gov.in/Careers.html",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Today, 10:00 AM",
+            isActive = true,
+            totalDiscovered = 11
+        ),
+        ContentSource(
+            id = "src-lic",
+            name = "Life Insurance Corporation of India (LIC)",
+            officialDomain = "licindia.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://licindia.in/careers",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Today, 07:00 AM",
+            isActive = true,
+            totalDiscovered = 4
+        ),
+        ContentSource(
+            id = "src-dsssb",
+            name = "Delhi Subordinate Services Selection Board (DSSSB)",
+            officialDomain = "dsssb.delhi.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://dsssb.delhi.gov.in/current-vacancies",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Today, 09:30 AM",
+            isActive = true,
+            totalDiscovered = 19
+        ),
+        ContentSource(
+            id = "src-iaf",
+            name = "Indian Air Force (IAF AFCAT & Agniveer)",
+            officialDomain = "careerindianairforce.cdac.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://careerindianairforce.cdac.in/",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 08:15 AM",
+            isActive = true,
+            totalDiscovered = 12
+        ),
+        ContentSource(
+            id = "src-army",
+            name = "Join Indian Army Official Recruitment",
+            officialDomain = "joinindianarmy.nic.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://joinindianarmy.nic.in/",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 08:45 AM",
+            isActive = true,
+            totalDiscovered = 15
+        ),
+        ContentSource(
+            id = "src-navy",
+            name = "Join Indian Navy (Nausena Bharti)",
+            officialDomain = "joinindiannavy.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://www.joinindiannavy.gov.in/",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 08:30 AM",
+            isActive = true,
+            totalDiscovered = 10
+        ),
+        ContentSource(
+            id = "src-capf",
+            name = "Central Armed Police Forces (BSF/CISF/CRPF/ITBP)",
+            officialDomain = "recruitment.itbpolice.nic.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://recruitment.itbpolice.nic.in/",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 07:30 AM",
+            isActive = true,
+            totalDiscovered = 20
+        ),
+        ContentSource(
+            id = "src-fci",
+            name = "Food Corporation of India (FCI)",
+            officialDomain = "fci.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://fci.gov.in/current-vacancies.php",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Yesterday, 03:00 PM",
+            isActive = true,
+            totalDiscovered = 6
+        ),
+        ContentSource(
+            id = "src-nta",
+            name = "National Testing Agency (NTA Exam Portals)",
+            officialDomain = "nta.ac.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://nta.ac.in/",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 09:45 AM",
+            isActive = true,
+            totalDiscovered = 14
+        ),
+
+        // ODISHA STATE RECRUITMENT SOURCES
         ContentSource(
             id = "src-opsc",
             name = "Odisha Public Service Commission (OPSC)",
@@ -646,15 +802,81 @@ object InitialDataSeed {
             totalDiscovered = 15
         ),
         ContentSource(
-            id = "src-uppolice",
-            name = "UP Police Recruitment & Promotion Board",
-            officialDomain = "uppbpb.gov.in",
+            id = "src-odishapolice",
+            name = "State Police Selection Board, Odisha",
+            officialDomain = "odishapolice.gov.in",
             sourceType = "OFFICIAL_PORTAL",
-            sourceUrl = "https://uppbpb.gov.in/notifications",
-            pollingIntervalHours = 8,
-            lastSyncTime = "Today, 06:00 AM",
+            sourceUrl = "https://odishapolice.gov.in/recruitment",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 09:20 AM",
+            isActive = true,
+            totalDiscovered = 14
+        ),
+        ContentSource(
+            id = "src-ojee",
+            name = "Odisha Joint Entrance Examination (OJEE)",
+            officialDomain = "ojee.nic.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://ojee.nic.in/",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Today, 06:45 AM",
             isActive = true,
             totalDiscovered = 8
+        ),
+        ContentSource(
+            id = "src-chseodisha",
+            name = "Council of Higher Secondary Education (CHSE Odisha)",
+            officialDomain = "chseodisha.nic.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://chseodisha.nic.in/",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Today, 07:45 AM",
+            isActive = true,
+            totalDiscovered = 10
+        ),
+        ContentSource(
+            id = "src-bseodisha",
+            name = "Board of Secondary Education Odisha (OTET / BSE)",
+            officialDomain = "bseodisha.ac.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://www.bseodisha.ac.in/",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Yesterday, 08:00 PM",
+            isActive = true,
+            totalDiscovered = 6
+        ),
+        ContentSource(
+            id = "src-optcl",
+            name = "Odisha Power Transmission Corporation Ltd (OPTCL)",
+            officialDomain = "optcl.co.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://www.optcl.co.in/Career.aspx",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Today, 08:30 AM",
+            isActive = true,
+            totalDiscovered = 5
+        ),
+        ContentSource(
+            id = "src-dnhodisha",
+            name = "Health & Family Welfare / OSMCL Odisha",
+            officialDomain = "dnhodisha.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://health.odisha.gov.in/",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Today, 07:15 AM",
+            isActive = true,
+            totalDiscovered = 12
+        ),
+        ContentSource(
+            id = "src-ohpc",
+            name = "Odisha Hydro Power Corporation / GRIDCO",
+            officialDomain = "ohpcltd.com",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://www.ohpcltd.com/recruitment/",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Yesterday, 04:30 PM",
+            isActive = true,
+            totalDiscovered = 7
         )
     )
 
