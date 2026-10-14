@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
+import com.example.data.remote.cloudflare.CloudflareImportRunItemDto
+import com.example.data.remote.cloudflare.CloudflareJobDto
+import com.example.data.remote.cloudflare.CloudflareSourceDto
 import com.example.data.remote.firestore.JobFirestoreService
 import com.example.data.remote.firestore.JobSyncCoordinator
 import com.example.data.repository.CloudflareJobRepository
@@ -35,6 +38,13 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
     val candidates: StateFlow<List<ImportCandidate>> = pipelineRepository.importCandidates
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val cloudflareSources: StateFlow<List<CloudflareSourceDto>> = cloudflareRepo.sources
+    val cloudflarePendingJobs: StateFlow<List<CloudflareJobDto>> = cloudflareRepo.pendingJobs
+    val cloudflareImportRuns: StateFlow<List<CloudflareImportRunItemDto>> = cloudflareRepo.importRuns
+
+    private val _isCloudflareImporting = MutableStateFlow(false)
+    val isCloudflareImporting: StateFlow<Boolean> = _isCloudflareImporting.asStateFlow()
+
     private val _dashboardStats = MutableStateFlow(AdminDashboardStats())
     val dashboardStats: StateFlow<AdminDashboardStats> = _dashboardStats.asStateFlow()
 
@@ -44,10 +54,13 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
     private val _actionStatusMessage = MutableStateFlow<String?>(null)
     val actionStatusMessage: StateFlow<String?> = _actionStatusMessage.asStateFlow()
 
+    val adminApiKey: String = "sarkari_admin_secret_key_change_me"
+
     init {
         viewModelScope.launch {
             pipelineRepository.initializeSourcesIfEmpty()
             refreshStats()
+            refreshCloudflareData()
         }
     }
 
@@ -55,6 +68,72 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _dashboardStats.value = pipelineRepository.getDashboardStats()
             _auditLogs.value = pipelineRepository.getAuditLogs()
+        }
+    }
+
+    fun refreshCloudflareData() {
+        viewModelScope.launch {
+            cloudflareRepo.fetchJobSources(adminApiKey)
+            cloudflareRepo.fetchPendingJobs(adminApiKey)
+            cloudflareRepo.fetchImportRuns(adminApiKey)
+        }
+    }
+
+    /**
+     * Run automated Cloudflare Worker importer on official All India and Odisha portals
+     */
+    fun runCloudflareImport(sourceId: String? = null) {
+        viewModelScope.launch {
+            _isCloudflareImporting.value = true
+            _actionStatusMessage.value = "Executing automated importer on Cloudflare Edge..."
+            val result = cloudflareRepo.runAutomatedImport(sourceId, adminApiKey)
+            _isCloudflareImporting.value = false
+            result.fold(
+                onSuccess = { summary ->
+                    val msg = "Import ${summary.status}: ${summary.totalFetched} fetched, ${summary.totalInserted} new pending review, ${summary.totalDuplicates} duplicates, ${summary.totalErrors} errors."
+                    _actionStatusMessage.value = msg
+                    refreshStats()
+                },
+                onFailure = { err ->
+                    _actionStatusMessage.value = "Cloudflare Import Error: ${err.message}"
+                }
+            )
+        }
+    }
+
+    /**
+     * Approve and publish a pending notice from Cloudflare review queue
+     */
+    fun approveCloudflareJob(jobId: String) {
+        viewModelScope.launch {
+            val result = cloudflareRepo.approvePendingJob(jobId, adminApiKey, "Verified Admin")
+            result.fold(
+                onSuccess = { msg ->
+                    _actionStatusMessage.value = msg
+                    refreshStats()
+                },
+                onFailure = { err ->
+                    _actionStatusMessage.value = "Approval failed: ${err.message}"
+                }
+            )
+        }
+    }
+
+    /**
+     * Reject a pending notice
+     */
+    fun rejectCloudflareJob(jobId: String, reason: String = "Missing gazette notification") {
+        viewModelScope.launch {
+            val result = cloudflareRepo.rejectPendingJob(jobId, reason, adminApiKey)
+            result.fold(
+                onSuccess = { msg ->
+                    _actionStatusMessage.value = msg
+                    refreshStats()
+                },
+                onFailure = { err ->
+                    _actionStatusMessage.value = "Reject failed: ${err.message}"
+                }
+            )
         }
     }
 

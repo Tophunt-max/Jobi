@@ -4,7 +4,6 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
-import okhttp3.RequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -23,6 +22,7 @@ interface CloudflareApiService {
     @GET("api/jobs")
     suspend fun getJobs(
         @Query("category") category: String? = null,
+        @Query("state") state: String? = null,
         @Query("search") search: String? = null,
         @Query("status") status: String? = "ACTIVE",
         @Query("limit") limit: Int = 50
@@ -50,6 +50,51 @@ interface CloudflareApiService {
     suspend fun uploadPdfToR2(
         @Query("filename") filename: String,
         @Part file: MultipartBody.Part
+    ): CloudflareActionResponse
+
+    // ========================================================
+    // Automated Importer & Admin Endpoints
+    // ========================================================
+
+    @GET("api/admin/job-import/sources")
+    suspend fun getJobSources(
+        @Header("X-Admin-Key") adminKey: String? = null
+    ): CloudflareSourcesResponse
+
+    @POST("api/admin/job-import/run")
+    suspend fun runJobImport(
+        @Body request: CloudflareRunImportRequest,
+        @Header("X-Admin-Key") adminKey: String? = null
+    ): CloudflareActionResponse
+
+    @GET("api/admin/job-import/runs")
+    suspend fun getImportRuns(
+        @Header("X-Admin-Key") adminKey: String? = null
+    ): CloudflareImportRunsResponse
+
+    @GET("api/admin/jobs/pending")
+    suspend fun getPendingJobs(
+        @Header("X-Admin-Key") adminKey: String? = null
+    ): CloudflareListResponse
+
+    @POST("api/admin/jobs/{id}/approve")
+    suspend fun approveJob(
+        @Path("id") id: String,
+        @Body request: CloudflareApproveRequest,
+        @Header("X-Admin-Key") adminKey: String? = null
+    ): CloudflareActionResponse
+
+    @POST("api/admin/jobs/{id}/reject")
+    suspend fun rejectJob(
+        @Path("id") id: String,
+        @Body request: CloudflareRejectRequest,
+        @Header("X-Admin-Key") adminKey: String? = null
+    ): CloudflareActionResponse
+
+    @POST("api/admin/job-import/sources/{id}/test")
+    suspend fun testSource(
+        @Path("id") id: String,
+        @Header("X-Admin-Key") adminKey: String? = null
     ): CloudflareActionResponse
 }
 

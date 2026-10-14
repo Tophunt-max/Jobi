@@ -591,6 +591,61 @@ object InitialDataSeed {
             totalDiscovered = 12
         ),
         ContentSource(
+            id = "src-sbi",
+            name = "State Bank of India (SBI) Central Careers",
+            officialDomain = "sbi.co.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://sbi.co.in/web/careers",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 07:15 AM",
+            isActive = true,
+            totalDiscovered = 14
+        ),
+        ContentSource(
+            id = "src-kvs",
+            name = "Kendriya Vidyalaya Sangathan (KVS)",
+            officialDomain = "kvsangathan.nic.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://kvsangathan.nic.in/employment-notice",
+            pollingIntervalHours = 12,
+            lastSyncTime = "Yesterday, 04:00 PM",
+            isActive = true,
+            totalDiscovered = 6
+        ),
+        ContentSource(
+            id = "src-opsc",
+            name = "Odisha Public Service Commission (OPSC)",
+            officialDomain = "opsc.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://www.opsc.gov.in/",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 08:00 AM",
+            isActive = true,
+            totalDiscovered = 18
+        ),
+        ContentSource(
+            id = "src-ossc",
+            name = "Odisha Staff Selection Commission (OSSC)",
+            officialDomain = "ossc.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://www.ossc.gov.in/",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 08:45 AM",
+            isActive = true,
+            totalDiscovered = 22
+        ),
+        ContentSource(
+            id = "src-osssc",
+            name = "Odisha Sub-ordinate Staff Selection Commission (OSSSC)",
+            officialDomain = "osssc.gov.in",
+            sourceType = "OFFICIAL_PORTAL",
+            sourceUrl = "https://www.osssc.gov.in/",
+            pollingIntervalHours = 6,
+            lastSyncTime = "Today, 09:10 AM",
+            isActive = true,
+            totalDiscovered = 15
+        ),
+        ContentSource(
             id = "src-uppolice",
             name = "UP Police Recruitment & Promotion Board",
             officialDomain = "uppbpb.gov.in",
@@ -604,6 +659,38 @@ object InitialDataSeed {
     )
 
     val initialCandidates = listOf(
+        ImportCandidate(
+            id = "cand-opsc-ocs-2026",
+            externalId = "OPSC-ADVT-25/2026",
+            title = "Odisha Civil Services (OCS) Examination 2026 (Group A & B)",
+            organization = "Odisha Public Service Commission (OPSC)",
+            canonicalUrl = "https://www.opsc.gov.in/notices/ocs_2026.pdf",
+            sourceDomain = "opsc.gov.in",
+            retrievedTimestamp = System.currentTimeMillis() - 3600000,
+            contentHash = "SHA256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+            parsedVacancies = 399,
+            parsedClosingDate = "15-04-2026",
+            parsedQualification = "Bachelor Degree in any discipline + Odia ME School Standard",
+            validationStatus = "VALID",
+            reviewStatus = "PENDING_REVIEW",
+            reviewerNotes = "Source verified from official opsc.gov.in portal. No fee applicable for all categories."
+        ),
+        ImportCandidate(
+            id = "cand-osssc-cre-2026",
+            externalId = "OSSSC-IIE-28/2026",
+            title = "OSSSC Combined Recruitment Examination (RI, ARI, Amin, Forest Guard)",
+            organization = "Odisha Sub-ordinate Staff Selection Commission",
+            canonicalUrl = "https://www.osssc.gov.in/notice_cre.pdf",
+            sourceDomain = "osssc.gov.in",
+            retrievedTimestamp = System.currentTimeMillis() - 5400000,
+            contentHash = "SHA256:8b4c330f28e219488a03f443b74737f10b806be44d9f7831f24d45d81f8f3074",
+            parsedVacancies = 2895,
+            parsedClosingDate = "10-06-2026",
+            parsedQualification = "Higher Secondary (10+2) / Graduation with Odia proficiency",
+            validationStatus = "VALID",
+            reviewStatus = "PENDING_REVIEW",
+            reviewerNotes = "Official Odisha revenue recruitment notification detected. Awaiting admin review."
+        ),
         ImportCandidate(
             id = "cand-dsssb-teacher-2026",
             externalId = "DSSSB-ADVT-08/2026",

@@ -21,17 +21,22 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,7 +44,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
@@ -95,13 +99,27 @@ fun AdminPipelineScreen(
     modifier: Modifier = Modifier
 ) {
     val stats by viewModel.dashboardStats.collectAsState()
-    val sources by viewModel.sources.collectAsState()
-    val candidates by viewModel.candidates.collectAsState()
+    val localSources by viewModel.sources.collectAsState()
+    val localCandidates by viewModel.candidates.collectAsState()
+    val cfSources by viewModel.cloudflareSources.collectAsState()
+    val cfPendingJobs by viewModel.cloudflarePendingJobs.collectAsState()
+    val cfImportRuns by viewModel.cloudflareImportRuns.collectAsState()
+    val isImporting by viewModel.isCloudflareImporting.collectAsState()
     val auditLogs by viewModel.auditLogs.collectAsState()
     val statusMsg by viewModel.actionStatusMessage.collectAsState()
 
+    val pendingLocalCount = localCandidates.count { it.reviewStatus == "PENDING_REVIEW" }
+    val totalPendingCount = cfPendingJobs.size + pendingLocalCount
+
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Dashboard", "Review Queue (${candidates.count { it.reviewStatus == "PENDING_REVIEW" }})", "Sources", "Add Job", "Audit Logs")
+    val tabs = listOf(
+        "Dashboard",
+        "Review Queue ($totalPendingCount)",
+        "Sources (${if (cfSources.isNotEmpty()) cfSources.size else localSources.size})",
+        "Import History",
+        "Add Job",
+        "Audit Logs"
+    )
 
     // Manual Job Form State
     var newTitle by remember { mutableStateOf("") }
@@ -128,13 +146,20 @@ fun AdminPipelineScreen(
                             modifier = Modifier.size(22.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Admin & Verified Pipeline",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = PureWhite
+                        Column {
+                            Text(
+                                text = "Admin Portal & Importer",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = PureWhite
+                                )
                             )
-                        )
+                            Text(
+                                text = "Cloudflare Workers + D1 Backend",
+                                fontSize = 10.sp,
+                                color = SaffronOrange
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -147,7 +172,10 @@ fun AdminPipelineScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.refreshStats() }) {
+                    IconButton(onClick = {
+                        viewModel.refreshStats()
+                        viewModel.refreshCloudflareData()
+                    }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Refresh",
@@ -230,7 +258,7 @@ fun AdminPipelineScreen(
             }
 
             when (selectedTab) {
-                // 0: Dashboard Stats
+                // 0: Dashboard Stats & Automated Importer Control
                 0 -> {
                     Column(
                         modifier = Modifier
@@ -238,6 +266,95 @@ fun AdminPipelineScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp)
                     ) {
+                        // Automated Importer Hero Card
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = DeepNavy),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(18.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.AutoAwesome,
+                                            contentDescription = null,
+                                            tint = SaffronOrange,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Cloudflare Automated Importer",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PureWhite
+                                        )
+                                    }
+                                    Surface(
+                                        color = EmeraldGreen.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Cron: Every 6h",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = EmeraldGreen,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Automated crawler for All India (SSC, UPSC, RRB, IBPS, SBI, KVS) & Odisha (OPSC, OSSC, OSSSC) with SHA-256 deduplication and approval queue.",
+                                    fontSize = 12.sp,
+                                    color = Slate200,
+                                    lineHeight = 17.sp
+                                )
+
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Button(
+                                    onClick = { viewModel.runCloudflareImport(null) },
+                                    enabled = !isImporting,
+                                    colors = ButtonDefaults.buttonColors(containerColor = SaffronOrange),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.fillMaxWidth().testTag("run_importer_button")
+                                ) {
+                                    if (isImporting) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            color = DeepNavy,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Fetching Official Sources...",
+                                            fontWeight = FontWeight.Bold,
+                                            color = DeepNavy
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.Sync,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = DeepNavy
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Run Importer Now",
+                                            fontWeight = FontWeight.Bold,
+                                            color = DeepNavy
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
                         Text(
                             text = "Portal Metric & Ingestion Overview",
                             style = MaterialTheme.typography.titleSmall.copy(
@@ -245,7 +362,7 @@ fun AdminPipelineScreen(
                                 color = Slate900
                             )
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -260,19 +377,20 @@ fun AdminPipelineScreen(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             StatCard(title = "Upcoming Deadlines", value = "${stats.upcomingDeadlines}", isAlert = true, modifier = Modifier.weight(1f))
-                            StatCard(title = "Pending Imports", value = "${stats.pendingImports}", modifier = Modifier.weight(1f))
+                            StatCard(title = "Pending Review", value = "$totalPendingCount", modifier = Modifier.weight(1f))
                         }
                         Spacer(modifier = Modifier.height(10.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            StatCard(title = "Active Sources", value = "${stats.activeSources}", modifier = Modifier.weight(1f))
+                            StatCard(title = "Verified Sources", value = "${if (cfSources.isNotEmpty()) cfSources.size else stats.activeSources}", modifier = Modifier.weight(1f))
                             StatCard(title = "Results Published", value = "${stats.totalResults}", modifier = Modifier.weight(1f))
                         }
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
+                        // Workflow Steps Summary Card
                         Card(
                             colors = CardDefaults.cardColors(containerColor = PureWhite),
                             shape = RoundedCornerShape(16.dp),
@@ -281,27 +399,30 @@ fun AdminPipelineScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "Automated Crawler Health",
+                                    text = "Publishing Workflow Cycle",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Slate900
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "All 5 official source adapters (UPSC, SSC, RRB, IBPS, UPPRPB) are actively monitoring official gazette domains with SHA-256 duplicate checksum verification.",
-                                    fontSize = 12.sp,
-                                    color = Slate600,
-                                    lineHeight = 17.sp
-                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    WorkflowChip(step = "1", title = "Auto Fetch")
+                                    WorkflowChip(step = "2", title = "Deduplicate")
+                                    WorkflowChip(step = "3", title = "Admin Review")
+                                    WorkflowChip(step = "4", title = "Publish + Push")
+                                }
                             }
                         }
                     }
                 }
 
-                // 1: Review Queue
+                // 1: Review Queue (Pending Approval)
                 1 -> {
-                    val pending = candidates.filter { it.reviewStatus == "PENDING_REVIEW" }
-                    if (pending.isEmpty()) {
+                    val pendingLocal = localCandidates.filter { it.reviewStatus == "PENDING_REVIEW" }
+                    if (cfPendingJobs.isEmpty() && pendingLocal.isEmpty()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -323,10 +444,19 @@ fun AdminPipelineScreen(
                                     color = Slate900
                                 )
                                 Text(
-                                    text = "All discovered candidates have been reviewed and published.",
+                                    text = "All fetched official notifications have been reviewed and published.",
                                     fontSize = 12.sp,
                                     color = Slate500
                                 )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                OutlinedButton(
+                                    onClick = { viewModel.runCloudflareImport(null) },
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Fetch New Notices from Sources")
+                                }
                             }
                         }
                     } else {
@@ -337,7 +467,129 @@ fun AdminPipelineScreen(
                                 .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            pending.forEach { cand ->
+                            Text(
+                                text = "Pending Official Notices Awaiting Approval ($totalPendingCount)",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Slate900
+                            )
+
+                            // Cloudflare D1 Pending Jobs
+                            cfPendingJobs.forEach { job ->
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = PureWhite),
+                                    shape = RoundedCornerShape(16.dp),
+                                    border = BorderStroke(1.dp, Slate200),
+                                    modifier = Modifier.fillMaxWidth().testTag("pending_job_${job.id}")
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Surface(
+                                                    color = if (job.state == "Odisha") SaffronOrange.copy(alpha = 0.15f) else NavyContainer,
+                                                    shape = RoundedCornerShape(6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = job.state ?: "All India",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (job.state == "Odisha") Color(0xFFC25500) else DeepNavy,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                                Surface(
+                                                    color = Slate100,
+                                                    shape = RoundedCornerShape(6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = job.sourceDomain?.ifBlank { "official.gov.in" } ?: "official.gov.in",
+                                                        fontSize = 10.sp,
+                                                        color = Slate600,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = "Advt: ${job.advertisementNumber ?: "Pending"}",
+                                                fontSize = 10.sp,
+                                                color = Slate500
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = job.title,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Slate900
+                                        )
+                                        Text(
+                                            text = job.organization?.ifBlank { job.department } ?: "Government Department",
+                                            fontSize = 12.sp,
+                                            color = Slate600
+                                        )
+
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            Text(
+                                                text = "Vacancies: ${job.totalPosts ?: "Check Notice"}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = DeepNavy
+                                            )
+                                            Text(
+                                                text = "Last Date: ${job.lastDate ?: "Check Notice"}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = StatusUrgent
+                                            )
+                                        }
+
+                                        Text(
+                                            text = "Qual: ${job.qualification ?: "As per gazette"}",
+                                            fontSize = 11.sp,
+                                            color = Slate600,
+                                            maxLines = 2
+                                        )
+
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            OutlinedButton(
+                                                onClick = { viewModel.rejectCloudflareJob(job.id, "Rejected by admin") },
+                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusUrgent),
+                                                border = BorderStroke(1.dp, StatusUrgent),
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Icon(imageVector = Icons.Default.Close, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Reject", fontSize = 11.sp)
+                                            }
+
+                                            Button(
+                                                onClick = { viewModel.approveCloudflareJob(job.id) },
+                                                colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier.weight(1.5f).testTag("approve_btn_${job.id}")
+                                            ) {
+                                                Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Approve & Publish", fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Local Candidates
+                            pendingLocal.forEach { cand ->
                                 Card(
                                     colors = CardDefaults.cardColors(containerColor = PureWhite),
                                     shape = RoundedCornerShape(16.dp),
@@ -370,23 +622,19 @@ fun AdminPipelineScreen(
                                         }
 
                                         Spacer(modifier = Modifier.height(8.dp))
-
                                         Text(
                                             text = cand.title,
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Slate900
                                         )
-
-                                        Spacer(modifier = Modifier.height(6.dp))
-
+                                        Spacer(modifier = Modifier.height(4.dp))
                                         Text(
                                             text = "Extracted: ${cand.parsedVacancies} Vacancies • Closes: ${cand.parsedClosingDate}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = DeepNavy
                                         )
-
                                         Text(
                                             text = "Checksum: ${cand.contentHash.take(24)}...",
                                             fontSize = 10.sp,
@@ -394,7 +642,6 @@ fun AdminPipelineScreen(
                                         )
 
                                         Spacer(modifier = Modifier.height(12.dp))
-
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -429,7 +676,7 @@ fun AdminPipelineScreen(
                     }
                 }
 
-                // 2: Sources Registry
+                // 2: Sources Registry (All India + Odisha)
                 2 -> {
                     Column(
                         modifier = Modifier
@@ -438,55 +685,180 @@ fun AdminPipelineScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Verified Recruitment Portals",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Slate900
+                            )
+                            Button(
+                                onClick = { viewModel.runCloudflareImport(null) },
+                                enabled = !isImporting,
+                                colors = ButtonDefaults.buttonColors(containerColor = DeepNavy),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Poll All Sources", fontSize = 11.sp)
+                            }
+                        }
+
+                        // Display Cloudflare Sources or fallback to local
+                        if (cfSources.isNotEmpty()) {
+                            // Section: Odisha State Portals
+                            val odishaSources = cfSources.filter { it.state == "Odisha" }
+                            if (odishaSources.isNotEmpty()) {
+                                Text(
+                                    text = "Odisha State Government Sources",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SaffronOrange,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                                odishaSources.forEach { src ->
+                                    SourceCard(
+                                        name = src.name,
+                                        domain = src.officialDomain,
+                                        type = src.parserType,
+                                        state = src.state,
+                                        lastFetched = src.lastFetchedAt ?: "Ready",
+                                        onPoll = { viewModel.runCloudflareImport(src.id) }
+                                    )
+                                }
+                            }
+
+                            // Section: All India Central Portals
+                            val allIndiaSources = cfSources.filter { it.state != "Odisha" }
+                            if (allIndiaSources.isNotEmpty()) {
+                                Text(
+                                    text = "All India Central Recruitment Sources",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DeepNavy,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                                allIndiaSources.forEach { src ->
+                                    SourceCard(
+                                        name = src.name,
+                                        domain = src.officialDomain,
+                                        type = src.parserType,
+                                        state = src.state,
+                                        lastFetched = src.lastFetchedAt ?: "Ready",
+                                        onPoll = { viewModel.runCloudflareImport(src.id) }
+                                    )
+                                }
+                            }
+                        } else {
+                            localSources.forEach { src ->
+                                SourceCard(
+                                    name = src.name,
+                                    domain = src.officialDomain,
+                                    type = src.sourceType,
+                                    state = if (src.id.contains("opsc") || src.id.contains("ossc")) "Odisha" else "All India",
+                                    lastFetched = src.lastSyncTime,
+                                    onPoll = { viewModel.triggerPollSource(src) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 3: Import Runs History
+                3 -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
-                            text = "Official Source Adapters & Whitelist",
+                            text = "Automated Crawler Runs History",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = Slate900
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
 
-                        sources.forEach { src ->
+                        if (cfImportRuns.isEmpty()) {
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = PureWhite),
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, Slate200),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(14.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "No runs recorded on Cloudflare yet. Tap 'Run Importer Now' from the Dashboard tab to execute your first import cycle.",
+                                        fontSize = 12.sp,
+                                        color = Slate600
+                                    )
+                                }
+                            }
+                        } else {
+                            cfImportRuns.forEach { run ->
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = PureWhite),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, Slate200),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = src.name,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Slate900
-                                        )
-                                        Text(
-                                            text = "${src.officialDomain} • ${src.sourceType}",
-                                            fontSize = 11.sp,
-                                            color = Slate500
-                                        )
-                                        Text(
-                                            text = "Last Synced: ${src.lastSyncTime}",
-                                            fontSize = 10.sp,
-                                            color = Slate600
-                                        )
-                                    }
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Surface(
+                                                    color = if (run.status == "SUCCESS") GreenContainer else StatusUrgentBg,
+                                                    shape = RoundedCornerShape(6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = run.status,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (run.status == "SUCCESS") OnGreenContainer else StatusUrgent,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = run.triggeredBy ?: "CRON",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Slate700
+                                                )
+                                            }
+                                            Text(
+                                                text = run.startedAt.take(19).replace("T", " "),
+                                                fontSize = 10.sp,
+                                                color = Slate500
+                                            )
+                                        }
 
-                                    OutlinedButton(
-                                        onClick = { viewModel.triggerPollSource(src) },
-                                        shape = RoundedCornerShape(8.dp),
-                                        border = BorderStroke(1.dp, DeepNavy)
-                                    ) {
-                                        Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(14.dp), tint = DeepNavy)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Poll Now", fontSize = 11.sp, color = DeepNavy)
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(text = "Fetched: ${run.fetchedCount}", fontSize = 11.sp, color = Slate700)
+                                            Text(text = "New: ${run.insertedCount}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = EmeraldGreen)
+                                            Text(text = "Duplicates: ${run.duplicateCount}", fontSize = 11.sp, color = Slate500)
+                                            Text(text = "Errors: ${run.errorCount}", fontSize = 11.sp, color = if (run.errorCount > 0) StatusUrgent else Slate400)
+                                        }
+
+                                        if (!run.errorSummary.isNullOrBlank()) {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(
+                                                text = "Details: ${run.errorSummary}",
+                                                fontSize = 10.sp,
+                                                color = StatusUrgent
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -494,8 +866,8 @@ fun AdminPipelineScreen(
                     }
                 }
 
-                // 3: Add Job
-                3 -> {
+                // 4: Add Manual Job
+                4 -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -602,8 +974,8 @@ fun AdminPipelineScreen(
                     }
                 }
 
-                // 4: Audit Logs
-                4 -> {
+                // 5: Audit Logs
+                5 -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -685,6 +1057,95 @@ private fun StatCard(
                 fontWeight = FontWeight.Bold,
                 color = if (isAlert) StatusUrgent else DeepNavy
             )
+        }
+    }
+}
+
+@Composable
+private fun WorkflowChip(step: String, title: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            shape = CircleShape,
+            color = NavyContainer,
+            modifier = Modifier.size(24.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(text = step, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DeepNavy)
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = title, fontSize = 10.sp, color = Slate600)
+    }
+}
+
+@Composable
+private fun SourceCard(
+    name: String,
+    domain: String,
+    type: String,
+    state: String,
+    lastFetched: String,
+    onPoll: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = PureWhite),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, Slate200),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = name,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Slate900
+                    )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Surface(
+                        color = if (state == "Odisha") SaffronOrange.copy(alpha = 0.15f) else NavyContainer,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = state,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (state == "Odisha") Color(0xFFC25500) else DeepNavy,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                    Text(
+                        text = "$domain • $type",
+                        fontSize = 10.sp,
+                        color = Slate500
+                    )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Last Synced: $lastFetched",
+                    fontSize = 10.sp,
+                    color = Slate600
+                )
+            }
+
+            OutlinedButton(
+                onClick = onPoll,
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, DeepNavy)
+            ) {
+                Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(13.dp), tint = DeepNavy)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Poll", fontSize = 11.sp, color = DeepNavy)
+            }
         }
     }
 }

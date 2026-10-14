@@ -1,87 +1,95 @@
-# Cloudflare Workers + D1 + R2 Backend Setup Guide (हिंदी व English)
+# Automated Government Job Importer: Cloudflare Workers + D1 + R2 + Android
 
-इस गाइड की मदद से आप सिर्फ 5 मिनट में अपना Cloudflare Worker, D1 Database, और R2 Object Storage लाइव डिप्लॉय कर सकते हैं।
-
----
-
-## 1. Prerequisites (ज़रूरी चीज़ें)
-1. **Node.js**: अपने कंप्यूटर पर Node.js (v18+) इंस्टॉल रखें।
-2. **Cloudflare Account**: [cloudflare.com](https://dash.cloudflare.com) पर फ़्री अकाउंट बनाएँ।
+यह गाइड आपके **Indian Government Job Portal (Kotlin Android)** और **Cloudflare Workers Backend** के सम्पूर्ण ऑटोमेशन को सेट अप व डिप्लॉय करने के लिए तैयार की गई है।
 
 ---
 
-## 2. Step-by-Step Deployment Commands
+## 🌟 आर्किटेक्चर सारांश (Architecture Overview)
 
-अपने टर्मिनल या Command Prompt में `backend-cloudflare` फ़ोल्डर में जाएँ:
+```
+[Official Sources Registry]
+  ├── All India: SSC, UPSC, RRB, IBPS, SBI, KVS
+  └── Odisha: OPSC, OSSC, OSSSC
+           │
+           ▼ (Scheduled Cron Trigger: Every 6 Hours / Admin Manual)
+[Cloudflare Worker Backend API]
+  ├── Bounded Source Adapters (Timeouts + Error Isolation)
+  ├── Concurrency-Safe Deduplication (Canonical URL + Advt No + SHA-256)
+  └── Date Parser & Validation (DD/MM/YYYY, YYYY-MM-DD)
+           │
+           ▼
+[Cloudflare D1 Database] (Jobs saved as status='pending_review')
+           │
+           ▼
+[Android Admin Review Queue] ──(Admin Approve)──► [Status: ACTIVE]
+                                                       │
+                                                       ├──► Live in App (Instant Sync)
+                                                       └──► FCM Push Notification Queued
+```
 
-### Step A: Wrangler CLI इंस्टॉल करें और लॉगिन करें
+---
+
+## 🚀 5-Minute Setup & Deployment Guide
+
+### चरण 1: Cloudflare CLI (Wrangler) इंस्टॉल व लॉगिन करें
+अपने टर्मिनल में चलाएँ:
 ```bash
 npm install -g wrangler
 wrangler login
 ```
-*(यह ब्राउज़र खोलेगा जहाँ आप अपने Cloudflare अकाउंट को अनुमति देंगे।)*
 
----
-
-### Step B: Cloudflare D1 Database बनाएँ
+### चरण 2: Cloudflare D1 Database बनाएँ
 ```bash
 wrangler d1 create sarkari_jobs_db
 ```
-**Output Example:**
-```
-✅ Successfully created DB 'sarkari_jobs_db'!
+कमांड चलने के बाद आपको एक `database_id` मिलेगा। उसे `backend-cloudflare/wrangler.toml` में पेस्ट करें:
+```toml
 [[d1_databases]]
 binding = "DB"
 database_name = "sarkari_jobs_db"
-database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+database_id = "your-actual-database-id-here"
 ```
-➡️ **नोट:** ऊपर मिले `database_id` को `wrangler.toml` फ़ाइल में पेस्ट कर दें।
 
----
-
-### Step C: D1 Database में स्कीमा और शुरुआती डेटा अपलोड करें
+### चरण 3: Database Schema & Official Sources Seed चलाएँ
 ```bash
-wrangler d1 execute sarkari_jobs_db --file=./schema.sql
+cd backend-cloudflare
+wrangler d1 execute sarkari_jobs_db --file=./schema.sql --remote
 ```
-*(यह कमांड `jobs` टेबल, इंडेक्स और सैंपल सरकारी भर्ती डेटा लाइव बना देगा।)*
+यह कमांड आपके D1 में `jobs`, `job_sources` (All India व Odisha के आधिकारिक पोर्टल्स), `job_import_runs`, और `job_notifications` टेबल्स तैयार कर देगा।
 
----
-
-### Step D: Cloudflare R2 Bucket बनाएँ (PDFs और एडमिट कार्ड स्टोरेज)
+### चरण 4: Cloudflare R2 Bucket (PDF Storage - Zero Egress Fees)
 ```bash
 wrangler r2 bucket create sarkari-job-docs
 ```
-*(Cloudflare R2 में 10GB स्टोरेज बिल्कुल मुफ़्त है और डेटा डाउनलोड (Egress) का कोई चार्ज नहीं लगता!)*
 
----
-
-### Step E: Worker को लाइव डिप्लॉय करें!
+### चरण 5: Worker डिप्लॉय करें
 ```bash
 wrangler deploy
 ```
-
-डिप्लॉय होते ही आपको अपना लाइव API URL मिल जाएगा:
-```
-Published sarkari-jobs-worker (1.23 sec)
-https://sarkari-jobs-worker.<your-subdomain>.workers.dev
-```
+डिप्लॉय होते ही आपको अपना लाइव Worker URL मिल जाएगा, उदाहरण:
+`https://sarkari-jobs-worker.<your-account>.workers.dev`
 
 ---
 
-## 3. Test Your Cloudflare API Endpoints
-
-आप अपने ब्राउज़र या Postman में यह URLs टेस्ट कर सकते हैं:
-* **Health Check:** `https://your-worker.workers.dev/api/health`
-* **All Jobs:** `https://your-worker.workers.dev/api/jobs`
-* **Filter by Category:** `https://your-worker.workers.dev/api/jobs?category=Admit%20Card`
-* **Search Jobs:** `https://your-worker.workers.dev/api/jobs?search=SSC`
-* **Dashboard Stats:** `https://your-worker.workers.dev/api/stats`
+## ⚙️ Cron Triggers (Scheduled Auto-Import)
+`wrangler.toml` में हर 6 घंटे पर चलने वाला क्रॉन ट्रिगर पहले से कॉन्फ़िगर है:
+```toml
+[triggers]
+crons = ["0 */6 * * *"]
+```
+जब भी क्रॉन ट्रिगर चलता है, `scheduled(event, env, ctx)` हैंडलर:
+1. सभी एक्टिव ऑल इंडिया व ओडिशा पोर्टल्स को चेक करता है।
+2. नए रिक्रूटमेंट नोटिसेस फ़ेच करता है।
+3. डुप्लिकेट्स को हटाकर नए नोटिसेस को `status = 'pending_review'` के रूप में D1 में सेव करता है।
+4. पूरे रन के आँकड़े `job_import_runs` टेबल में सुरक्षित रखता है।
 
 ---
 
-## 4. Android App में URL जोड़ें
-इस URL को Android ऐप के Settings या `CloudflareConfig.kt` में डाल दें:
-```kotlin
-const val DEFAULT_WORKER_URL = "https://sarkari-jobs-worker.<your-subdomain>.workers.dev"
-```
-आपकी Android ऐप अब पूरी तरह Cloudflare Edge, D1 Database, और R2 Storage से कनेक्ट हो जाएगी!
+## 📱 Android App में Worker URL सेट करना
+App खोलें ➔ **Profile / Settings** ➔ **Cloudflare Worker URL** में अपना लाइव Worker URL डालें या डिफ़ॉल्ट URL का उपयोग करें।
+
+Admin स्क्रीन में:
+* **Dashboard Tab**: "Run Importer Now" बटन पर क्लिक करके किसी भी समय तत्काल आयात चला सकते हैं।
+* **Review Queue Tab**: नए आयातित नोटिसेस को एक क्लिक में "Approve & Publish" या "Reject" कर सकते हैं।
+* **Sources Tab**: SSC, UPSC, RRB, IBPS, SBI, KVS, OPSC, OSSC, OSSSC आदि पोर्टल्स की स्थिति देख सकते हैं।
+* **Import History Tab**: प्रत्येक क्रॉन व मैन्युअल रन का विस्तृत लॉग (Fetched, Inserted, Duplicates, Errors) देख सकते हैं।

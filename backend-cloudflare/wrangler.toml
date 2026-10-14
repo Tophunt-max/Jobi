@@ -16,3 +16,7 @@ database_id = "your-d1-database-id-after-creation"
 [[r2_buckets]]
 binding = "FILES_BUCKET"
 bucket_name = "sarkari-job-docs"
+
+# Cloudflare Workers Scheduled Cron Triggers (Every 6 hours)
+[triggers]
+crons = ["0 */6 * * *"]
