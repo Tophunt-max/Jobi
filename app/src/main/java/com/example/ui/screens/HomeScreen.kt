@@ -811,6 +811,9 @@ fun HomeScreen(
                     )
 
                     categories.forEach { (cat, emoji) ->
+                        val count = allJobs.count { 
+                            it.category.contains(cat, ignoreCase = true) || it.organization.contains(cat, ignoreCase = true) 
+                        }
                         Surface(
                             onClick = {
                                 onFilterByCategory(cat)
@@ -834,6 +837,21 @@ fun HomeScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = Slate800
                                 )
+                                if (count > 0) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        color = Color(0xFFEFF6FF),
+                                        shape = CircleShape
+                                    ) {
+                                        Text(
+                                            text = if (count > 99) "99+" else count.toString(),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = RoyalBlue,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -947,12 +965,13 @@ fun HomeScreen(
         item { Spacer(modifier = Modifier.height(12.dp)) }
 
         // 8. Latest Jobs List
-        items(allJobs.take(5)) { job ->
+        items(allJobs.take(8)) { job ->
             Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                 JobCard(
                     job = job,
                     onClick = { onJobClick(job) },
-                    onBookmarkToggle = { onBookmarkToggle(job) }
+                    onBookmarkToggle = { onBookmarkToggle(job) },
+                    onShare = { AppUtils.shareJobAlert(context, job) }
                 )
             }
         }

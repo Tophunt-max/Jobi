@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Sidebar } from '../components/Sidebar';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Sarkari Portal Admin | Cloudflare Workers Importer',
   description: 'Automated Government Job Importer & Review Dashboard on Cloudflare Workers & D1',

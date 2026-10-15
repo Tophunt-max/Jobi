@@ -79,6 +79,30 @@ export const adminApi = {
     });
   },
 
+  // Batch Approve Jobs
+  async batchApproveJobs(ids: string[], approvedBy = 'Admin Batch'): Promise<{ success: boolean; message: string; approvedCount?: number }> {
+    try {
+      return await request(`/api/admin/jobs/batch-approve`, {
+        method: 'POST',
+        body: JSON.stringify({ ids, approved_by: approvedBy }),
+      });
+    } catch (err) {
+      // Fallback to sequential/parallel individual approves if batch endpoint fails
+      let successCount = 0;
+      for (const id of ids) {
+        try {
+          await this.approveJob(id, approvedBy);
+          successCount++;
+        } catch (_) {}
+      }
+      return {
+        success: successCount > 0,
+        message: `Batch approved ${successCount} of ${ids.length} jobs`,
+        approvedCount: successCount,
+      };
+    }
+  },
+
   // Reject Job
   async rejectJob(id: string, reason = 'Rejected by administrator'): Promise<{ success: boolean; message: string }> {
     return await request(`/api/admin/jobs/${id}/reject`, {

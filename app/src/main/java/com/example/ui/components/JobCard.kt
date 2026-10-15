@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,15 +13,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Share
@@ -31,13 +37,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -97,13 +103,14 @@ fun JobCard(
     val countdownText = AppUtils.getCountdownBadgeText(job.applicationClosingDate)
     val remainingDays = AppUtils.getRemainingDays(job.applicationClosingDate)
     val isUrgent = remainingDays <= 3
+    val isSoon = remainingDays in 4..7
 
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = PureWhite),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp, pressedElevation = 1.dp),
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, Slate200.copy(alpha = 0.8f)),
+        border = BorderStroke(1.dp, if (isUrgent) StatusUrgentBg else Slate200.copy(alpha = 0.8f)),
         modifier = modifier
             .fillMaxWidth()
             .testTag("job_card_${job.id}")
@@ -113,7 +120,7 @@ fun JobCard(
                 .fillMaxWidth()
                 .padding(18.dp)
         ) {
-            // Header Row: Organization Monogram Avatar + Org Name + Status Pill
+            // Header Row: Organization Monogram + Details + Urgency Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -180,89 +187,57 @@ fun JobCard(
                     }
                 }
 
-                // Modern Status Pill
-                when (job.status) {
-                    "CLOSING_SOON" -> {
-                        Surface(
-                            color = StatusUrgentBg,
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(StatusUrgent)
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text(
-                                    text = "Closing Soon",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = StatusUrgent
-                                )
-                            }
+                // Dynamic Urgency & Countdown Badge
+                Surface(
+                    color = when {
+                        isUrgent -> StatusUrgentBg
+                        isSoon -> Color(0xFFFEF3C7)
+                        else -> GreenContainer
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        when {
+                            isUrgent -> StatusUrgent.copy(alpha = 0.4f)
+                            isSoon -> Color(0xFFF59E0B).copy(alpha = 0.4f)
+                            else -> EmeraldMint.copy(alpha = 0.3f)
                         }
-                    }
-                    "UPCOMING" -> {
-                        Surface(
-                            color = StatusUpcomingBg,
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(StatusUpcoming)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when {
+                                        isUrgent -> StatusUrgent
+                                        isSoon -> Color(0xFFF59E0B)
+                                        else -> EmeraldMint
+                                    }
                                 )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text(
-                                    text = "Upcoming",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = StatusUpcoming
-                                )
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = countdownText,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = when {
+                                isUrgent -> StatusUrgent
+                                isSoon -> Color(0xFFB45309)
+                                else -> OnGreenContainer
                             }
-                        }
-                    }
-                    else -> {
-                        Surface(
-                            color = GreenContainer,
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(EmeraldMint)
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text(
-                                    text = "Active",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = OnGreenContainer
-                                )
-                            }
-                        }
+                        )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Job Title
+            // Job Notice Title
             Text(
                 text = job.title,
                 style = MaterialTheme.typography.titleMedium.copy(
@@ -275,15 +250,20 @@ fun JobCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Modern Feature Badges: Vacancies, Qualification, State
+            // Eligibility & Salary Chips Row
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Total Vacancies Chip
                 Surface(
-                    color = Slate100,
+                    color = Color(0xFFEFF6FF),
+                    border = BorderStroke(1.dp, Color(0xFFBFDBFE)),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Row(
@@ -294,22 +274,22 @@ fun JobCard(
                             imageVector = Icons.Default.People,
                             contentDescription = null,
                             tint = RoyalBlue,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "${job.totalVacancies} Posts",
+                            text = "⚡ ${job.totalVacancies} Posts",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Slate800
+                            color = RoyalBlue
                         )
                     }
                 }
 
+                // Qualification Chip
                 Surface(
                     color = Slate100,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f, fill = false)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
@@ -319,7 +299,7 @@ fun JobCard(
                             imageVector = Icons.Default.School,
                             contentDescription = null,
                             tint = Slate600,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -333,6 +313,59 @@ fun JobCard(
                     }
                 }
 
+                // Salary Scale Chip
+                Surface(
+                    color = Color(0xFFECFDF5),
+                    border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Payments,
+                            contentDescription = null,
+                            tint = EmeraldGreen,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (job.salaryScale.isNotBlank()) job.salaryScale.take(18) else "7th CPC Pay",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = EmeraldGreen
+                        )
+                    }
+                }
+
+                // Age Limit Chip
+                Surface(
+                    color = Color(0xFFFFFBEB),
+                    border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Cake,
+                            contentDescription = null,
+                            tint = Color(0xFFD97706),
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${job.minAge}-${job.maxAge} Yrs",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF92400E)
+                        )
+                    }
+                }
+
+                // State Chip
                 Surface(
                     color = Slate100,
                     shape = RoundedCornerShape(10.dp)
@@ -347,129 +380,126 @@ fun JobCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Modern Bottom Footer: Deadline + Quick Actions (Calendar, Share, Bookmark) + View Details
-            Surface(
-                color = if (isUrgent) StatusUrgentBg.copy(alpha = 0.5f) else Color(0xFFF8FAFC),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
+            // Quick Direct Action Bar (PDF Notice, Apply Online, Share, Bookmark, View Details)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                // Quick PDF Notice Button
+                OutlinedButton(
+                    onClick = {
+                        val pdfUrl = job.officialNotificationUrl.ifEmpty { job.officialWebsiteUrl }
+                        AppUtils.openOfficialPdf(context, pdfUrl)
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = RoyalBlue,
+                        containerColor = Color(0xFFF8FAFC)
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier.height(34.dp).testTag("quick_pdf_btn_${job.id}")
                 ) {
-                    Row(
-                        modifier = Modifier.weight(1f, fill = false),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Event,
-                            contentDescription = "Application Deadline",
-                            tint = if (isUrgent) StatusUrgent else RoyalBlue,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Last Date: ",
-                                    fontSize = 10.sp,
-                                    color = Slate500
-                                )
-                                Text(
-                                    text = job.applicationClosingDate,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isUrgent) StatusUrgent else DeepNavy
-                                )
-                            }
-                            Text(
-                                text = countdownText,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (isUrgent) StatusUrgent else EmeraldGreen
-                            )
-                        }
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Description,
+                        contentDescription = "PDF Notice",
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Quick Add to Device Calendar
-                        IconButton(
-                            onClick = { AppUtils.addJobDeadlineToCalendar(context, job) },
-                            modifier = Modifier
-                                .size(34.dp)
-                                .testTag("calendar_btn_${job.id}")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = "Add to Calendar",
-                                tint = Slate600,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                // Quick Apply Online Button
+                OutlinedButton(
+                    onClick = {
+                        val applyUrl = job.applyOnlineUrl.ifEmpty { job.officialWebsiteUrl }
+                        AppUtils.openApplyPortal(context, applyUrl)
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = EmeraldGreen,
+                        containerColor = Color(0xFFF0FDF4)
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier.height(34.dp).testTag("quick_apply_btn_${job.id}")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = "Apply Portal",
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "Apply", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
 
-                        // Quick Share Job Alert
-                        IconButton(
-                            onClick = {
-                                if (onShare != {}) onShare() else AppUtils.shareJobAlert(context, job)
-                            },
-                            modifier = Modifier
-                                .size(34.dp)
-                                .testTag("share_btn_${job.id}")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = "Share Job Alert",
-                                tint = Slate600,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                Spacer(modifier = Modifier.weight(1f))
 
-                        // Bookmark
-                        IconButton(
-                            onClick = onBookmarkToggle,
-                            modifier = Modifier
-                                .size(34.dp)
-                                .testTag("bookmark_btn_${job.id}")
-                        ) {
-                            Icon(
-                                imageVector = if (job.isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                                contentDescription = if (job.isBookmarked) "Remove from Favorites" else "Save to Favorites",
-                                tint = if (job.isBookmarked) GoldStar else Slate400,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                // Quick Calendar
+                IconButton(
+                    onClick = { AppUtils.addJobDeadlineToCalendar(context, job) },
+                    modifier = Modifier.size(32.dp).testTag("calendar_btn_${job.id}")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = "Add to Calendar",
+                        tint = Slate600,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
 
-                        Spacer(modifier = Modifier.width(4.dp))
+                // Quick Share Job Alert
+                IconButton(
+                    onClick = {
+                        if (onShare != {}) onShare() else AppUtils.shareJobAlert(context, job)
+                    },
+                    modifier = Modifier.size(32.dp).testTag("share_btn_${job.id}")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share Job Alert",
+                        tint = Slate600,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
 
-                        Button(
-                            onClick = onClick,
-                            colors = ButtonDefaults.buttonColors(containerColor = DeepNavy),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                            modifier = Modifier
-                                .height(34.dp)
-                                .testTag("view_details_btn_${job.id}")
-                        ) {
-                            Text(
-                                text = "Details",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = PureWhite
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                tint = PureWhite,
-                                modifier = Modifier.size(12.dp)
-                            )
-                        }
-                    }
+                // Bookmark
+                IconButton(
+                    onClick = onBookmarkToggle,
+                    modifier = Modifier.size(32.dp).testTag("bookmark_btn_${job.id}")
+                ) {
+                    Icon(
+                        imageVector = if (job.isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                        contentDescription = if (job.isBookmarked) "Remove from Favorites" else "Save to Favorites",
+                        tint = if (job.isBookmarked) GoldStar else Slate400,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+
+                // Details Button
+                Button(
+                    onClick = onClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = DeepNavy),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.height(34.dp).testTag("view_details_btn_${job.id}")
+                ) {
+                    Text(
+                        text = "Details",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PureWhite
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = PureWhite,
+                        modifier = Modifier.size(12.dp)
+                    )
                 }
             }
         }

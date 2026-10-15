@@ -241,6 +241,49 @@ export default {
                 }, corsHeaders);
             }
 
+            // POST /api/admin/jobs/batch-approve - Batch Approve & Publish pending job notices
+            if (path === "/api/admin/jobs/batch-approve" && method === "POST") {
+                verifyAdmin(adminKey, expectedKey);
+                const body = await request.json().catch(() => ({}));
+                const ids = Array.isArray(body.ids) ? body.ids : [];
+                const approvedBy = body.approved_by || "Admin Batch";
+
+                if (ids.length === 0) {
+                    return jsonResponse({ success: false, message: "No job IDs provided" }, corsHeaders, 400);
+                }
+
+                let approvedCount = 0;
+                for (const id of ids) {
+                    const existing = await env.DB.prepare("SELECT * FROM jobs WHERE id = ?").bind(id).first();
+                    if (existing && existing.status === 'pending_review') {
+                        await env.DB.prepare(`
+                            UPDATE jobs 
+                            SET status = 'ACTIVE', verified = 1, approved_by = ?, approved_at = CURRENT_TIMESTAMP, published_at = CURRENT_TIMESTAMP
+                            WHERE id = ?
+                        `).bind(approvedBy, id).run();
+
+                        const notifId = `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+                        await env.DB.prepare(`
+                            INSERT INTO job_notifications (id, job_id, title, body, status)
+                            VALUES (?, ?, ?, ?, 'PENDING')
+                        `).bind(
+                            notifId,
+                            id,
+                            `New ${existing.category}: ${existing.title}`,
+                            `${existing.organization} has released notification for ${existing.total_posts || ''} vacancies. Last date: ${existing.last_date || 'Check Notice'}.`
+                        ).run();
+
+                        approvedCount++;
+                    }
+                }
+
+                return jsonResponse({
+                    success: true,
+                    message: `Successfully approved ${approvedCount} jobs`,
+                    approvedCount
+                }, corsHeaders);
+            }
+
             // POST /api/admin/jobs/:id/approve - Approve & Publish a pending job notice
             if (path.startsWith("/api/admin/jobs/") && path.endsWith("/approve") && method === "POST") {
                 verifyAdmin(adminKey, expectedKey);

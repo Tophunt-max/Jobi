@@ -27,6 +27,7 @@ fun FilterChipsRow(
     items: List<String>,
     selectedItem: String,
     onItemSelected: (String) -> Unit,
+    counts: Map<String, Int> = emptyMap(),
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -38,15 +39,35 @@ fun FilterChipsRow(
     ) {
         items.forEach { item ->
             val isSelected = item == selectedItem
+            val count = counts[item]
             FilterChip(
                 selected = isSelected,
                 onClick = { onItemSelected(item) },
                 label = {
-                    Text(
-                        text = item,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                    )
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            text = item,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        )
+                        if (count != null && count > 0) {
+                            androidx.compose.material3.Surface(
+                                color = if (isSelected) PureWhite.copy(alpha = 0.25f) else Slate200,
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            ) {
+                                Text(
+                                    text = if (count > 99) "99+" else count.toString(),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) PureWhite else Slate700,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                    }
                 },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = DeepNavy,

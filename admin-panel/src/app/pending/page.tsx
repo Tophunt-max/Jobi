@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '../../components/Header';
 import { StatusBadge } from '../../components/StatusBadge';
 import { adminApi } from '../../lib/api';
@@ -17,7 +17,9 @@ import {
   Calendar,
   Building2,
   DollarSign,
-  GraduationCap
+  GraduationCap,
+  CheckCheck,
+  Loader2
 } from 'lucide-react';
 
 export default function PendingReviewPage() {
@@ -31,6 +33,11 @@ export default function PendingReviewPage() {
   const [rejectReason, setRejectReason] = useState('Incomplete or unverified official notification link');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [bannerNotice, setBannerNotice] = useState<string | null>(null);
+
+  // Multi-select & Batch Approve state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBatchApproving, setIsBatchApproving] = useState(false);
+  const selectAllCheckboxRef = useRef<HTMLInputElement | null>(null);
 
   const loadPendingJobs = async () => {
     setLoading(true);
@@ -89,6 +96,71 @@ export default function PendingReviewPage() {
     const matchesCategory = categoryFilter === 'ALL' || j.category === categoryFilter;
     return matchesSearch && matchesState && matchesCategory;
   });
+
+  const isAllFilteredSelected = filteredJobs.length > 0 && filteredJobs.every((j) => selectedIds.has(j.id));
+  const isSomeFilteredSelected = filteredJobs.some((j) => selectedIds.has(j.id)) && !isAllFilteredSelected;
+
+  useEffect(() => {
+    if (selectAllCheckboxRef.current) {
+      selectAllCheckboxRef.current.indeterminate = isSomeFilteredSelected;
+    }
+  }, [isSomeFilteredSelected]);
+
+  const toggleSelectJob = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllFiltered = () => {
+    if (isAllFilteredSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        filteredJobs.forEach((j) => next.delete(j.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        filteredJobs.forEach((j) => next.add(j.id));
+        return next;
+      });
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBatchApprove = async () => {
+    const idsToApprove = Array.from(selectedIds);
+    if (idsToApprove.length === 0) return;
+
+    if (!confirm(`Are you sure you want to batch approve ${idsToApprove.length} selected notices? They will be immediately published to the mobile application.`)) {
+      return;
+    }
+
+    setIsBatchApproving(true);
+    try {
+      const res = await adminApi.batchApproveJobs(idsToApprove, 'Admin Batch');
+      const count = res.approvedCount ?? idsToApprove.length;
+      setBannerNotice(`Successfully batch approved ${count} notices. Published to mobile app & FCM push notifications queued.`);
+      setSelectedIds(new Set());
+      await loadPendingJobs();
+    } catch (err: any) {
+      alert(`Batch approval failed: ${err.message}`);
+    } finally {
+      setIsBatchApproving(false);
+      setTimeout(() => setBannerNotice(null), 6000);
+    }
+  };
 
   return (
     <>
@@ -150,10 +222,47 @@ export default function PendingReviewPage() {
 
         {/* Table of Pending Notices */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-            <span className="text-xs font-bold text-slate-700">
-              Showing {filteredJobs.length} of {jobs.length} pending review items
-            </span>
+          <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-700">
+                Showing {filteredJobs.length} of {jobs.length} pending review items
+              </span>
+              {selectedIds.size > 0 && (
+                <span className="text-[11px] font-semibold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">
+                  {selectedIds.size} selected
+                </span>
+              )}
+            </div>
+
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="px-2.5 py-1 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded text-xs font-medium cursor-pointer transition-colors"
+                >
+                  Clear Selection
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBatchApprove}
+                  disabled={isBatchApproving}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isBatchApproving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Approving {selectedIds.size}...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCheck className="w-4 h-4" />
+                      <span>Batch Approve ({selectedIds.size})</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
           {loading ? (
@@ -169,7 +278,17 @@ export default function PendingReviewPage() {
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-5">Recruitment Details</th>
+                    <th className="py-3 px-4 w-12 text-center">
+                      <input
+                        ref={selectAllCheckboxRef}
+                        type="checkbox"
+                        checked={isAllFilteredSelected}
+                        onChange={toggleSelectAllFiltered}
+                        title={isAllFilteredSelected ? "Deselect all" : "Select all filtered"}
+                        className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </th>
+                    <th className="py-3 px-4">Recruitment Details</th>
                     <th className="py-3 px-4">Category</th>
                     <th className="py-3 px-4">State</th>
                     <th className="py-3 px-4">Posts / Qualification</th>
@@ -179,86 +298,100 @@ export default function PendingReviewPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredJobs.map((job) => (
-                    <tr key={job.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-5 max-w-xs">
-                        <div className="font-bold text-slate-900 line-clamp-1">{job.title}</div>
-                        <div className="text-slate-500 text-[11px] mt-0.5">
-                          {job.organization}
-                        </div>
-                        {job.advertisement_number && (
-                          <div className="text-[10px] text-blue-600 font-mono mt-0.5">
-                            Advt: {job.advertisement_number}
+                  {filteredJobs.map((job) => {
+                    const isSelected = selectedIds.has(job.id);
+                    return (
+                      <tr 
+                        key={job.id} 
+                        className={`transition-colors ${isSelected ? 'bg-blue-50/70 hover:bg-blue-50' : 'hover:bg-slate-50/80'}`}
+                      >
+                        <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => toggleSelectJob(job.id, e as any)}
+                            className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </td>
+                        <td className="py-3.5 px-4 max-w-xs">
+                          <div className="font-bold text-slate-900 line-clamp-1">{job.title}</div>
+                          <div className="text-slate-500 text-[11px] mt-0.5">
+                            {job.organization}
                           </div>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-blue-100 text-blue-800">
-                          {job.category}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-700">
-                        {job.state}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">
-                        <div className="font-medium text-slate-800">{job.total_posts || 'Check Notice'}</div>
-                        <div className="text-[10px] text-slate-500 line-clamp-1">{job.qualification || 'Graduation / Relevant'}</div>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-700">
-                        <div>Start: {job.start_date || 'Active'}</div>
-                        <div className="text-rose-600 font-semibold">Last: {job.last_date || 'Check Notice'}</div>
-                      </td>
-                      <td className="py-3.5 px-4 space-y-1">
-                        {job.official_notification_url && (
-                          <a
-                            href={job.official_notification_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            <FileText className="w-3 h-3" />
-                            <span>PDF Notice</span>
-                            <ExternalLink className="w-2.5 h-2.5" />
-                          </a>
-                        )}
-                        {job.official_apply_url && (
-                          <div>
+                          {job.advertisement_number && (
+                            <div className="text-[10px] text-blue-600 font-mono mt-0.5">
+                              Advt: {job.advertisement_number}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-blue-100 text-blue-800">
+                            {job.category}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-700">
+                          {job.state}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          <div className="font-medium text-slate-800">{job.total_posts || 'Check Notice'}</div>
+                          <div className="text-[10px] text-slate-500 line-clamp-1">{job.qualification || 'Graduation / Relevant'}</div>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-slate-700">
+                          <div>Start: {job.start_date || 'Active'}</div>
+                          <div className="text-rose-600 font-semibold">Last: {job.last_date || 'Check Notice'}</div>
+                        </td>
+                        <td className="py-3.5 px-4 space-y-1">
+                          {job.official_notification_url && (
                             <a
-                              href={job.official_apply_url}
+                              href={job.official_notification_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] text-emerald-600 hover:text-emerald-800 hover:underline"
+                              className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 hover:underline"
                             >
-                              <span>Apply Portal</span>
+                              <FileText className="w-3 h-3" />
+                              <span>PDF Notice</span>
                               <ExternalLink className="w-2.5 h-2.5" />
                             </a>
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
-                        <button
-                          onClick={() => setSelectedJob(job)}
-                          className="px-2.5 py-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded border border-slate-200 font-semibold text-[11px] cursor-pointer"
-                        >
-                          Inspect
-                        </button>
-                        <button
-                          onClick={() => handleApprove(job)}
-                          disabled={processingId === job.id}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[11px] cursor-pointer shadow-sm disabled:opacity-50"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => setRejectingJob(job)}
-                          disabled={processingId === job.id}
-                          className="px-2.5 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded font-bold text-[11px] cursor-pointer disabled:opacity-50"
-                        >
-                          Reject
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                          )}
+                          {job.official_apply_url && (
+                            <div>
+                              <a
+                                href={job.official_apply_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] text-emerald-600 hover:text-emerald-800 hover:underline"
+                              >
+                                <span>Apply Portal</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                          <button
+                            onClick={() => setSelectedJob(job)}
+                            className="px-2.5 py-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded border border-slate-200 font-semibold text-[11px] cursor-pointer"
+                          >
+                            Inspect
+                          </button>
+                          <button
+                            onClick={() => handleApprove(job)}
+                            disabled={processingId === job.id || isBatchApproving}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[11px] cursor-pointer shadow-sm disabled:opacity-50"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => setRejectingJob(job)}
+                            disabled={processingId === job.id || isBatchApproving}
+                            className="px-2.5 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded font-bold text-[11px] cursor-pointer disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -409,6 +542,53 @@ export default function PendingReviewPage() {
                   Confirm Rejection
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating Bulk Action Bar */}
+        {selectedIds.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs font-bold tracking-wide">
+                {selectedIds.size} {selectedIds.size === 1 ? 'Notice' : 'Notices'} Selected
+              </span>
+            </div>
+            <div className="h-4 w-px bg-slate-700" />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleSelectAllFiltered}
+                className="px-2.5 py-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-medium cursor-pointer transition-colors"
+              >
+                {isAllFilteredSelected ? 'Deselect All' : `Select All (${filteredJobs.length})`}
+              </button>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="px-2.5 py-1 text-slate-400 hover:text-slate-200 text-xs font-medium cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBatchApprove}
+                disabled={isBatchApproving}
+                className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-emerald-500/20 cursor-pointer transition-all disabled:opacity-50"
+              >
+                {isBatchApproving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                    <span>Batch Approving...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCheck className="w-4 h-4 text-slate-950" />
+                    <span>Batch Approve ({selectedIds.size})</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}

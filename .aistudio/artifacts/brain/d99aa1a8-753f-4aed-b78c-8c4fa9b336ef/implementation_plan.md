@@ -1,94 +1,64 @@
-# Implementation Plan: Cloudflare Workers + D1 Database + R2 Storage Integration
+# Mobile Application UI Redesign & Feature Enhancement Plan
 
-This plan outlines the architecture, deployment scripts, and Android client implementation to connect the application with a Cloudflare serverless backend (Workers + D1 SQLite database + R2 object storage).
-
----
-
-## Architecture Overview
-
-```
-                                      ┌─────────────────────────────────────────┐
-                                      │        Cloudflare Edge Network          │
-                                      │                                         │
-┌───────────────────────────┐         │  ┌───────────────────────────────────┐  │
-│      Android App          │  HTTPS  │  │        Cloudflare Worker          │  │
-│                           │─────────┼─▶│       (Serverless REST API)       │  │
-│  ┌─────────────────────┐  │         │  │   /api/jobs, /api/admit-cards,   │  │
-│  │ CloudflareApiClient │  │         │  │   /api/results, /api/upload      │  │
-│  └──────────┬──────────┘  │         │  └─────────────┬─────────────┬───────┘  │
-│             ▼             │         │                │             │          │
-│  ┌─────────────────────┐  │         │                ▼             ▼          │
-│  │ CloudflareJobRepo   │  │         │        ┌──────────────┐ ┌─────────────┐ │
-│  └──────────┬──────────┘  │         │        │Cloudflare D1 │ │Cloudflare R2│ │
-│             ▼             │         │        │(SQLite Edge) │ │(PDF Storage)│ │
-│  ┌─────────────────────┐  │         │        └──────────────┘ └─────────────┘ │
-│  │ Room Database       │  │         │                                         │
-│  │ (Offline Cache)     │  │         │                                         │
-│  └─────────────────────┘  │         │                                         │
-└───────────────────────────┘         └─────────────────────────────────────────┘
-```
+Based on your preferences, this plan covers a complete overhaul of the Android mobile application UI using **Modern Material 3 with vibrant accents**, incorporating all requested features: **Job card redesign with countdown timers and urgency badges, eligibility & salary tags, quick PDF/share action buttons, live category counters, upgraded details view, and enhanced candidate utility tools**.
 
 ---
 
-## Phase 1: Cloudflare Backend Deliverables (Bundled Scripts & Configuration)
-
-Provide ready-to-deploy files in a dedicated project directory (`backend-cloudflare/`):
-
-1. **`wrangler.toml`**:
-   - Worker definition, environment variables.
-   - `[[d1_databases]]` binding: `DB` pointing to D1 database `sarkari_jobs_db`.
-   - `[[r2_buckets]]` binding: `FILES_BUCKET` pointing to R2 bucket `sarkari-job-docs`.
-
-2. **`schema.sql` (D1 Database Schema)**:
-   - `jobs` table with all metadata: `id`, `title`, `department`, `category` (Latest Job, Admit Card, Result, Syllabus, Answer Key), `total_posts`, `qualification`, `application_start_date`, `last_date`, `exam_date`, `salary_scale`, `official_url`, `apply_url`, `pdf_r2_key`, `created_at`.
-   - Indices on `category`, `last_date`, and `department` for sub-millisecond edge queries.
-   - Initial sample datasets for Sarkari jobs, admit cards, and results.
-
-3. **`worker.js` (Cloudflare Worker REST API)**:
-   - `GET /api/jobs`: Supports query filtering (`?category=Admit Card`, `?search=SSC`, `?status=ACTIVE`).
-   - `GET /api/jobs/:id`: Detailed view.
-   - `POST /api/jobs`: Admin endpoint to publish/update jobs with authentication token header.
-   - `POST /api/upload`: Direct upload handler for PDF notifications and admit cards into Cloudflare R2 with zero egress bandwidth costs.
-   - `GET /api/files/:filename`: Secure streaming or download URL from R2.
+## 1. Visual Theme & Design System Upgrade
+- **Vibrant Material 3 Palette (`ui/theme/Color.kt`, `Theme.kt`)**:
+  - High-contrast primary blues (`#1A56DB`, `#2563EB`) paired with emerald success indicators (`#059669`) and urgency amber/crimson tones (`#DC2626`, `#D97706`).
+  - Subtle gradient tints and refined border radiuses (16dp–20dp) for cards and modals.
+  - Consistent surface elevations and typography hierarchy for high legibility on handheld screens.
 
 ---
 
-## Phase 2: Android Networking & Data Layer
-
-1. **Retrofit API Service (`com.example.data.remote.cloudflare`)**:
-   - `CloudflareApiService.kt`: Defines endpoints for `getJobs()`, `getJobById()`, `getJobsByCategory()`, and `searchJobs()`.
-   - DTO classes with `kotlinx.serialization`: `CloudflareJobDto`, `CloudflareApiResponse<T>`.
-
-2. **Offline-First Repository Integration (`com.example.data.repository`)**:
-   - `CloudflareJobRepository.kt`:
-     - Reads directly from Room cache for instantaneous UI rendering.
-     - Fetches live updates from Cloudflare Worker in background coroutine.
-     - Upserts fresh jobs into Room database (`JobDao`), maintaining full offline capability.
-     - Gracefully falls back to existing local Room data or demo items if network is unavailable or worker URL is unconfigured.
-
-3. **Configuration & Environment Management**:
-   - Default configurable base URL in `com.example.util.CloudflareConfig.kt` (pointing to demo endpoint or customizable worker domain).
-   - Allows users or admins to plug in their custom Worker URL (`https://<worker-name>.<account>.workers.dev`) seamlessly.
+## 2. Redesigned Job Cards (`ui/components/JobCard.kt`)
+- **Urgency & Countdown Badges**:
+  - Dynamic deadline indicators: "Closes in 2 days" (Urgent red badge), "Ends in 6 days" (Amber badge), or "Closing: DD MMM" (Slate badge).
+- **Live Vacancy & Category Tags**:
+  - Bold vacancy highlight chip (e.g. `⚡ 3,450 Posts`) alongside category badge (`Latest Job`, `Admit Card`, `Result`).
+- **Eligibility & Salary Tag Chips**:
+  - Qualification chip (e.g. `Graduation`, `10th/12th Pass`, `Engineering Degree`).
+  - Salary scale chip (e.g. `Level-7 (₹44,900 - ₹1,42,400)`).
+  - Age bracket tag (e.g. `18 - 32 Yrs`).
+- **Quick Action Bar on Each Card**:
+  - **Quick Share**: One-tap share to WhatsApp, Telegram, or system share sheet with formatted notification summary and link.
+  - **PDF Notice**: Direct action to open official notification PDF.
+  - **Apply Now**: Direct button to launch the official recruitment portal.
+  - **Bookmark**: Single-tap save for offline access.
 
 ---
 
-## Phase 3: UI & Sync Indicator Enhancement
-
-1. **Cloudflare Sync Status Badge**:
-   - Update `JobListingScreen` and `AppTopBar` to display connection state:
-     - 🟠 "Edge Connecting"
-     - 🟢 "Cloudflare Edge Active" (D1 + R2 Connected)
-     - ⚪ "Offline (Room Cache)"
-2. **Document Viewer Integration**:
-   - Seamlessly launch or download notification PDFs hosted on Cloudflare R2 directly from job detail view.
+## 3. Dynamic Category Navigation & Search (`HomeScreen.kt`, `FilterChipsRow.kt`)
+- **Live Vacancy Count Badges on Category Switcher**:
+  - Category tabs (`Latest Jobs`, `Admit Cards`, `Results`, `Answer Keys`, `Syllabus`) showing real-time notice counts (e.g., `Jobs (24)`, `Admit Cards (8)`).
+- **Quick Filter Bar**:
+  - Instant toggle pills for `All India`, `Odisha`, `Central Govt`, `Bank/SSC/UPSC`, and deadline urgency filters (`Closing Soon`).
+- **Enhanced Search Experience**:
+  - Responsive search field with clear action, vacancy suggestions, and state selector.
 
 ---
 
-## Step-by-Step Deployment Instructions (For User)
+## 4. Redesigned Job Details Screen (`ui/screens/JobDetailScreen.kt`)
+- **Hero Header**:
+  - Organization banner with official verification badge, advertisement number, and quick status.
+- **Key Information Matrix**:
+  - Visual 4-cell metric grid: Total Vacancies, Pay Scale Band, Age Limit, and Application Fee.
+- **Application Timeline Stepper**:
+  - Visual step-by-step progress tracking: Notification Release ➔ Application Window ➔ Admit Card ➔ Exam Date ➔ Result.
+- **Sticky Bottom Action Dock**:
+  - Prominent dual CTA: "Apply on Official Portal" & "Official PDF Notice", with floating "Add to Calendar / Set Reminder".
 
-Include a clear `CLOUDFLARE_SETUP.md` guide explaining:
-1. `npm install -g wrangler` & `wrangler login`
-2. `wrangler d1 create sarkari_jobs_db` & `wrangler d1 execute sarkari_jobs_db --file=schema.sql`
-3. `wrangler r2 bucket create sarkari-job-docs`
-4. `wrangler deploy`
-5. Copying the generated URL into the Android app.
+---
+
+## 5. Candidate Utility Tools Hub (`AgeCalculatorSheet.kt`, `SalaryCalculatorSheet.kt`)
+- **Age & Eligibility Calculator**:
+  - Modern bottom sheet with date picker, category selection (General, OBC, SC/ST, PwD), and real-time eligibility feedback for active notifications.
+- **7th CPC In-Hand Salary Calculator**:
+  - Interactive level and city tier (X, Y, Z) selectors showing Basic Pay, DA, HRA, TA, and estimated net monthly in-hand salary.
+
+---
+
+## Verification Plan
+1. **Compilation**: Execute `compile_applet` to ensure zero compilation or syntax errors across Jetpack Compose components.
+2. **Visual & Interaction Verification**: Validate card sizing, responsive padding on diverse device dimensions, ripple effects, and modal dismissals.

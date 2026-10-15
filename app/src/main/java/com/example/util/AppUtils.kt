@@ -123,4 +123,32 @@ object AppUtils {
         shareIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         context.startActivity(shareIntent)
     }
+
+    /**
+     * Opens official notification PDF in browser or system PDF viewer
+     */
+    fun openOfficialPdf(context: Context, url: String) {
+        try {
+            val targetUrl = if (url.startsWith("http://") || url.startsWith("https://")) url else "https://$url"
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(targetUrl)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+        }
+    }
+
+    /**
+     * Opens official recruitment portal in browser
+     */
+    fun openApplyPortal(context: Context, url: String) {
+        try {
+            val targetUrl = if (url.startsWith("http://") || url.startsWith("https://")) url else "https://$url"
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(targetUrl)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+        }
+    }
 }

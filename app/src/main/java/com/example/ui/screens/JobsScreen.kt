@@ -199,27 +199,44 @@ fun JobsScreen(
             }
         }
 
-        // Filter Rows (State, Category, Qualification)
+        // Compute live vacancy count badges for categories & states
+        val categoryCounts = androidx.compose.runtime.remember(jobs) {
+            categories.associateWith { cat ->
+                if (cat == "All Categories") jobs.size
+                else jobs.count { it.category.contains(cat, ignoreCase = true) || it.organization.contains(cat, ignoreCase = true) }
+            }
+        }
+
+        val stateCounts = androidx.compose.runtime.remember(jobs) {
+            states.associateWith { state ->
+                if (state == "All India") jobs.size
+                else jobs.count { it.stateOrAllIndia.equals(state, ignoreCase = true) || it.stateOrAllIndia.contains(state, ignoreCase = true) }
+            }
+        }
+
+        // Filter Rows (Category, State, Urgency)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(PureWhite)
                 .padding(vertical = 8.dp)
         ) {
-            // Category Filter Row
+            // Category Filter Row with live vacancy count badges
             FilterChipsRow(
                 items = categories,
                 selectedItem = selectedCategory,
-                onItemSelected = onCategorySelect
+                onItemSelected = onCategorySelect,
+                counts = categoryCounts
             )
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // State Selector Row
+            // State Selector Row with live vacancy count badges
             FilterChipsRow(
                 items = states,
                 selectedItem = selectedState,
-                onItemSelected = onStateSelect
+                onItemSelected = onStateSelect,
+                counts = stateCounts
             )
         }
 
