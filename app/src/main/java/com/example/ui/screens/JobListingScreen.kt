@@ -30,14 +30,7 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Cloud
-import com.example.data.remote.firestore.SyncStatus
-import com.example.data.repository.CloudflareSyncState
-import com.example.ui.components.CloudflareStatusDialog
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -125,24 +118,12 @@ fun JobListingScreen(
     val allJobs by viewModel.allJobs.collectAsState()
     val admitCards by viewModel.admitCards.collectAsState()
     val results by viewModel.results.collectAsState()
-    val syncStatus by viewModel.syncStatus.collectAsState()
-    val cloudflareSyncState by viewModel.cloudflareSyncState.collectAsState()
-    val cloudflareWorkerUrl by viewModel.cloudflareWorkerUrl.collectAsState()
 
-    var showCloudflareDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf(uiState.searchQuery) }
-    var selectedCategoryFilter by remember { mutableStateOf(if (uiState.selectedCategory.isNotBlank() && uiState.selectedCategory != "All Categories") uiState.selectedCategory else "All") }
-    var selectedOrgFilter by remember { mutableStateOf("All Organizations") }
-
-    if (showCloudflareDialog) {
-        CloudflareStatusDialog(
-            currentWorkerUrl = cloudflareWorkerUrl,
-            syncState = cloudflareSyncState,
-            onDismiss = { showCloudflareDialog = false },
-            onSaveUrl = { viewModel.setCloudflareWorkerUrl(it) },
-            onSyncNow = { viewModel.syncCloudflareNow() }
-        )
+    var selectedCategoryFilter by remember {
+        mutableStateOf(if (uiState.selectedCategory.isNotBlank() && uiState.selectedCategory != "All Categories") uiState.selectedCategory else "All")
     }
+    var selectedOrgFilter by remember { mutableStateOf("All Organizations") }
 
     JobListingScreenContent(
         allJobs = allJobs,
@@ -161,10 +142,7 @@ fun JobListingScreen(
         selectedOrgFilter = selectedOrgFilter,
         onOrgFilterSelect = { selectedOrgFilter = it },
         isRefreshing = uiState.isRefreshing,
-        syncStatus = syncStatus,
-        cloudflareSyncState = cloudflareSyncState,
         onRefresh = { viewModel.refreshData() },
-        onCloudflareClick = { showCloudflareDialog = true },
         onJobClick = onJobClick,
         onBookmarkToggle = { viewModel.toggleBookmark(it) },
         language = uiState.language,
@@ -184,10 +162,7 @@ fun JobListingScreenContent(
     selectedOrgFilter: String,
     onOrgFilterSelect: (String) -> Unit,
     isRefreshing: Boolean,
-    syncStatus: SyncStatus = SyncStatus.Idle,
-    cloudflareSyncState: CloudflareSyncState = CloudflareSyncState.Idle,
     onRefresh: () -> Unit,
-    onCloudflareClick: () -> Unit = {},
     onJobClick: (JobEntity) -> Unit,
     onBookmarkToggle: (JobEntity) -> Unit,
     language: AppLanguage,
@@ -355,98 +330,6 @@ fun JobListingScreenContent(
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = OnGreenContainer
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            // Cloudflare Edge & D1 Status Pill
-                            Surface(
-                                onClick = onCloudflareClick,
-                                color = when (cloudflareSyncState) {
-                                    is CloudflareSyncState.Synced -> Color(0xFFFFF7ED)
-                                    is CloudflareSyncState.Syncing -> Color(0xFFFEF3C7)
-                                    is CloudflareSyncState.Error -> Color(0xFFF1F5F9)
-                                    else -> Color(0xFFFFF7ED)
-                                },
-                                shape = RoundedCornerShape(20.dp),
-                                modifier = Modifier.testTag("cloudflare_edge_badge")
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Cloud,
-                                        contentDescription = "Cloudflare Edge",
-                                        tint = when (cloudflareSyncState) {
-                                            is CloudflareSyncState.Synced -> Color(0xFFEA580C)
-                                            is CloudflareSyncState.Syncing -> Color(0xFFB45309)
-                                            else -> Color(0xFFEA580C)
-                                        },
-                                        modifier = Modifier.size(11.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = when (cloudflareSyncState) {
-                                            is CloudflareSyncState.Syncing -> "CF SYNCING..."
-                                            is CloudflareSyncState.Synced -> "D1+R2 ACTIVE"
-                                            is CloudflareSyncState.Error -> "OFFLINE CACHE"
-                                            else -> "CF EDGE"
-                                        },
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = when (cloudflareSyncState) {
-                                            is CloudflareSyncState.Synced -> Color(0xFFEA580C)
-                                            is CloudflareSyncState.Syncing -> Color(0xFFB45309)
-                                            else -> Color(0xFFEA580C)
-                                        }
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            // Cloud Sync Indicator
-                            Surface(
-                                onClick = onCloudflareClick,
-                                color = when (syncStatus) {
-                                    is SyncStatus.Synced -> GreenContainer
-                                    is SyncStatus.Syncing -> Color(0xFFFEF3C7)
-                                    else -> Slate100
-                                },
-                                shape = RoundedCornerShape(20.dp),
-                                modifier = Modifier.testTag("cloud_sync_indicator")
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = when (syncStatus) {
-                                            is SyncStatus.Synced -> Icons.Default.CloudDone
-                                            is SyncStatus.Syncing -> Icons.Default.CloudSync
-                                            else -> Icons.Default.CloudOff
-                                        },
-                                        contentDescription = null,
-                                        tint = when (syncStatus) {
-                                            is SyncStatus.Synced -> OnGreenContainer
-                                            is SyncStatus.Syncing -> Color(0xFFB45309)
-                                            else -> Slate500
-                                        },
-                                        modifier = Modifier.size(11.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = when (syncStatus) {
-                                            is SyncStatus.Synced -> "CLOUD SYNCED"
-                                            is SyncStatus.Syncing -> "SYNCING..."
-                                            else -> "ROOM CACHE"
-                                        },
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = when (syncStatus) {
-                                            is SyncStatus.Synced -> OnGreenContainer
-                                            is SyncStatus.Syncing -> Color(0xFFB45309)
-                                            else -> Slate600
-                                        }
                                     )
                                 }
                             }
@@ -657,7 +540,7 @@ fun JobListingScreenContent(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Firestore Filter",
+                            text = selectedCategoryFilter,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = RoyalBlue,

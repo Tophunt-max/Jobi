@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
@@ -169,6 +170,18 @@ fun HomeScreen(
                                 tint = RoyalBlue,
                                 modifier = Modifier.size(20.dp)
                             )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { onSearchChange("") }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear Search",
+                                        tint = Slate500,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
                         },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(

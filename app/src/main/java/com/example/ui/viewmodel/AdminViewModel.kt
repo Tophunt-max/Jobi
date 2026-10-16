@@ -1,5 +1,9 @@
 package com.example.ui.viewmodel
 
+import com.example.data.remote.cloudflare.CloudflareConfig
+import com.example.data.remote.firestore.SyncStatus
+import com.example.data.repository.CloudflareSyncState
+
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -41,6 +45,9 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
     val cloudflareSources: StateFlow<List<CloudflareSourceDto>> = cloudflareRepo.sources
     val cloudflarePendingJobs: StateFlow<List<CloudflareJobDto>> = cloudflareRepo.pendingJobs
     val cloudflareImportRuns: StateFlow<List<CloudflareImportRunItemDto>> = cloudflareRepo.importRuns
+    val cloudflareSyncState: StateFlow<CloudflareSyncState> = cloudflareRepo.syncState
+    val cloudflareWorkerUrl: StateFlow<String> = CloudflareConfig.workerUrlFlow
+    val syncStatus: StateFlow<SyncStatus> = syncCoordinator.syncStatus
 
     private val _isCloudflareImporting = MutableStateFlow(false)
     val isCloudflareImporting: StateFlow<Boolean> = _isCloudflareImporting.asStateFlow()
@@ -215,6 +222,49 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
                 "New job '$title' published to Cloudflare D1 & Cloud Firestore."
             } else {
                 "New job '$title' saved to Cloudflare Edge & local database."
+            }
+            refreshStats()
+        }
+    }
+
+    fun setCloudflareWorkerUrl(newUrl: String) {
+        val app = getApplication<Application>()
+        CloudflareConfig.setWorkerUrl(app, newUrl)
+        viewModelScope.launch {
+            _actionStatusMessage.value = "Updated Cloudflare Worker endpoint to: $newUrl"
+            cloudflareRepo.syncJobsFromCloudflare()
+            refreshStats()
+            refreshCloudflareData()
+        }
+    }
+
+    fun syncCloudflareNow() {
+        viewModelScope.launch {
+            _isCloudflareImporting.value = true
+            _actionStatusMessage.value = "Synchronizing with Cloudflare Edge D1 & R2..."
+            val result = cloudflareRepo.syncJobsFromCloudflare()
+            _isCloudflareImporting.value = false
+            result.fold(
+                onSuccess = { count ->
+                    _actionStatusMessage.value = "Edge Sync complete. $count jobs synchronized from Cloudflare D1."
+                    refreshStats()
+                    refreshCloudflareData()
+                },
+                onFailure = { err ->
+                    _actionStatusMessage.value = "Sync notice: ${err.message}"
+                }
+            )
+        }
+    }
+
+    fun syncFirestoreNow() {
+        viewModelScope.launch {
+            _actionStatusMessage.value = "Synchronizing with Cloud Firestore..."
+            val result = syncCoordinator.syncNow()
+            _actionStatusMessage.value = if (result.isSuccess) {
+                "Cloud Firestore sync completed: ${result.getOrNull() ?: 0} jobs synced."
+            } else {
+                "Cloud Firestore: ${result.exceptionOrNull()?.message ?: "Local cache active"}"
             }
             refreshStats()
         }

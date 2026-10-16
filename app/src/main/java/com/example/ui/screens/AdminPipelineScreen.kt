@@ -1,5 +1,15 @@
 package com.example.ui.screens
 
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
+import com.example.data.remote.firestore.SyncStatus
+import com.example.data.repository.CloudflareSyncState
+import com.example.ui.components.CloudflareStatusDialog
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -107,6 +117,11 @@ fun AdminPipelineScreen(
     val isImporting by viewModel.isCloudflareImporting.collectAsState()
     val auditLogs by viewModel.auditLogs.collectAsState()
     val statusMsg by viewModel.actionStatusMessage.collectAsState()
+    val cfSyncState by viewModel.cloudflareSyncState.collectAsState()
+    val cfWorkerUrl by viewModel.cloudflareWorkerUrl.collectAsState()
+    val syncStatus by viewModel.syncStatus.collectAsState()
+    var showCloudflareDialog by remember { mutableStateOf(false) }
+    var editedWorkerUrl by remember(cfWorkerUrl) { mutableStateOf(cfWorkerUrl) }
 
     val pendingLocalCount = localCandidates.count { it.reviewStatus == "PENDING_REVIEW" }
     val totalPendingCount = cfPendingJobs.size + pendingLocalCount
@@ -116,10 +131,21 @@ fun AdminPipelineScreen(
         "Dashboard",
         "Review Queue ($totalPendingCount)",
         "Sources (${if (cfSources.isNotEmpty()) cfSources.size else localSources.size})",
+        "Backend & Edge",
         "Import History",
         "Add Job",
         "Audit Logs"
     )
+
+    if (showCloudflareDialog) {
+        CloudflareStatusDialog(
+            currentWorkerUrl = cfWorkerUrl,
+            syncState = cfSyncState,
+            onDismiss = { showCloudflareDialog = false },
+            onSaveUrl = { viewModel.setCloudflareWorkerUrl(it) },
+            onSyncNow = { viewModel.syncCloudflareNow() }
+        )
+    }
 
     // Manual Job Form State
     var newTitle by remember { mutableStateOf("") }
@@ -348,6 +374,165 @@ fun AdminPipelineScreen(
                                             fontWeight = FontWeight.Bold,
                                             color = DeepNavy
                                         )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Cloudflare Edge & Database Sync Engine Card
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = PureWhite),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, Slate200),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Storage,
+                                            contentDescription = null,
+                                            tint = DeepNavy,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Edge & Backend Infrastructure",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Slate900
+                                        )
+                                    }
+                                    Surface(
+                                        color = when (cfSyncState) {
+                                            is CloudflareSyncState.Synced -> GreenContainer
+                                            is CloudflareSyncState.Syncing -> Color(0xFFFEF3C7)
+                                            else -> Slate100
+                                        },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(
+                                            text = when (cfSyncState) {
+                                                is CloudflareSyncState.Synced -> "D1+R2 ACTIVE"
+                                                is CloudflareSyncState.Syncing -> "SYNCING..."
+                                                else -> "EDGE READY"
+                                            },
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = when (cfSyncState) {
+                                                is CloudflareSyncState.Synced -> OnGreenContainer
+                                                is CloudflareSyncState.Syncing -> Color(0xFFB45309)
+                                                else -> Slate700
+                                            },
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Surface(
+                                        color = when (syncStatus) {
+                                            is SyncStatus.Synced -> GreenContainer
+                                            is SyncStatus.Syncing -> Color(0xFFFEF3C7)
+                                            else -> Slate100
+                                        },
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = when (syncStatus) {
+                                                    is SyncStatus.Synced -> Icons.Default.CloudDone
+                                                    is SyncStatus.Syncing -> Icons.Default.CloudSync
+                                                    else -> Icons.Default.CloudOff
+                                                },
+                                                contentDescription = null,
+                                                tint = when (syncStatus) {
+                                                    is SyncStatus.Synced -> OnGreenContainer
+                                                    is SyncStatus.Syncing -> Color(0xFFB45309)
+                                                    else -> Slate600
+                                                },
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = when (syncStatus) {
+                                                    is SyncStatus.Synced -> "Firestore Synced"
+                                                    is SyncStatus.Syncing -> "Syncing..."
+                                                    else -> "Room DB Cache"
+                                                },
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Slate800
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        color = Color(0xFFFFF7ED),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Cloud,
+                                                contentDescription = null,
+                                                tint = Color(0xFFEA580C),
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Cloudflare D1 SQL",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFFEA580C)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { showCloudflareDialog = true },
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Configure URL", fontSize = 11.sp)
+                                    }
+
+                                    Button(
+                                        onClick = { viewModel.syncCloudflareNow() },
+                                        colors = ButtonDefaults.buttonColors(containerColor = DeepNavy),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Sync Edge Now", fontSize = 11.sp)
                                     }
                                 }
                             }
@@ -974,8 +1159,8 @@ fun AdminPipelineScreen(
                     }
                 }
 
-                // 5: Audit Logs
-                5 -> {
+                // 6: Audit Logs
+                6 -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
