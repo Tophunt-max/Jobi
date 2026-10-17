@@ -20,7 +20,9 @@ Modern, lightweight, production-grade Next.js Admin Panel designed to be deploye
    - Filter all live published records in Cloudflare D1 by category (`Latest Job`, `Admit Card`, `Result`, `Answer Key`, `Syllabus`) and status.
 5. **Execution Logs & Audit History**:
    - Track automated 6-hour cron triggers and manual crawler runs with counts for fetched, newly inserted, and duplicate skipped records.
-6. **Configurable Connection**:
+6. **Manual Recruitment Notice Publisher**: Directly create and publish verified government job openings, admit cards, or exam results with total vacancies, pay levels, eligibility, official PDF URLs, and online apply links.
+
+7. **Configurable Connection**:
    - Change your Cloudflare Worker URL and Admin Secret Key directly in the UI with local persistence.
 
 ---

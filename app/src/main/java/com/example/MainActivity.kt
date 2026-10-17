@@ -27,7 +27,6 @@ import com.example.ui.components.LanguageSelectorSheet
 import com.example.ui.components.NotificationsSheet
 import com.example.ui.components.ReportDialog
 import com.example.ui.components.SalaryCalculatorSheet
-import com.example.ui.screens.AdminPipelineScreen
 import com.example.ui.screens.AiMentorScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.JobDetailScreen
@@ -36,7 +35,6 @@ import com.example.ui.screens.JobsScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.ResultsAndCardsScreen
 import com.example.ui.theme.MyApplicationTheme
-import com.example.ui.viewmodel.AdminViewModel
 import com.example.ui.viewmodel.AiMentorViewModel
 import com.example.ui.viewmodel.JobViewModel
 import com.example.ui.viewmodel.MainTab
@@ -57,7 +55,6 @@ class MainActivity : ComponentActivity() {
 fun MainAppContent() {
     val jobViewModel: JobViewModel = viewModel()
     val aiMentorViewModel: AiMentorViewModel = viewModel()
-    val adminViewModel: AdminViewModel = viewModel()
 
     val uiState by jobViewModel.uiState.collectAsState()
     val userProfile by jobViewModel.userProfile.collectAsState()
@@ -148,24 +145,15 @@ fun MainAppContent() {
         return
     }
 
-    // Admin Pipeline Screen
-    if (uiState.currentTab == MainTab.ADMIN) {
-        AdminPipelineScreen(
-            viewModel = adminViewModel,
-            onBack = { jobViewModel.setTab(MainTab.HOME) }
-        )
-        return
-    }
+
 
     Scaffold(
         topBar = {
             AppTopBar(
                 language = uiState.language,
                 unreadNotifCount = unreadNotifCount,
-                isAdminActive = false,
                 onLanguageClick = { jobViewModel.toggleLanguageSheet(true) },
-                onNotificationsClick = { jobViewModel.toggleNotificationsSheet(true) },
-                onAdminToggle = { jobViewModel.setTab(MainTab.ADMIN) }
+                onNotificationsClick = { jobViewModel.toggleNotificationsSheet(true) }
             )
         },
         bottomBar = {
@@ -249,7 +237,30 @@ fun MainAppContent() {
                 }
 
                 MainTab.ADMIN -> {
-                    // Handled above
+                    // Admin has been migrated to the standalone Web Admin Panel
+                    HomeScreen(
+                        language = uiState.language,
+                        searchQuery = uiState.searchQuery,
+                        onSearchChange = {
+                            jobViewModel.setSearchQuery(it)
+                            if (it.isNotBlank()) jobViewModel.setTab(MainTab.JOBS)
+                        },
+                        closingSoonJobs = closingSoonJobs,
+                        allJobs = allJobs,
+                        onJobClick = { jobViewModel.selectJob(it) },
+                        onBookmarkToggle = { jobViewModel.toggleBookmark(it) },
+                        onNavigateTab = { jobViewModel.setTab(it) },
+                        onFilterByState = {
+                            jobViewModel.setStateFilter(it)
+                            jobViewModel.setTab(MainTab.JOBS)
+                        },
+                        onFilterByCategory = {
+                            jobViewModel.setCategoryFilter(it)
+                            jobViewModel.setTab(MainTab.JOBS)
+                        },
+                        onOpenAgeCalculator = { showAgeCalculator = true },
+                        onOpenSalaryCalculator = { showSalaryCalculator = true }
+                    )
                 }
             }
         }

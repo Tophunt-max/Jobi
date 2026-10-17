@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.JobEntity
 import com.example.util.AppUtils
+import com.example.util.JobBrandHelper
 import com.example.ui.theme.DeepNavy
 import com.example.ui.theme.EmeraldGreen
 import com.example.ui.theme.EmeraldMint
@@ -86,18 +87,8 @@ fun JobCard(
     onShare: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Dynamic brand badge colors based on organization category
-    val (orgMonogram, gradientColors) = when {
-        job.category.contains("Admit Card", ignoreCase = true) || job.title.contains("Admit Card", ignoreCase = true) -> "CARD" to listOf(Color(0xFF7C3AED), Color(0xFF9333EA))
-        job.category.contains("Result", ignoreCase = true) || job.title.contains("Result", ignoreCase = true) -> "RSLT" to listOf(Color(0xFF059669), Color(0xFF10B981))
-        job.organization.contains("UPSC", ignoreCase = true) -> "UPSC" to listOf(Color(0xFF1E3A8A), Color(0xFF2563EB))
-        job.organization.contains("SSC", ignoreCase = true) -> "SSC" to listOf(Color(0xFF4338CA), Color(0xFF6366F1))
-        job.organization.contains("Railway", ignoreCase = true) -> "RRB" to listOf(Color(0xFF0F766E), Color(0xFF14B8A6))
-        job.organization.contains("Bank", ignoreCase = true) || job.organization.contains("SBI", ignoreCase = true) -> "BANK" to listOf(Color(0xFF0369A1), Color(0xFF0EA5E9))
-        job.organization.contains("Police", ignoreCase = true) || job.organization.contains("Defense", ignoreCase = true) -> "DEF" to listOf(Color(0xFFBE123C), Color(0xFFF43F5E))
-        job.organization.contains("ISRO", ignoreCase = true) -> "ISRO" to listOf(Color(0xFF7C3AED), Color(0xFFA855F7))
-        else -> job.category.take(4).uppercase() to listOf(Color(0xFF1E293B), Color(0xFF334155))
-    }
+    // Dynamic brand badge colors cached via JobBrandHelper (zero allocation during scroll)
+    val (orgMonogram, gradientColors) = JobBrandHelper.getBrand(job.organization, job.category, job.title)
 
     val context = LocalContext.current
     val countdownText = AppUtils.getCountdownBadgeText(job.applicationClosingDate)
@@ -252,11 +243,9 @@ fun JobCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Eligibility & Salary Chips Row
+            // Eligibility & Key Details Chips Row (Non-blocking layout for smooth list scroll)
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -286,10 +275,11 @@ fun JobCard(
                     }
                 }
 
-                // Qualification Chip
+                // Qualification Chip (Fills available space gracefully)
                 Surface(
                     color = Slate100,
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
@@ -313,59 +303,7 @@ fun JobCard(
                     }
                 }
 
-                // Salary Scale Chip
-                Surface(
-                    color = Color(0xFFECFDF5),
-                    border = BorderStroke(1.dp, Color(0xFFA7F3D0)),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Payments,
-                            contentDescription = null,
-                            tint = EmeraldGreen,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (job.salaryScale.isNotBlank()) job.salaryScale.take(18) else "7th CPC Pay",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = EmeraldGreen
-                        )
-                    }
-                }
-
-                // Age Limit Chip
-                Surface(
-                    color = Color(0xFFFFFBEB),
-                    border = BorderStroke(1.dp, Color(0xFFFDE68A)),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Cake,
-                            contentDescription = null,
-                            tint = Color(0xFFD97706),
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${job.minAge}-${job.maxAge} Yrs",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF92400E)
-                        )
-                    }
-                }
-
-                // State Chip
+                // State / All India Chip
                 Surface(
                     color = Slate100,
                     shape = RoundedCornerShape(10.dp)

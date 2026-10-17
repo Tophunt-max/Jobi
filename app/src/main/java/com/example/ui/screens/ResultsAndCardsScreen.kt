@@ -135,7 +135,7 @@ fun ResultsAndCardsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(results) { res ->
+                    items(results, key = { "result_${it.id}" }, contentType = { "result_item" }) { res ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = PureWhite),
                             shape = RoundedCornerShape(16.dp),
@@ -243,7 +243,7 @@ fun ResultsAndCardsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(admitCards) { card ->
+                    items(admitCards, key = { "admit_${it.id}" }, contentType = { "admit_item" }) { card ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = PureWhite),
                             shape = RoundedCornerShape(16.dp),
@@ -354,7 +354,7 @@ fun ResultsAndCardsScreen(
                         )
                     }
 
-                    items(syllabi) { syl ->
+                    items(syllabi, key = { "syl_${it.id}" }, contentType = { "syl_item" }) { syl ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = PureWhite),
                             shape = RoundedCornerShape(16.dp),
@@ -444,7 +444,7 @@ fun ResultsAndCardsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(answerKeys) { keyItem ->
+                    items(answerKeys, key = { "ans_${it.id}" }, contentType = { "ans_item" }) { keyItem ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = PureWhite),
                             shape = RoundedCornerShape(16.dp),

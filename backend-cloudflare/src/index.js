@@ -341,6 +341,61 @@ export default {
                 }, corsHeaders);
             }
 
+            // POST /api/admin/jobs - Manually publish a verified recruitment notice
+            if (path === "/api/admin/jobs" && method === "POST") {
+                verifyAdmin(adminKey, expectedKey);
+                const body = await request.json().catch(() => ({}));
+                const title = body.title;
+                const org = body.organization || "Government of India";
+                if (!title) {
+                    return jsonResponse({ success: false, message: "Title is required" }, corsHeaders, 400);
+                }
+                const id = body.id || `manual-${Date.now()}`;
+                const slug = (body.slug || title.toLowerCase().replace(/[^a-z0-9]+/g, "-")).slice(0, 80);
+                const category = body.category || "Latest Job";
+                const state = body.state || "All India";
+                const totalPosts = parseInt(body.total_posts || body.totalVacancies, 10) || 100;
+                const qualification = body.qualification || "Graduate Degree";
+                const salaryScale = body.salary_scale || body.salaryScale || "Level 7 Pay Matrix";
+                const startDate = body.start_date || "Today";
+                const lastDate = body.last_date || body.applicationClosingDate || "30-11-2026";
+                const officialWebsite = body.official_website || "https://india.gov.in";
+                const officialPdf = body.official_pdf || "https://official.gov.in/notice.pdf";
+                const applyUrl = body.apply_url || "https://official.gov.in/apply";
+                const advtNumber = body.advt_number || body.advtNumber || "ADV-2026/01";
+
+                await env.DB.prepare(`
+                    INSERT INTO jobs (
+                        id, title, slug, organization, department, posts, category,
+                        state, total_posts, qualification, age_min, age_max,
+                        start_date, last_date, exam_date, fee_general, fee_reserved,
+                        salary_scale, official_website, official_pdf, apply_url,
+                        source_id, source_domain, advt_number, status, is_verified,
+                        approved_by, created_at, published_at, is_featured
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?,
+                        ?, ?, ?, ACTIVE, 1,
+                        ?, datetime("now"), datetime("now"), ?
+                    )
+                `).bind(
+                    id, title, slug, org, org, title, category,
+                    state, totalPosts, qualification, body.age_min || 18, body.age_max || 35,
+                    startDate, lastDate, body.exam_date || "TBA", body.fee_general || "Rs. 100", body.fee_reserved || "Nil",
+                    salaryScale, officialWebsite, officialPdf, applyUrl,
+                    "manual", "official.gov.in", advtNumber,
+                    "Admin Web Panel", body.is_featured ? 1 : 0
+                ).run();
+
+                return jsonResponse({
+                    success: true,
+                    message: `Job notice "${title}" published successfully to Cloudflare D1 database`,
+                    jobId: id
+                }, corsHeaders, 201);
+            }
+
             // POST /api/admin/job-import/sources/:id/test - Test an adapter manually
             if (path.startsWith("/api/admin/job-import/sources/") && path.endsWith("/test") && method === "POST") {
                 verifyAdmin(adminKey, expectedKey);

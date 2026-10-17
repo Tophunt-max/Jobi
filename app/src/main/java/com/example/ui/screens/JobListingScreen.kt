@@ -77,6 +77,7 @@ import com.example.model.AdmitCardItem
 import com.example.model.AppLanguage
 import com.example.model.JobEntity
 import com.example.model.ResultItem
+import com.example.util.JobBrandHelper
 import com.example.ui.theme.DeepNavy
 import com.example.ui.theme.EmeraldMint
 import com.example.ui.theme.GoldStar
@@ -695,7 +696,7 @@ fun JobListingScreenContent(
                 }
 
                 // New Job Openings
-                items(filteredJobs, key = { "job_${it.id}" }) { job ->
+                items(filteredJobs, key = { "job_${it.id}" }, contentType = { "job_card" }) { job ->
                     GovernmentJobOpeningCard(
                         job = job,
                         onClick = { onJobClick(job) },
@@ -704,7 +705,7 @@ fun JobListingScreenContent(
                 }
 
                 // Admit Cards
-                items(filteredAdmitCards, key = { "admit_${it.id}" }) { card ->
+                items(filteredAdmitCards, key = { "admit_${it.id}" }, contentType = { "admit_card" }) { card ->
                     AdmitCardListingCard(
                         card = card,
                         onDownloadClick = {
@@ -715,7 +716,7 @@ fun JobListingScreenContent(
                 }
 
                 // Results
-                items(filteredResults, key = { "result_${it.id}" }) { res ->
+                items(filteredResults, key = { "result_${it.id}" }, contentType = { "result_card" }) { res ->
                     ResultListingCard(
                         result = res,
                         onViewResultClick = {
@@ -740,16 +741,8 @@ fun GovernmentJobOpeningCard(
     onBookmarkToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Dynamic Monogram & Gradient
-    val (orgMonogram, gradientColors) = when {
-        job.organization.contains("UPSC", ignoreCase = true) -> "UPSC" to listOf(Color(0xFF1E3A8A), Color(0xFF2563EB))
-        job.organization.contains("SSC", ignoreCase = true) -> "SSC" to listOf(Color(0xFF4338CA), Color(0xFF6366F1))
-        job.organization.contains("Railway", ignoreCase = true) -> "RRB" to listOf(Color(0xFF0F766E), Color(0xFF14B8A6))
-        job.organization.contains("Bank", ignoreCase = true) || job.organization.contains("SBI", ignoreCase = true) -> "BANK" to listOf(Color(0xFF0369A1), Color(0xFF0EA5E9))
-        job.organization.contains("Police", ignoreCase = true) || job.organization.contains("Defense", ignoreCase = true) -> "DEF" to listOf(Color(0xFFBE123C), Color(0xFFF43F5E))
-        job.organization.contains("ISRO", ignoreCase = true) -> "ISRO" to listOf(Color(0xFF7C3AED), Color(0xFFA855F7))
-        else -> job.category.take(4).uppercase() to listOf(Color(0xFF1E293B), Color(0xFF334155))
-    }
+    // Dynamic Monogram & Gradient (Zero allocation cached lookup)
+    val (orgMonogram, gradientColors) = JobBrandHelper.getBrand(job.organization, job.category, job.title)
 
     Card(
         onClick = onClick,

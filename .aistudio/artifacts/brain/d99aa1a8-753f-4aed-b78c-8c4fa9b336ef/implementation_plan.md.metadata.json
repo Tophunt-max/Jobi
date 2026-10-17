@@ -1,6 +1,6 @@
 {
-  "summary": "Comprehensive implementation plan to elevate the Android mobile application UI with Modern Material 3 design, vibrant accents, enhanced job cards with deadline countdown timers and urgency badges, eligibility/salary chips, quick action buttons (Share, PDF Notice, Apply), dynamic category counters, redesigned job details screen with application timeline, and polished candidate utility tools.",
-  "updatedAt": "2026-10-15T15:36:24.023802845Z",
+  "summary": "Implementation plan to separate the Admin Portal and Importer from the Android mobile app and migrate all administrative controls to the dedicated standalone Web Admin Panel connected to the Cloudflare Worker backend.",
+  "updatedAt": "2026-10-17T00:39:05.359846375Z",
   "requestFeedback": true,
   "userFacing": true
 }

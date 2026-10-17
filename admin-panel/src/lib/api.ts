@@ -146,6 +146,14 @@ export const adminApi = {
     return res.runs || [];
   },
 
+  // Create / Publish Manual Job Notice
+  async createJob(jobData: any): Promise<{ success: boolean; message: string; jobId?: string }> {
+    return await request("/api/admin/jobs", {
+      method: "POST",
+      body: JSON.stringify(jobData),
+    });
+  },
+
   // All Published Jobs
   async getAllJobs(params?: { status?: string; category?: string; search?: string; limit?: number }): Promise<JobItem[]> {
     const q = new URLSearchParams();

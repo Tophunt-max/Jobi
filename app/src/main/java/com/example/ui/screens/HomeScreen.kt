@@ -50,6 +50,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -95,6 +96,33 @@ import com.example.ui.theme.StatusUrgentBg
 import com.example.ui.theme.VerifiedBlue
 import com.example.ui.viewmodel.MainTab
 
+private val HomeCategories = listOf(
+    "Admit Card" to "🎫",
+    "Result" to "🏆",
+    "UPSC" to "🏛️",
+    "SSC" to "📝",
+    "Railways" to "🚆",
+    "Banking" to "🏦",
+    "Police" to "👮",
+    "Defence" to "🛡️",
+    "Teaching" to "📚",
+    "Engineering" to "⚙️",
+    "10th / 12th Pass" to "📖"
+)
+
+private val PopularStates = listOf(
+    "All India",
+    "Uttar Pradesh",
+    "Bihar",
+    "Rajasthan",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Delhi (NCT)",
+    "West Bengal",
+    "Odisha",
+    "Tamil Nadu"
+)
+
 @Composable
 fun HomeScreen(
     language: AppLanguage,
@@ -112,6 +140,15 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val topJobs = remember(allJobs) { allJobs.take(8) }
+    val categoryCounts = remember(allJobs) {
+        HomeCategories.associate { (cat, _) ->
+            cat to allJobs.count {
+                it.category.contains(cat, ignoreCase = true) || it.organization.contains(cat, ignoreCase = true)
+            }
+        }
+    }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -119,7 +156,7 @@ fun HomeScreen(
         contentPadding = PaddingValues(bottom = 90.dp)
     ) {
         // 1. Modern Hero Section with Search Field
-        item {
+        item(key = "hero_section") {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -283,7 +320,7 @@ fun HomeScreen(
         }
 
         // 2. Verified Live Announcements Ticker
-        item {
+        item(key = "live_alerts") {
             Surface(
                 color = PureWhite,
                 shadowElevation = 1.dp,
@@ -333,7 +370,7 @@ fun HomeScreen(
         }
 
         // Candidate Utility Tools Hub (Age & Eligibility, 7th CPC Salary, Deadlines, Syllabus)
-        item {
+        item(key = "utility_tools") {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -546,7 +583,7 @@ fun HomeScreen(
         }
 
         // 3. AI Eligibility Mentor Modern Hero Card (Gemini 3.1 Pro with High Thinking)
-        item {
+        item(key = "ai_mentor_hero") {
             Card(
                 onClick = { onNavigateTab(MainTab.AI_MENTOR) },
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
@@ -644,7 +681,7 @@ fun HomeScreen(
 
         // 4. Closing Soon (Urgent Deadlines) Horizontal Section
         if (closingSoonJobs.isNotEmpty()) {
-            item {
+            item(key = "closing_soon_section") {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier
@@ -686,7 +723,7 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        items(closingSoonJobs) { job ->
+                        items(closingSoonJobs, key = { "closing_${it.id}" }, contentType = { "closing_card" }) { job ->
                             val countdownBadge = AppUtils.getCountdownBadgeText(job.applicationClosingDate)
                             Card(
                                 onClick = { onJobClick(job) },
@@ -788,7 +825,7 @@ fun HomeScreen(
         item { Spacer(modifier = Modifier.height(24.dp)) }
 
         // 5. Popular Categories Modern Grid Shortcuts
-        item {
+        item(key = "categories_section") {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "Explore by Recruitment Board",
@@ -802,31 +839,12 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp),
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    val categories = listOf(
-                        "Admit Card" to "🎫",
-                        "Result" to "🏆",
-                        "UPSC" to "🏛️",
-                        "SSC" to "📝",
-                        "Railways" to "🚆",
-                        "Banking" to "🏦",
-                        "Police" to "👮",
-                        "Defence" to "🛡️",
-                        "Teaching" to "📚",
-                        "Engineering" to "⚙️",
-                        "10th / 12th Pass" to "📖"
-                    )
-
-                    categories.forEach { (cat, emoji) ->
-                        val count = allJobs.count { 
-                            it.category.contains(cat, ignoreCase = true) || it.organization.contains(cat, ignoreCase = true) 
-                        }
+                    items(HomeCategories, key = { it.first }) { (cat, emoji) ->
+                        val count = categoryCounts[cat] ?: 0
                         Surface(
                             onClick = {
                                 onFilterByCategory(cat)
@@ -875,7 +893,7 @@ fun HomeScreen(
         item { Spacer(modifier = Modifier.height(24.dp)) }
 
         // 6. State-wise Directory Shortcuts
-        item {
+        item(key = "states_section") {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
@@ -896,27 +914,11 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp),
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val popularStates = listOf(
-                        "All India",
-                        "Uttar Pradesh",
-                        "Bihar",
-                        "Rajasthan",
-                        "Madhya Pradesh",
-                        "Maharashtra",
-                        "Delhi (NCT)",
-                        "West Bengal",
-                        "Odisha",
-                        "Tamil Nadu"
-                    )
-
-                    popularStates.forEach { stateName ->
+                    items(PopularStates, key = { it }) { stateName ->
                         val isAllIndia = stateName == "All India"
                         Surface(
                             onClick = {
@@ -948,7 +950,7 @@ fun HomeScreen(
         item { Spacer(modifier = Modifier.height(24.dp)) }
 
         // 7. Latest Published Jobs Header
-        item {
+        item(key = "latest_jobs_header") {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -978,7 +980,7 @@ fun HomeScreen(
         item { Spacer(modifier = Modifier.height(12.dp)) }
 
         // 8. Latest Jobs List
-        items(allJobs.take(8)) { job ->
+        items(topJobs, key = { "home_job_${it.id}" }, contentType = { "job_card" }) { job ->
             Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                 JobCard(
                     job = job,
@@ -990,7 +992,7 @@ fun HomeScreen(
         }
 
         // 9. Statutory Independent Service Disclaimer Banner
-        item {
+        item(key = "disclaimer") {
             Surface(
                 color = PureWhite,
                 shape = RoundedCornerShape(16.dp),

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Shield
@@ -37,7 +36,6 @@ import androidx.compose.ui.unit.sp
 import com.example.model.AppLanguage
 import com.example.model.LanguageRegistry
 import com.example.ui.theme.EmeraldMint
-import com.example.ui.theme.GoldStar
 import com.example.ui.theme.HeroGradientBrush
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.SaffronOrange
@@ -46,10 +44,8 @@ import com.example.ui.theme.SaffronOrange
 fun AppTopBar(
     language: AppLanguage,
     unreadNotifCount: Int,
-    isAdminActive: Boolean,
     onLanguageClick: () -> Unit,
     onNotificationsClick: () -> Unit,
-    onAdminToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -181,19 +177,6 @@ fun AppTopBar(
                             modifier = Modifier.size(22.dp)
                         )
                     }
-                }
-
-                // Admin Console Quick Link
-                IconButton(
-                    onClick = onAdminToggle,
-                    modifier = Modifier.testTag("admin_toggle_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AdminPanelSettings,
-                        contentDescription = "Admin Verification Panel",
-                        tint = if (isAdminActive) GoldStar else PureWhite.copy(alpha = 0.75f),
-                        modifier = Modifier.size(22.dp)
-                    )
                 }
             }
         }
