@@ -96,18 +96,40 @@ import com.example.ui.theme.StatusUrgentBg
 import com.example.ui.theme.VerifiedBlue
 import com.example.ui.viewmodel.MainTab
 
-private val HomeCategories = listOf(
-    "Admit Card" to "🎫",
-    "Result" to "🏆",
-    "UPSC" to "🏛️",
-    "SSC" to "📝",
-    "Railways" to "🚆",
-    "Banking" to "🏦",
-    "Police" to "👮",
-    "Defence" to "🛡️",
-    "Teaching" to "📚",
-    "Engineering" to "⚙️",
-    "10th / 12th Pass" to "📖"
+data class SarkariPortalPillar(
+    val title: String,
+    val subtitle: String,
+    val iconEmoji: String,
+    val containerBg: Color,
+    val accentColor: Color,
+    val testTag: String,
+    val actionType: Int // 0: Latest Jobs, 1: Results, 2: Admit Card, 3: Syllabus, 4: Admission, 5: Answer Key
+)
+
+data class JobSectorDef(
+    val name: String,
+    val iconEmoji: String,
+    val subtitle: String,
+    val filterKey: String
+)
+
+private val SarkariPillarsList = listOf(
+    SarkariPortalPillar("Latest Job", "Active Recruitments", "💼", Color(0xFFEFF6FF), Color(0xFF1D4ED8), "pillar_latest_job", 0),
+    SarkariPortalPillar("Admit Card", "Exam Hall Tickets", "🎫", Color(0xFFFFF7ED), Color(0xFFC2410C), "pillar_admit_card", 2),
+    SarkariPortalPillar("Results", "Cut-off & Merit", "🏆", Color(0xFFF0FDF4), Color(0xFF15803D), "pillar_results", 1),
+    SarkariPortalPillar("Syllabus", "Exam Pattern & Marks", "📚", Color(0xFFFAF5FF), Color(0xFF7E22CE), "pillar_syllabus", 3),
+    SarkariPortalPillar("Admission", "Colleges & NTA", "🎓", Color(0xFFFDF2F8), Color(0xFFBE185D), "pillar_admission", 4),
+    SarkariPortalPillar("Answer Key", "Official Objections", "🔑", Color(0xFFFFFBEB), Color(0xFFB45309), "pillar_answer_key", 5)
+)
+
+private val TopJobSectorsList = listOf(
+    JobSectorDef("All India Govt Jobs", "🇮🇳", "UPSC, SSC & Central Ministries", "All India Govt Jobs"),
+    JobSectorDef("State Govt Jobs", "🏛️", "State PSC, UP, Bihar, MP, Rajasthan", "State Govt Jobs"),
+    JobSectorDef("Bank Jobs", "🏦", "IBPS, SBI, RBI & PSBs", "Bank Jobs"),
+    JobSectorDef("Teaching Jobs", "🧑‍🏫", "KVS, NVS, CTET, DSSSB & TET", "Teaching Jobs"),
+    JobSectorDef("Engineering Jobs", "⚙️", "ISRO, SSC JE, RRB JE & PSUs", "Engineering Jobs"),
+    JobSectorDef("Railway Jobs", "🚆", "RRB NTPC, ALP, Group D & RPF", "Railway Jobs"),
+    JobSectorDef("Police/Defence Jobs", "🛡️", "Army, Navy, NDA, CDS & Police", "Police/Defence Jobs")
 )
 
 private val PopularStates = listOf(
@@ -137,15 +159,29 @@ fun HomeScreen(
     onFilterByCategory: (String) -> Unit,
     onOpenAgeCalculator: () -> Unit = {},
     onOpenSalaryCalculator: () -> Unit = {},
+    onOpenJobAlerts: () -> Unit = {},
+    onOpenResultsSubTab: (Int) -> Unit = {},
+    matchedJobsCount: Int = 0,
+    isJobAlertsEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val topJobs = remember(allJobs) { allJobs.take(8) }
-    val categoryCounts = remember(allJobs) {
-        HomeCategories.associate { (cat, _) ->
-            cat to allJobs.count {
-                it.category.contains(cat, ignoreCase = true) || it.organization.contains(cat, ignoreCase = true)
+    val sectorCounts = remember(allJobs) {
+        TopJobSectorsList.associate { sector ->
+            val count = allJobs.count { job ->
+                when (sector.name) {
+                    "All India Govt Jobs" -> job.stateOrAllIndia.equals("All India", ignoreCase = true) || job.category.equals("UPSC", ignoreCase = true) || job.category.equals("SSC", ignoreCase = true)
+                    "State Govt Jobs" -> !job.stateOrAllIndia.equals("All India", ignoreCase = true) || job.category.contains("State", ignoreCase = true)
+                    "Bank Jobs" -> job.category.contains("Bank", ignoreCase = true) || job.organization.contains("Bank", ignoreCase = true) || job.organization.contains("IBPS", ignoreCase = true) || job.organization.contains("SBI", ignoreCase = true)
+                    "Teaching Jobs" -> job.category.contains("Teach", ignoreCase = true) || job.title.contains("Teacher", ignoreCase = true) || job.title.contains("TET", ignoreCase = true) || job.organization.contains("KVS", ignoreCase = true) || job.organization.contains("DSSSB", ignoreCase = true)
+                    "Engineering Jobs" -> job.category.contains("Engin", ignoreCase = true) || job.title.contains("Engineer", ignoreCase = true) || job.title.contains("Scientist", ignoreCase = true) || job.organization.contains("ISRO", ignoreCase = true) || job.title.contains("JE", ignoreCase = true)
+                    "Railway Jobs" -> job.category.contains("Railway", ignoreCase = true) || job.organization.contains("Railway", ignoreCase = true) || job.organization.contains("RRB", ignoreCase = true)
+                    "Police/Defence Jobs" -> job.category.contains("Police", ignoreCase = true) || job.category.contains("Defence", ignoreCase = true) || job.title.contains("Police", ignoreCase = true) || job.title.contains("Army", ignoreCase = true) || job.title.contains("NDA", ignoreCase = true) || job.title.contains("Constable", ignoreCase = true)
+                    else -> job.category.contains(sector.name, ignoreCase = true)
+                }
             }
+            sector.name to count
         }
     }
 
@@ -365,6 +401,187 @@ fun HomeScreen(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
+                }
+            }
+        }
+
+        // 2b. Official Sarkari 6 Pillar Portals Hub (Latest Jobs, Admit Card, Results, Syllabus, Admission, Answer Key)
+        item(key = "sarkari_pillars_hub") {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Official Recruitment Portals",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Slate900
+                    )
+                    Text(
+                        text = "All 6 Services",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RoyalBlue
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // 2 Rows x 3 Columns grid of pillars
+                val chunkedPillars = SarkariPillarsList.chunked(3)
+                chunkedPillars.forEachIndexed { rowIndex, rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowItems.forEach { pillar ->
+                            Surface(
+                                onClick = {
+                                    when (pillar.actionType) {
+                                        0 -> {
+                                            onFilterByCategory("Latest Job")
+                                            onNavigateTab(MainTab.JOBS)
+                                        }
+                                        1 -> onOpenResultsSubTab(0)
+                                        2 -> onOpenResultsSubTab(1)
+                                        3 -> onOpenResultsSubTab(2)
+                                        4 -> onOpenResultsSubTab(3)
+                                        5 -> onOpenResultsSubTab(4)
+                                    }
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                color = PureWhite,
+                                border = BorderStroke(1.dp, Slate200),
+                                shadowElevation = 1.dp,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag(pillar.testTag)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(pillar.containerBg),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = pillar.iconEmoji, fontSize = 18.sp)
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Text(
+                                        text = pillar.title,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Slate900,
+                                        maxLines = 1
+                                    )
+
+                                    Text(
+                                        text = pillar.subtitle,
+                                        fontSize = 9.sp,
+                                        color = Slate500,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (rowIndex < chunkedPillars.size - 1) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+
+        // 2c. Targeted Custom Job Alerts Banner Card
+        item(key = "targeted_job_alerts_card") {
+            Card(
+                onClick = onOpenJobAlerts,
+                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .testTag("home_card_targeted_alerts")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEFF6FF)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NotificationsActive,
+                            contentDescription = null,
+                            tint = RoyalBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "🎯 Targeted Job Alerts",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = DeepNavy
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                color = if (isJobAlertsEnabled) Color(0xFFDCFCE7) else Slate100,
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text(
+                                    text = if (isJobAlertsEnabled) "● $matchedJobsCount Matches" else "Paused",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isJobAlertsEnabled) EmeraldGreen else Slate600,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = if (isJobAlertsEnabled) "Curated for your state, degree & target agencies" else "Tap to configure personalized exam notifications",
+                            fontSize = 11.sp,
+                            color = Slate600,
+                            lineHeight = 14.sp
+                        )
+                    }
+
+                    Surface(
+                        color = NavyContainer,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "Tune",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepNavy,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             }
         }
@@ -824,18 +1041,36 @@ fun HomeScreen(
 
         item { Spacer(modifier = Modifier.height(24.dp)) }
 
-        // 5. Popular Categories Modern Grid Shortcuts
-        item(key = "categories_section") {
+        // 5. Explore Government Job Sectors (State, Central, Bank, Teaching, Engineering, Railway, Police/Defence)
+        item(key = "sectors_section") {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Explore by Recruitment Board",
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 16.sp,
-                        color = Slate900
-                    ),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Explore Job Sectors",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 16.sp,
+                            color = Slate900
+                        )
+                    )
+
+                    Text(
+                        text = "All Categories",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RoyalBlue,
+                        modifier = Modifier.clickable {
+                            onFilterByCategory("All Categories")
+                            onNavigateTab(MainTab.JOBS)
+                        }
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -843,46 +1078,55 @@ fun HomeScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(HomeCategories, key = { it.first }) { (cat, emoji) ->
-                        val count = categoryCounts[cat] ?: 0
+                    items(TopJobSectorsList, key = { it.name }) { sector ->
+                        val count = sectorCounts[sector.name] ?: 0
                         Surface(
                             onClick = {
-                                onFilterByCategory(cat)
+                                onFilterByCategory(sector.filterKey)
                                 onNavigateTab(MainTab.JOBS)
                             },
                             shape = RoundedCornerShape(16.dp),
                             color = PureWhite,
                             shadowElevation = 2.dp,
                             border = BorderStroke(1.dp, Slate200.copy(alpha = 0.8f)),
-                            modifier = Modifier.testTag("cat_shortcut_$cat")
+                            modifier = Modifier.testTag("sector_shortcut_${sector.filterKey}")
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Column(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
-                                Text(text = emoji, fontSize = 16.sp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = cat,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Slate800
-                                )
-                                if (count > 0) {
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Surface(
-                                        color = Color(0xFFEFF6FF),
-                                        shape = CircleShape
-                                    ) {
-                                        Text(
-                                            text = if (count > 99) "99+" else count.toString(),
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = RoyalBlue,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(text = sector.iconEmoji, fontSize = 20.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = sector.name,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Slate900
+                                    )
+                                    if (count > 0) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            color = Color(0xFFEFF6FF),
+                                            shape = CircleShape
+                                        ) {
+                                            Text(
+                                                text = if (count > 99) "99+" else count.toString(),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = RoyalBlue,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
                                     }
                                 }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Text(
+                                    text = sector.subtitle,
+                                    fontSize = 10.sp,
+                                    color = Slate500
+                                )
                             }
                         }
                     }

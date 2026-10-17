@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.model.AdmissionItem
 import com.example.model.AdmitCardItem
 import com.example.model.AnswerKeyItem
 import com.example.model.ContentSource
@@ -20,11 +21,12 @@ import com.example.model.SyllabusItem
         AdmitCardItem::class,
         SyllabusItem::class,
         AnswerKeyItem::class,
+        AdmissionItem::class,
         NotificationItem::class,
         ContentSource::class,
         ImportCandidate::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

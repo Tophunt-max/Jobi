@@ -55,3 +55,18 @@ data class AnswerKeyItem(
     val officialLink: String,
     val verificationDomain: String = "official.gov.in"
 )
+
+@Entity(tableName = "admissions")
+data class AdmissionItem(
+    @PrimaryKey val id: String,
+    val examOrCourseName: String,
+    val conductingAuthority: String,
+    val eligibilityCourse: String,
+    val applicationStartDate: String,
+    val applicationClosingDate: String,
+    val entranceExamDate: String,
+    val officialApplyUrl: String,
+    val officialInformationBulletinUrl: String,
+    val verificationDomain: String = "nta.ac.in",
+    val status: String = "OPEN" // "OPEN", "CLOSING_SOON", "ADMIT_CARD_OUT"
+)

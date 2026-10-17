@@ -171,17 +171,20 @@ fun JobListingScreenContent(
 ) {
     val context = LocalContext.current
 
-    // Category Filter Chips with Admit Card and Result
+    // Category Filter Chips with All User Categories
     val categoryChips = listOf(
         "All" to "🌐",
+        "Latest Job" to "💼",
+        "All India Govt" to "🇮🇳",
+        "State Govt" to "🏛️",
+        "Bank Jobs" to "🏦",
+        "Teaching Jobs" to "🧑‍🏫",
+        "Engineering Jobs" to "⚙️",
+        "Railway Jobs" to "🚆",
+        "Police / Defence" to "🛡️",
         "Admit Card" to "🎫",
         "Result" to "🏆",
-        "New Job" to "💼",
-        "Favorites" to "⭐",
-        "SSC" to "📑",
-        "UPSC" to "🏛️",
-        "Railways" to "🚆",
-        "Banking" to "🏦"
+        "Favorites" to "⭐"
     )
 
     // Organization Filter Chips
@@ -211,9 +214,16 @@ fun JobListingScreenContent(
     val filteredJobs = remember(allJobs, searchQuery, selectedCategoryFilter, selectedOrgFilter) {
         allJobs.filter { job ->
             val matchesCategory = when (selectedCategoryFilter) {
-                "All" -> true
+                "All", "All Categories" -> true
                 "Favorites" -> job.isBookmarked
-                "New Job" -> !job.category.equals("Admit Card", ignoreCase = true) && !job.category.equals("Result", ignoreCase = true)
+                "New Job", "Latest Job", "Latest Jobs" -> !job.category.equals("Admit Card", ignoreCase = true) && !job.category.equals("Result", ignoreCase = true)
+                "All India Govt", "All India Govt Jobs", "All India" -> job.stateOrAllIndia.equals("All India", ignoreCase = true) || job.category.equals("UPSC", ignoreCase = true) || job.category.equals("SSC", ignoreCase = true)
+                "State Govt", "State Govt Jobs" -> !job.stateOrAllIndia.equals("All India", ignoreCase = true) || job.category.contains("State", ignoreCase = true)
+                "Bank Jobs", "Banking" -> job.category.contains("Bank", ignoreCase = true) || job.organization.contains("Bank", ignoreCase = true) || job.organization.contains("IBPS", ignoreCase = true) || job.organization.contains("SBI", ignoreCase = true)
+                "Teaching Jobs", "Teaching" -> job.category.contains("Teach", ignoreCase = true) || job.title.contains("Teacher", ignoreCase = true) || job.title.contains("TET", ignoreCase = true) || job.organization.contains("KVS", ignoreCase = true) || job.organization.contains("DSSSB", ignoreCase = true)
+                "Engineering Jobs", "Engineering" -> job.category.contains("Engin", ignoreCase = true) || job.title.contains("Engineer", ignoreCase = true) || job.title.contains("Scientist", ignoreCase = true) || job.organization.contains("ISRO", ignoreCase = true) || job.organization.contains("DRDO", ignoreCase = true) || job.title.contains("JE", ignoreCase = true)
+                "Railway Jobs", "Railways" -> job.category.contains("Railway", ignoreCase = true) || job.organization.contains("Railway", ignoreCase = true) || job.organization.contains("RRB", ignoreCase = true)
+                "Police / Defence", "Police/Defence Jobs", "Police", "Defence" -> job.category.contains("Police", ignoreCase = true) || job.category.contains("Defence", ignoreCase = true) || job.title.contains("Police", ignoreCase = true) || job.title.contains("Constable", ignoreCase = true) || job.title.contains("SI", ignoreCase = true) || job.title.contains("Army", ignoreCase = true) || job.title.contains("NDA", ignoreCase = true) || job.organization.contains("Police", ignoreCase = true) || job.organization.contains("Army", ignoreCase = true)
                 "Admit Card" -> job.category.equals("Admit Card", ignoreCase = true) ||
                     job.title.contains("Admit Card", ignoreCase = true) ||
                     job.title.contains("Hall Ticket", ignoreCase = true) ||

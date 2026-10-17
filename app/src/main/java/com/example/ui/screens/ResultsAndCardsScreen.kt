@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.model.AdmissionItem
 import com.example.model.AdmitCardItem
 import com.example.model.AnswerKeyItem
 import com.example.model.AppLanguage
@@ -67,6 +68,8 @@ import com.example.ui.theme.GreenContainer
 import com.example.ui.theme.NavyContainer
 import com.example.ui.theme.OnGreenContainer
 import com.example.ui.theme.PureWhite
+import com.example.ui.theme.RoyalBlue
+import com.example.ui.theme.RoyalBlueContainer
 import com.example.ui.theme.SaffronOrange
 import com.example.ui.theme.Slate100
 import com.example.ui.theme.Slate200
@@ -86,10 +89,13 @@ fun ResultsAndCardsScreen(
     admitCards: List<AdmitCardItem>,
     syllabi: List<SyllabusItem>,
     answerKeys: List<AnswerKeyItem>,
+    admissions: List<AdmissionItem> = emptyList(),
+    initialSubTab: Int = 0,
+    onSubTabChange: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    var selectedSubTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Results", "Admit Cards", "Syllabus", "Answer Keys")
+    var selectedSubTab by remember(initialSubTab) { mutableIntStateOf(initialSubTab) }
+    val tabs = listOf("Results", "Admit Cards", "Syllabus", "Admission", "Answer Keys")
     val context = LocalContext.current
 
     Column(
@@ -104,17 +110,22 @@ fun ResultsAndCardsScreen(
             contentColor = DeepNavy,
             edgePadding = 16.dp,
             indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedSubTab]),
-                    color = DeepNavy,
-                    height = 3.dp
-                )
+                if (selectedSubTab < tabPositions.size) {
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedSubTab]),
+                        color = DeepNavy,
+                        height = 3.dp
+                    )
+                }
             }
         ) {
             tabs.forEachIndexed { index, tabTitle ->
                 Tab(
                     selected = selectedSubTab == index,
-                    onClick = { selectedSubTab = index },
+                    onClick = {
+                        selectedSubTab = index
+                        onSubTabChange?.invoke(index)
+                    },
                     text = {
                         Text(
                             text = tabTitle,
@@ -437,8 +448,220 @@ fun ResultsAndCardsScreen(
                 }
             }
 
-            // 3: Answer Keys
+            // 3: Admission Notices
             3 -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item {
+                        Surface(
+                            color = RoyalBlueContainer.copy(alpha = 0.35f),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, RoyalBlue.copy(alpha = 0.2f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = "🎓", fontSize = 24.sp)
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "Central & State University Admissions 2026",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = DeepNavy
+                                    )
+                                    Text(
+                                        text = "Official notifications for CUET, JEE, NEET, B.Ed, ITI & Polytechnic entrance forms",
+                                        fontSize = 11.sp,
+                                        color = Slate600
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    items(admissions, key = { "adm_${it.id}" }, contentType = { "adm_item" }) { adm ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = PureWhite),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, Slate200),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("admission_card_${adm.id}")
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        color = NavyContainer,
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = adm.conductingAuthority,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = DeepNavy,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                    val statusBg = when (adm.status) {
+                                        "CLOSING_SOON" -> StatusUrgentBg
+                                        "OPEN" -> GreenContainer
+                                        else -> Slate100
+                                    }
+                                    val statusColor = when (adm.status) {
+                                        "CLOSING_SOON" -> StatusUrgent
+                                        "OPEN" -> OnGreenContainer
+                                        else -> Slate700
+                                    }
+                                    Surface(
+                                        color = statusBg,
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = adm.status.replace("_", " "),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = statusColor,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Text(
+                                    text = adm.examOrCourseName,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate900
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Surface(
+                                    color = Slate100,
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Text(
+                                            text = "Eligibility & Academic Criteria",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Slate800
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = adm.eligibilityCourse,
+                                            fontSize = 11.sp,
+                                            color = Slate600
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Application Window",
+                                            fontSize = 10.sp,
+                                            color = Slate500
+                                        )
+                                        Text(
+                                            text = "${adm.applicationStartDate} to ${adm.applicationClosingDate}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Slate800
+                                        )
+                                    }
+
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = "Entrance Exam",
+                                            fontSize = 10.sp,
+                                            color = Slate500
+                                        )
+                                        Text(
+                                            text = adm.entranceExamDate,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = RoyalBlue
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(adm.officialApplyUrl))
+                                            context.startActivity(intent)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = DeepNavy),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = "Apply Online",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(adm.officialInformationBulletinUrl))
+                                            context.startActivity(intent)
+                                        },
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Description,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = DeepNavy
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Bulletin PDF",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = DeepNavy
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4: Answer Keys
+            4 -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),

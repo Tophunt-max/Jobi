@@ -29,6 +29,7 @@ import com.example.ui.components.ReportDialog
 import com.example.ui.components.SalaryCalculatorSheet
 import com.example.ui.screens.AiMentorScreen
 import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.JobAlertPreferencesScreen
 import com.example.ui.screens.JobDetailScreen
 import com.example.ui.screens.JobListingScreen
 import com.example.ui.screens.JobsScreen
@@ -66,8 +67,11 @@ fun MainAppContent() {
     val admitCards by jobViewModel.admitCards.collectAsState()
     val syllabi by jobViewModel.syllabi.collectAsState()
     val answerKeys by jobViewModel.answerKeys.collectAsState()
+    val admissions by jobViewModel.admissions.collectAsState()
     val notifications by jobViewModel.notifications.collectAsState()
     val unreadNotifCount by jobViewModel.unreadNotifCount.collectAsState()
+    val jobAlertPreferences by jobViewModel.jobAlertPreferences.collectAsState()
+    val matchedJobs by jobViewModel.matchedJobs.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showAgeCalculator by remember { mutableStateOf(false) }
@@ -95,7 +99,8 @@ fun MainAppContent() {
             notifications = notifications,
             onMarkAllRead = { jobViewModel.markAllNotificationsAsRead() },
             onDismiss = { jobViewModel.toggleNotificationsSheet(false) },
-            onSyncDeadlines = { jobViewModel.syncAllBookmarkedDeadlines() }
+            onSyncDeadlines = { jobViewModel.syncAllBookmarkedDeadlines() },
+            onOpenAlertPreferences = { jobViewModel.toggleJobAlertsScreen(true) }
         )
     }
 
@@ -145,7 +150,21 @@ fun MainAppContent() {
         return
     }
 
-
+    // Targeted Job Alert Preferences Overlay
+    if (uiState.showJobAlertsScreen) {
+        JobAlertPreferencesScreen(
+            currentPreferences = jobAlertPreferences,
+            matchedJobs = matchedJobs,
+            onSavePreferences = { jobViewModel.updateJobAlertPreferences(it) },
+            onSendTestAlert = { jobViewModel.sendTestJobAlert() },
+            onJobClick = { job ->
+                jobViewModel.toggleJobAlertsScreen(false)
+                jobViewModel.selectJob(job)
+            },
+            onBack = { jobViewModel.toggleJobAlertsScreen(false) }
+        )
+        return
+    }
 
     Scaffold(
         topBar = {
@@ -194,7 +213,11 @@ fun MainAppContent() {
                             jobViewModel.setTab(MainTab.JOBS)
                         },
                         onOpenAgeCalculator = { showAgeCalculator = true },
-                        onOpenSalaryCalculator = { showSalaryCalculator = true }
+                        onOpenSalaryCalculator = { showSalaryCalculator = true },
+                        onOpenJobAlerts = { jobViewModel.toggleJobAlertsScreen(true) },
+                        onOpenResultsSubTab = { jobViewModel.setResultsSubTab(it) },
+                        matchedJobsCount = matchedJobs.size,
+                        isJobAlertsEnabled = jobAlertPreferences.isEnabled
                     )
                 }
 
@@ -211,7 +234,10 @@ fun MainAppContent() {
                         results = results,
                         admitCards = admitCards,
                         syllabi = syllabi,
-                        answerKeys = answerKeys
+                        answerKeys = answerKeys,
+                        admissions = admissions,
+                        initialSubTab = uiState.selectedResultsSubTab,
+                        onSubTabChange = { jobViewModel.setResultsSubTab(it) }
                     )
                 }
 
@@ -232,7 +258,9 @@ fun MainAppContent() {
                         language = uiState.language,
                         onOpenLanguageSheet = { jobViewModel.toggleLanguageSheet(true) },
                         onJobClick = { jobViewModel.selectJob(it) },
-                        onBookmarkToggle = { jobViewModel.toggleBookmark(it) }
+                        onBookmarkToggle = { jobViewModel.toggleBookmark(it) },
+                        onOpenJobAlerts = { jobViewModel.toggleJobAlertsScreen(true) },
+                        onNavigateToJobs = { jobViewModel.setTab(MainTab.JOBS) }
                     )
                 }
 
@@ -259,7 +287,10 @@ fun MainAppContent() {
                             jobViewModel.setTab(MainTab.JOBS)
                         },
                         onOpenAgeCalculator = { showAgeCalculator = true },
-                        onOpenSalaryCalculator = { showSalaryCalculator = true }
+                        onOpenSalaryCalculator = { showSalaryCalculator = true },
+                        onOpenJobAlerts = { jobViewModel.toggleJobAlertsScreen(true) },
+                        matchedJobsCount = matchedJobs.size,
+                        isJobAlertsEnabled = jobAlertPreferences.isEnabled
                     )
                 }
             }

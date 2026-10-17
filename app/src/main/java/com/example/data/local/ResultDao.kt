@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.example.model.AdmissionItem
 import com.example.model.AdmitCardItem
 import com.example.model.AnswerKeyItem
 import com.example.model.ResultItem
@@ -35,4 +36,10 @@ interface ResultDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAnswerKeys(keys: List<AnswerKeyItem>)
+
+    @Query("SELECT * FROM admissions ORDER BY applicationClosingDate ASC")
+    fun getAllAdmissions(): Flow<List<AdmissionItem>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAdmissions(admissions: List<AdmissionItem>)
 }

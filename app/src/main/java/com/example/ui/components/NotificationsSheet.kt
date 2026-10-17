@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,7 +67,8 @@ fun NotificationsSheet(
     notifications: List<NotificationItem>,
     onMarkAllRead: () -> Unit,
     onDismiss: () -> Unit,
-    onSyncDeadlines: (() -> Unit)? = null
+    onSyncDeadlines: (() -> Unit)? = null,
+    onOpenAlertPreferences: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var filterType by remember { mutableStateOf("ALL") } // ALL, DEADLINE, OTHER
@@ -129,6 +131,22 @@ fun NotificationsSheet(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (onOpenAlertPreferences != null) {
+                        IconButton(
+                            onClick = {
+                                onDismiss()
+                                onOpenAlertPreferences()
+                            },
+                            modifier = Modifier.testTag("btn_notif_alert_prefs")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = "Alert Preferences",
+                                tint = DeepNavy,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                     TextButton(onClick = onMarkAllRead) {
                         Text("Mark read", fontSize = 12.sp, color = SaffronOrange)
                     }

@@ -4,6 +4,7 @@ import com.example.data.local.JobDao
 import com.example.data.local.NotificationDao
 import com.example.data.local.ResultDao
 import com.example.data.sample.InitialDataSeed
+import com.example.model.AdmissionItem
 import com.example.model.AdmitCardItem
 import com.example.model.AnswerKeyItem
 import com.example.model.JobEntity
@@ -26,20 +27,22 @@ class JobRepository(
     val allAdmitCards: Flow<List<AdmitCardItem>> = resultDao.getAllAdmitCards()
     val allSyllabi: Flow<List<SyllabusItem>> = resultDao.getAllSyllabi()
     val allAnswerKeys: Flow<List<AnswerKeyItem>> = resultDao.getAllAnswerKeys()
+    val allAdmissions: Flow<List<AdmissionItem>> = resultDao.getAllAdmissions()
 
     val allNotifications: Flow<List<NotificationItem>> = notificationDao.getAllNotifications()
     val unreadNotifCount: Flow<Int> = notificationDao.getUnreadCount()
 
     suspend fun initializeDatabaseIfEmpty() {
         val existingCount = jobDao.getActiveJobsCount()
-        if (existingCount == 0) {
+        if (existingCount < InitialDataSeed.initialJobs.size) {
             jobDao.insertJobs(InitialDataSeed.initialJobs)
-            resultDao.insertResults(InitialDataSeed.initialResults)
-            resultDao.insertAdmitCards(InitialDataSeed.initialAdmitCards)
-            resultDao.insertSyllabi(InitialDataSeed.initialSyllabi)
-            resultDao.insertAnswerKeys(InitialDataSeed.initialAnswerKeys)
-            notificationDao.insertNotifications(InitialDataSeed.initialNotifications)
         }
+        resultDao.insertResults(InitialDataSeed.initialResults)
+        resultDao.insertAdmitCards(InitialDataSeed.initialAdmitCards)
+        resultDao.insertSyllabi(InitialDataSeed.initialSyllabi)
+        resultDao.insertAnswerKeys(InitialDataSeed.initialAnswerKeys)
+        resultDao.insertAdmissions(InitialDataSeed.initialAdmissions)
+        notificationDao.insertNotifications(InitialDataSeed.initialNotifications)
     }
 
     fun getJobById(id: String): Flow<JobEntity?> = jobDao.getJobById(id)
