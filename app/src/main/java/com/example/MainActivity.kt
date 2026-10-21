@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.model.JobEntity
 import com.example.ui.components.AgeCalculatorSheet
@@ -43,7 +44,16 @@ import com.example.ui.viewmodel.MainTab
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = androidx.activity.SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = androidx.activity.SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            )
+        )
         setContent {
             MyApplicationTheme {
                 MainAppContent()
@@ -72,6 +82,7 @@ fun MainAppContent() {
     val unreadNotifCount by jobViewModel.unreadNotifCount.collectAsState()
     val jobAlertPreferences by jobViewModel.jobAlertPreferences.collectAsState()
     val matchedJobs by jobViewModel.matchedJobs.collectAsState()
+    val backendSyncState by jobViewModel.backendSyncState.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showAgeCalculator by remember { mutableStateOf(false) }
@@ -167,6 +178,7 @@ fun MainAppContent() {
     }
 
     Scaffold(
+        containerColor = Color(0xFFF8FAFC),
         topBar = {
             AppTopBar(
                 language = uiState.language,
@@ -260,7 +272,14 @@ fun MainAppContent() {
                         onJobClick = { jobViewModel.selectJob(it) },
                         onBookmarkToggle = { jobViewModel.toggleBookmark(it) },
                         onOpenJobAlerts = { jobViewModel.toggleJobAlertsScreen(true) },
-                        onNavigateToJobs = { jobViewModel.setTab(MainTab.JOBS) }
+                        onNavigateToJobs = { jobViewModel.setTab(MainTab.JOBS) },
+                        backendSyncState = backendSyncState,
+                        onRefreshData = { jobViewModel.refreshData() },
+                        allJobsCount = allJobs.size,
+                        resultsCount = results.size,
+                        admitCardsCount = admitCards.size,
+                        syllabiCount = syllabi.size,
+                        admissionsCount = admissions.size
                     )
                 }
 

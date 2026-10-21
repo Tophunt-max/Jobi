@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -59,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import com.example.model.AppLanguage
 import com.example.model.LanguageRegistry
 import com.example.ui.theme.DeepNavy
+import com.example.ui.theme.EmeraldGreen
 import com.example.ui.theme.PureWhite
 import com.example.ui.theme.RoyalBlue
 import com.example.ui.theme.RoyalBlueDark
@@ -66,6 +68,7 @@ import com.example.ui.theme.Slate200
 import com.example.ui.theme.Slate400
 import com.example.ui.theme.Slate500
 import com.example.ui.theme.Slate700
+import com.example.ui.theme.Slate900
 import com.example.ui.viewmodel.MainTab
 
 private data class BottomNavItemData(
@@ -87,12 +90,28 @@ private val AiGradient = Brush.horizontalGradient(
 
 private val AiContainerGradient = Brush.horizontalGradient(
     colors = listOf(
-        Color(0xFFE0E7FF), // Soft Indigo
-        Color(0xFFEDE9FE), // Soft Purple
-        Color(0xFFFCE7F3)  // Soft Pink
+        Color(0xFFEFF6FF),
+        Color(0xFFF3E8FF),
+        Color(0xFFFDF2F8)
     )
 )
 
+private val ActiveTabGradient = Brush.horizontalGradient(
+    colors = listOf(
+        RoyalBlueDark,
+        RoyalBlue
+    )
+)
+
+/**
+ * Modern 2026 Floating Island Pill Navigation Bar
+ * Features:
+ * - Floating dock capsule design elevated from system bottom
+ * - Active pill morphing with spring bounce animation
+ * - Top luminous indicator dot/bar
+ * - Special iridescent styling for AI Mentor
+ * - Strict WindowInsets navigationBars padding for zero cut-off
+ */
 @Composable
 fun AppBottomBar(
     currentTab: MainTab,
@@ -141,173 +160,186 @@ fun AppBottomBar(
         )
     }
 
+    // Full-bleed Surface so pure white background extends all the way to the physical bottom edge
     Surface(
         color = PureWhite,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         shadowElevation = 16.dp,
-        border = BorderStroke(1.dp, Slate200.copy(alpha = 0.85f)),
-        modifier = modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
+        border = BorderStroke(1.dp, Slate200.copy(alpha = 0.9f)),
+        modifier = modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(72.dp)
-                .padding(horizontal = 6.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
+                .navigationBarsPadding()
         ) {
-            items.forEach { item ->
-                val isSelected = currentTab == item.tab
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(66.dp)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items.forEach { item ->
+                    val isSelected = currentTab == item.tab
 
-                // Smooth spring animation for icon scale
-                val iconScale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.15f else 1.0f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    ),
-                    label = "iconScale_${item.tab}"
-                )
+                    // Spring animation for icon scale
+                    val iconScale by animateFloatAsState(
+                        targetValue = if (isSelected) 1.14f else 1.0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        label = "scale_${item.tab}"
+                    )
 
-                // Prominent animated active pill width for the bottom dot/bar
-                val activeIndicatorWidth by animateDpAsState(
-                    targetValue = if (isSelected) 22.dp else 0.dp,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium
-                    ),
-                    label = "indicatorWidth_${item.tab}"
-                )
+                    // Spring vertical offset bounce for selected icon
+                    val iconOffsetY by animateDpAsState(
+                        targetValue = if (isSelected) (-2).dp else 0.dp,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
+                        label = "offsetY_${item.tab}"
+                    )
 
-                // Animated label color with crisp high-contrast active state
-                val textColor by animateColorAsState(
-                    targetValue = when {
-                        isSelected && item.isSpecialAi -> Color(0xFF6D28D9)
-                        isSelected -> RoyalBlueDark
-                        else -> Slate500
-                    },
-                    animationSpec = spring(stiffness = Spring.StiffnessMedium),
-                    label = "textColor_${item.tab}"
-                )
+                    // Top indicator bar width
+                    val indicatorWidth by animateDpAsState(
+                        targetValue = if (isSelected) 20.dp else 0.dp,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
+                        label = "indicator_${item.tab}"
+                    )
 
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = ripple(bounded = false, radius = 28.dp),
-                            onClick = { onTabSelected(item.tab) }
-                        )
-                        .testTag(item.testTag),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(horizontal = 2.dp)
+                    // Animated label color with crisp high-contrast active state
+                    val labelColor by animateColorAsState(
+                        targetValue = when {
+                            isSelected && item.isSpecialAi -> Color(0xFF6D28D9)
+                            isSelected -> RoyalBlueDark
+                            else -> Slate500
+                        },
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                        label = "labelColor_${item.tab}"
+                    )
+
+                    // Nav Item Box with minimum touch target size
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(
+                                    bounded = true,
+                                    radius = 32.dp,
+                                    color = if (item.isSpecialAi) Color(0xFF7C3AED).copy(alpha = 0.2f) else RoyalBlue.copy(alpha = 0.2f)
+                                ),
+                                onClick = { onTabSelected(item.tab) }
+                            )
+                            .testTag(item.testTag),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Prominent active pill container around the icon
-                        Box(
-                            contentAlignment = Alignment.Center,
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.SpaceBetween,
                             modifier = Modifier
-                                .height(34.dp)
-                                .width(if (item.isSpecialAi && isSelected) 58.dp else 52.dp)
-                                .clip(RoundedCornerShape(17.dp))
-                                .then(
-                                    if (isSelected) {
-                                        if (item.isSpecialAi) {
-                                            Modifier
-                                                .background(AiContainerGradient)
-                                                .border(
-                                                    width = 1.5.dp,
-                                                    color = Color(0xFF7C3AED).copy(alpha = 0.35f),
-                                                    shape = RoundedCornerShape(17.dp)
-                                                )
-                                        } else {
-                                            Modifier
-                                                .background(Color(0xFFDBEAFE)) // Rich Royal Blue Container
-                                                .border(
-                                                    width = 1.5.dp,
-                                                    color = RoyalBlue.copy(alpha = 0.35f),
-                                                    shape = RoundedCornerShape(17.dp)
-                                                )
-                                        }
-                                    } else {
-                                        Modifier
-                                    }
-                                )
+                                .fillMaxHeight()
+                                .padding(vertical = 4.dp)
                         ) {
-                            // Icon with spring bounce animation
-                            Icon(
-                                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = LanguageRegistry.getString(item.labelKey, language),
-                                tint = when {
-                                    isSelected && item.isSpecialAi -> Color(0xFF6D28D9)
-                                    isSelected -> RoyalBlueDark
-                                    item.isSpecialAi -> Color(0xFF8B5CF6)
-                                    else -> Slate400
-                                },
+                            // Top glowing luminous active bar
+                            Box(
                                 modifier = Modifier
-                                    .size(22.dp)
-                                    .scale(iconScale)
+                                    .height(3.dp)
+                                    .width(indicatorWidth)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (item.isSpecialAi) AiGradient
+                                        else ActiveTabGradient
+                                    )
                             )
 
-                            // Distinctive "AI" badge on AI Mentor
-                            if (item.isSpecialAi) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = 4.dp, y = (-2).dp)
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(AiGradient)
-                                        .padding(horizontal = 3.dp, vertical = 0.5.dp)
-                                ) {
-                                    Text(
-                                        text = "AI",
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = PureWhite,
-                                        lineHeight = 9.sp
+                            // Icon Container with active pill morphing
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .offset(y = iconOffsetY)
+                                    .height(32.dp)
+                                    .width(if (isSelected) 48.dp else 36.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .then(
+                                        if (isSelected) {
+                                            if (item.isSpecialAi) {
+                                                Modifier
+                                                    .background(AiContainerGradient)
+                                                    .border(
+                                                        width = 1.dp,
+                                                        color = Color(0xFF7C3AED).copy(alpha = 0.35f),
+                                                        shape = RoundedCornerShape(16.dp)
+                                                    )
+                                            } else {
+                                                Modifier
+                                                    .background(Color(0xFFEFF6FF))
+                                                    .border(
+                                                        width = 1.dp,
+                                                        color = RoyalBlue.copy(alpha = 0.3f),
+                                                        shape = RoundedCornerShape(16.dp)
+                                                    )
+                                            }
+                                        } else {
+                                            Modifier
+                                        }
                                     )
+                            ) {
+                                Icon(
+                                    imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = LanguageRegistry.getString(item.labelKey, language),
+                                    tint = when {
+                                        isSelected && item.isSpecialAi -> Color(0xFF6D28D9)
+                                        isSelected -> RoyalBlueDark
+                                        item.isSpecialAi -> Color(0xFF8B5CF6)
+                                        else -> Slate400
+                                    },
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .scale(iconScale)
+                                )
+
+                                // Distinctive "AI" micro-badge on AI Mentor
+                                if (item.isSpecialAi) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .offset(x = 5.dp, y = (-3).dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(AiGradient)
+                                            .padding(horizontal = 3.dp, vertical = 0.5.dp)
+                                    ) {
+                                        Text(
+                                            text = "AI",
+                                            fontSize = 7.5.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = PureWhite,
+                                            lineHeight = 8.sp
+                                        )
+                                    }
                                 }
                             }
+
+                            // Tab Label
+                            Text(
+                                text = LanguageRegistry.getString(item.labelKey, language),
+                                fontSize = 10.5.sp,
+                                fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
+                                color = labelColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center
+                            )
                         }
-
-                        Spacer(modifier = Modifier.height(3.dp))
-
-                        // Tab Label with bold active font weight
-                        Text(
-                            text = LanguageRegistry.getString(item.labelKey, language),
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                            color = textColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(2.dp))
-
-                        // Prominent active colored indicator pill / dot
-                        Box(
-                            modifier = Modifier
-                                .height(4.dp)
-                                .width(activeIndicatorWidth)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(
-                                    if (item.isSpecialAi) AiGradient
-                                    else Brush.horizontalGradient(
-                                        listOf(
-                                            RoyalBlueDark,
-                                            RoyalBlue
-                                        )
-                                    )
-                                )
-                        )
                     }
                 }
             }

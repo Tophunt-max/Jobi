@@ -44,9 +44,14 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Verified
+import com.example.data.repository.BackendSyncState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -139,6 +144,13 @@ fun ProfileScreen(
     onBookmarkToggle: (JobEntity) -> Unit,
     onOpenJobAlerts: () -> Unit = {},
     onNavigateToJobs: (() -> Unit)? = null,
+    backendSyncState: BackendSyncState = BackendSyncState.Idle,
+    onRefreshData: () -> Unit = {},
+    allJobsCount: Int = 0,
+    resultsCount: Int = 0,
+    admitCardsCount: Int = 0,
+    syllabiCount: Int = 0,
+    admissionsCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -1473,6 +1485,265 @@ fun ProfileScreen(
                                         checkedThumbColor = PureWhite,
                                         checkedTrackColor = DeepNavy
                                     )
+                                )
+                            }
+                        }
+                    }
+
+                    // Modern Backend API & Offline Dual Caching Card
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = PureWhite),
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("profile_backend_api_card")
+                    ) {
+                        Column(modifier = Modifier.padding(18.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.linearGradient(
+                                                    listOf(Color(0xFF0284C7), RoyalBlue)
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CloudSync,
+                                            contentDescription = "Backend API Sync",
+                                            tint = PureWhite,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "Backend API & Dual Caching",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Slate900
+                                        )
+                                        Text(
+                                            text = "Edge Worker & SQLite Room Layer",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = RoyalBlue
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    color = when (backendSyncState) {
+                                        is BackendSyncState.Syncing -> SaffronContainer
+                                        is BackendSyncState.Success -> Color(0xFFDCFCE7)
+                                        else -> Slate100
+                                    },
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    when (backendSyncState) {
+                                                        is BackendSyncState.Syncing -> SaffronOrange
+                                                        is BackendSyncState.Success -> EmeraldGreen
+                                                        else -> Slate500
+                                                    }
+                                                )
+                                        )
+                                        Spacer(modifier = Modifier.width(5.dp))
+                                        Text(
+                                            text = when (backendSyncState) {
+                                                is BackendSyncState.Syncing -> "Syncing..."
+                                                is BackendSyncState.Success -> "Connected"
+                                                is BackendSyncState.OfflineCached -> "Cached Mode"
+                                                else -> "Ready"
+                                            },
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = when (backendSyncState) {
+                                                is BackendSyncState.Syncing -> SaffronOrange
+                                                is BackendSyncState.Success -> EmeraldGreen
+                                                else -> Slate700
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Sync state descriptive message
+                            val syncMessage = when (backendSyncState) {
+                                is BackendSyncState.Syncing -> backendSyncState.currentEntity
+                                is BackendSyncState.Success -> backendSyncState.message
+                                is BackendSyncState.OfflineCached -> backendSyncState.message
+                                else -> "Local SQLite cache synced with official Cloudflare backend API endpoints."
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Slate100,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Storage,
+                                        contentDescription = null,
+                                        tint = Slate600,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = syncMessage,
+                                        fontSize = 11.sp,
+                                        color = Slate700,
+                                        lineHeight = 15.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Real-time Caching Metrics Grid
+                            Text(
+                                text = "Local Database Cache Breakdown",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Slate800
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                // Jobs metric
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFFEFF6FF),
+                                    border = BorderStroke(1.dp, Color(0xFFDBEAFE))
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(text = "$allJobsCount", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = RoyalBlue)
+                                        Text(text = "Jobs", fontSize = 10.sp, color = Slate600)
+                                    }
+                                }
+
+                                // Results metric
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFFF0FDF4),
+                                    border = BorderStroke(1.dp, Color(0xFFDCFCE7))
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(text = "$resultsCount", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = EmeraldGreen)
+                                        Text(text = "Results", fontSize = 10.sp, color = Slate600)
+                                    }
+                                }
+
+                                // Admit Cards metric
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFFFFF7ED),
+                                    border = BorderStroke(1.dp, Color(0xFFFFEDD5))
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(text = "$admitCardsCount", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = SaffronOrange)
+                                        Text(text = "Cards", fontSize = 10.sp, color = Slate600)
+                                    }
+                                }
+
+                                // Syllabus metric
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFFFAF5FF),
+                                    border = BorderStroke(1.dp, Color(0xFFF3E8FF))
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(text = "$syllabiCount", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7E22CE))
+                                        Text(text = "Syllabus", fontSize = 10.sp, color = Slate600)
+                                    }
+                                }
+
+                                // Admission metric
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = Color(0xFFFDF2F8),
+                                    border = BorderStroke(1.dp, Color(0xFFFCE7F3))
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(text = "$admissionsCount", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFBE185D))
+                                        Text(text = "Admission", fontSize = 10.sp, color = Slate600)
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Force Refresh API Button
+                            Button(
+                                onClick = onRefreshData,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = DeepNavy,
+                                    contentColor = PureWhite
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("btn_sync_all_backend_data")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    tint = PureWhite,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Force Refresh & Sync All Backend Data",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }

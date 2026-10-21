@@ -18,6 +18,8 @@ import com.example.model.AppLanguage
 import com.example.model.ContentReport
 import com.example.model.JobEntity
 import com.example.data.local.JobAlertPreferencesManager
+import com.example.data.repository.BackendDataSyncManager
+import com.example.data.repository.BackendSyncState
 import com.example.model.JobAlertMatcher
 import com.example.model.JobAlertPreferences
 import com.example.model.MatchedJob
@@ -73,6 +75,9 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
     val cloudflareSyncState: StateFlow<CloudflareSyncState> = cloudflareRepo.syncState
     val cloudflareWorkerUrl: StateFlow<String> = CloudflareConfig.workerUrlFlow
     val officialSources = cloudflareRepo.sources
+
+    val backendSyncManager = BackendDataSyncManager(application, db.jobDao(), db.resultDao(), db.notificationDao())
+    val backendSyncState: StateFlow<BackendSyncState> = backendSyncManager.syncState
 
     private val _uiState = MutableStateFlow(JobUiState())
     val uiState: StateFlow<JobUiState> = _uiState.asStateFlow()
@@ -170,6 +175,8 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
         CloudflareConfig.init(application)
         viewModelScope.launch {
             repository.initializeDatabaseIfEmpty()
+            // Comprehensive sync from Backend API with HTTP Disk & Room persistent caching
+            backendSyncManager.syncAllData()
             // Start real-time Firestore synchronization
             syncCoordinator.startRealtimeSync(viewModelScope)
             // Synchronize with Cloudflare D1 Edge database in background
@@ -328,10 +335,10 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
     fun refreshData() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true)
+            backendSyncManager.syncAllData()
             syncCoordinator.syncNow()
             cloudflareRepo.syncJobsFromCloudflare()
             cloudflareRepo.fetchPublicSources()
-            repository.initializeDatabaseIfEmpty()
             _uiState.value = _uiState.value.copy(isRefreshing = false)
         }
     }
