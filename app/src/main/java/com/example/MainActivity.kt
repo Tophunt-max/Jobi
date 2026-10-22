@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.model.JobEntity
 import com.example.ui.components.AgeCalculatorSheet
@@ -34,6 +35,10 @@ import com.example.ui.screens.JobAlertPreferencesScreen
 import com.example.ui.screens.JobDetailScreen
 import com.example.ui.screens.JobListingScreen
 import com.example.ui.screens.JobsScreen
+import android.app.Activity
+import androidx.compose.foundation.layout.Column
+import com.example.ads.AdManager
+import com.example.ads.AdaptiveBannerAdView
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.ResultsAndCardsScreen
 import com.example.ui.theme.MyApplicationTheme
@@ -44,6 +49,9 @@ import com.example.ui.viewmodel.MainTab
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Initialize Google Mobile Ads SDK with background preloads
+        AdManager.initialize(this)
+
         enableEdgeToEdge(
             statusBarStyle = androidx.activity.SystemBarStyle.light(
                 android.graphics.Color.TRANSPARENT,
@@ -83,6 +91,8 @@ fun MainAppContent() {
     val jobAlertPreferences by jobViewModel.jobAlertPreferences.collectAsState()
     val matchedJobs by jobViewModel.matchedJobs.collectAsState()
     val backendSyncState by jobViewModel.backendSyncState.collectAsState()
+    val documentLocker by jobViewModel.documentLocker.collectAsState()
+    val appliedExams by jobViewModel.appliedExams.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showAgeCalculator by remember { mutableStateOf(false) }
@@ -115,12 +125,24 @@ fun MainAppContent() {
         )
     }
 
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val handleJobClick: (JobEntity) -> Unit = { job ->
+        if (activity != null) {
+            AdManager.showInterstitialIfAllowed(activity) {
+                jobViewModel.selectJob(job)
+            }
+        } else {
+            jobViewModel.selectJob(job)
+        }
+    }
+
     if (showAgeCalculator) {
         AgeCalculatorSheet(
             allJobs = allJobs,
             onSelectJob = { job ->
                 showAgeCalculator = false
-                jobViewModel.selectJob(job)
+                handleJobClick(job)
             },
             onDismiss = { showAgeCalculator = false }
         )
@@ -170,7 +192,7 @@ fun MainAppContent() {
             onSendTestAlert = { jobViewModel.sendTestJobAlert() },
             onJobClick = { job ->
                 jobViewModel.toggleJobAlertsScreen(false)
-                jobViewModel.selectJob(job)
+                handleJobClick(job)
             },
             onBack = { jobViewModel.toggleJobAlertsScreen(false) }
         )
@@ -188,11 +210,14 @@ fun MainAppContent() {
             )
         },
         bottomBar = {
-            AppBottomBar(
-                currentTab = uiState.currentTab,
-                language = uiState.language,
-                onTabSelected = { jobViewModel.setTab(it) }
-            )
+            Column {
+                AdaptiveBannerAdView()
+                AppBottomBar(
+                    currentTab = uiState.currentTab,
+                    language = uiState.language,
+                    onTabSelected = { jobViewModel.setTab(it) }
+                )
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.fillMaxSize()
@@ -213,7 +238,7 @@ fun MainAppContent() {
                         },
                         closingSoonJobs = closingSoonJobs,
                         allJobs = allJobs,
-                        onJobClick = { jobViewModel.selectJob(it) },
+                        onJobClick = handleJobClick,
                         onBookmarkToggle = { jobViewModel.toggleBookmark(it) },
                         onNavigateTab = { jobViewModel.setTab(it) },
                         onFilterByState = {
@@ -236,7 +261,7 @@ fun MainAppContent() {
                 MainTab.JOBS -> {
                     JobListingScreen(
                         viewModel = jobViewModel,
-                        onJobClick = { jobViewModel.selectJob(it) }
+                        onJobClick = handleJobClick
                     )
                 }
 
@@ -263,6 +288,7 @@ fun MainAppContent() {
                 }
 
                 MainTab.PROFILE -> {
+                    val context = LocalContext.current
                     ProfileScreen(
                         userProfile = userProfile,
                         onUpdateProfile = { jobViewModel.updateUserProfile(it) },
@@ -273,6 +299,13 @@ fun MainAppContent() {
                         onBookmarkToggle = { jobViewModel.toggleBookmark(it) },
                         onOpenJobAlerts = { jobViewModel.toggleJobAlertsScreen(true) },
                         onNavigateToJobs = { jobViewModel.setTab(MainTab.JOBS) },
+                        documentLocker = documentLocker,
+                        onUpdateDocumentLocker = { jobViewModel.updateDocumentLocker(it) },
+                        appliedExams = appliedExams,
+                        onAddAppliedExam = { jobViewModel.addAppliedExam(it) },
+                        onUpdateExamStage = { id, stage, notes -> jobViewModel.updateExamStage(id, stage, notes) },
+                        onDeleteAppliedExam = { jobViewModel.deleteAppliedExam(it) },
+                        onShareDossier = { jobViewModel.shareAspirantDossier(context) },
                         backendSyncState = backendSyncState,
                         onRefreshData = { jobViewModel.refreshData() },
                         allJobsCount = allJobs.size,
@@ -284,33 +317,9 @@ fun MainAppContent() {
                 }
 
                 MainTab.ADMIN -> {
-                    // Admin has been migrated to the standalone Web Admin Panel
-                    HomeScreen(
-                        language = uiState.language,
-                        searchQuery = uiState.searchQuery,
-                        onSearchChange = {
-                            jobViewModel.setSearchQuery(it)
-                            if (it.isNotBlank()) jobViewModel.setTab(MainTab.JOBS)
-                        },
-                        closingSoonJobs = closingSoonJobs,
-                        allJobs = allJobs,
-                        onJobClick = { jobViewModel.selectJob(it) },
-                        onBookmarkToggle = { jobViewModel.toggleBookmark(it) },
-                        onNavigateTab = { jobViewModel.setTab(it) },
-                        onFilterByState = {
-                            jobViewModel.setStateFilter(it)
-                            jobViewModel.setTab(MainTab.JOBS)
-                        },
-                        onFilterByCategory = {
-                            jobViewModel.setCategoryFilter(it)
-                            jobViewModel.setTab(MainTab.JOBS)
-                        },
-                        onOpenAgeCalculator = { showAgeCalculator = true },
-                        onOpenSalaryCalculator = { showSalaryCalculator = true },
-                        onOpenJobAlerts = { jobViewModel.toggleJobAlertsScreen(true) },
-                        matchedJobsCount = matchedJobs.size,
-                        isJobAlertsEnabled = jobAlertPreferences.isEnabled
-                    )
+                    LaunchedEffect(Unit) {
+                        jobViewModel.setTab(MainTab.PROFILE)
+                    }
                 }
             }
         }

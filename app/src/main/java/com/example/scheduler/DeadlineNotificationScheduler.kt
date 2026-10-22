@@ -174,14 +174,8 @@ object DeadlineNotificationScheduler {
                         pendingIntent
                     )
                 }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerTime,
-                    pendingIntent
-                )
             } else {
-                alarmManager.set(
+                alarmManager.setAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     triggerTime,
                     pendingIntent
@@ -190,7 +184,7 @@ object DeadlineNotificationScheduler {
 
             markAlertScheduled(context, job.id, true)
         } catch (e: Exception) {
-            Log.e("DeadlineScheduler", "Failed to schedule alarm: ${e.message}")
+            Log.w("DeadlineScheduler", "Notice: alarm scheduling unavailable or restricted: ${e.message}")
         }
     }
 

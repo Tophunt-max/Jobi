@@ -162,6 +162,22 @@ export default {
                 }, corsHeaders);
             }
 
+            // GET /api/ads/config - Public ad configuration for mobile client & web preview
+            if (path === "/api/ads/config" && method === "GET") {
+                try {
+                    await env.DB.prepare("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)").run();
+                    const row = await env.DB.prepare("SELECT value, updated_at FROM app_settings WHERE key = 'ad_config'").first();
+                    if (row && row.value) {
+                        const parsed = JSON.parse(row.value);
+                        parsed.updatedAt = row.updated_at;
+                        return jsonResponse({ success: true, data: parsed }, corsHeaders);
+                    }
+                } catch (e) {
+                    console.error("Error fetching ad_config from D1:", e);
+                }
+                return jsonResponse({ success: true, data: DEFAULT_AD_CONFIG }, corsHeaders);
+            }
+
             // ========================================================
             // 2. ADMIN AUTOMATED JOB IMPORTER APIS
             // ========================================================
@@ -179,6 +195,43 @@ export default {
                 return jsonResponse({
                     success: true,
                     sources: results || []
+                }, corsHeaders);
+            }
+
+            // GET /api/admin/ads - Fetch ad configuration for Admin Web Panel
+            if (path === "/api/admin/ads" && method === "GET") {
+                verifyAdmin(adminKey, expectedKey);
+                try {
+                    await env.DB.prepare("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)").run();
+                    const row = await env.DB.prepare("SELECT value, updated_at FROM app_settings WHERE key = 'ad_config'").first();
+                    if (row && row.value) {
+                        const parsed = JSON.parse(row.value);
+                        parsed.updatedAt = row.updated_at;
+                        return jsonResponse({ success: true, data: parsed }, corsHeaders);
+                    }
+                } catch (e) {
+                    console.error("Error in GET /api/admin/ads:", e);
+                }
+                return jsonResponse({ success: true, data: DEFAULT_AD_CONFIG }, corsHeaders);
+            }
+
+            // POST /api/admin/ads - Save & Publish ad configuration
+            if (path === "/api/admin/ads" && method === "POST") {
+                verifyAdmin(adminKey, expectedKey);
+                const body = await request.json().catch(() => ({}));
+                const mergedConfig = { ...DEFAULT_AD_CONFIG, ...body, updatedAt: new Date().toISOString() };
+                
+                await env.DB.prepare("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)").run();
+                await env.DB.prepare(`
+                    INSERT INTO app_settings (key, value, updated_at)
+                    VALUES ('ad_config', ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+                `).bind(JSON.stringify(mergedConfig)).run();
+
+                return jsonResponse({
+                    success: true,
+                    message: "Ads & Monetization configuration deployed successfully to Cloudflare D1",
+                    data: mergedConfig
                 }, corsHeaders);
             }
 
@@ -488,6 +541,31 @@ export default {
         console.log(`[CRON] Scheduled Job Import Triggered at ${new Date().toISOString()}`);
         ctx.waitUntil(executeJobImport(env, null, "CRON_TRIGGER"));
     }
+};
+
+/**
+ * Default safe Ad configuration (Google Official Test AdMob IDs)
+ */
+const DEFAULT_AD_CONFIG = {
+    masterEnabled: true,
+    bannerEnabled: true,
+    interstitialEnabled: true,
+    nativeEnabled: true,
+    rewardedEnabled: true,
+    bannerId: "",
+    interstitialId: "",
+    nativeId: "",
+    rewardedId: "",
+    interstitialClickInterval: 3,
+    interstitialCooldownSeconds: 60,
+    customSponsorActive: false,
+    sponsorName: "Sarkari Pariksha Partner",
+    sponsorHeadline: "🎯 All India Mock Test Series 2026",
+    sponsorBody: "500+ Sectional & Full-length tests with live All-India rank predictor & video solutions.",
+    sponsorRating: "4.9 ★",
+    sponsorCtaText: "Start Free Test",
+    sponsorEmoji: "🎯",
+    sponsorTargetUrl: "https://play.google.com/store/search?q=sarkari+mock+test&c=apps"
 };
 
 /**

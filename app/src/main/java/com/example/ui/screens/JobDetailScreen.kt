@@ -45,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import com.example.ads.NativeSponsoredJobCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -735,6 +736,11 @@ fun JobDetailScreen(
                 timeDuration = "60 Minutes (Tier-I / Prelims)",
                 negativeMarking = "0.50 per wrong answer"
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 9b. Native Sponsored Speed Typing & Preparation Kit
+            NativeSponsoredJobCard(creativeIndex = 2)
 
             Spacer(modifier = Modifier.height(16.dp))
 

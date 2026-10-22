@@ -62,8 +62,8 @@ class JobSyncCoordinator(
                             _syncStatus.value = SyncStatus.Synced(0)
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Failed to persist Firestore updates into Room", e)
-                        _syncStatus.value = SyncStatus.Offline("Local storage error: ${e.message}")
+                        Log.w(TAG, "Notice: could not persist Firestore updates into Room: ${e.message}")
+                        _syncStatus.value = SyncStatus.Offline("Local storage notice: ${e.message}")
                     }
                 }
         }

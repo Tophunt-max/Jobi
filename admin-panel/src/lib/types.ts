@@ -64,3 +64,26 @@ export interface DashboardStats {
   pendingReview: number;
   activeSources: number;
 }
+
+export interface AdConfig {
+  masterEnabled: boolean;
+  bannerEnabled: boolean;
+  interstitialEnabled: boolean;
+  nativeEnabled: boolean;
+  rewardedEnabled: boolean;
+  bannerId: string;
+  interstitialId: string;
+  nativeId: string;
+  rewardedId: string;
+  interstitialClickInterval: number;
+  interstitialCooldownSeconds: number;
+  customSponsorActive: boolean;
+  sponsorName: string;
+  sponsorHeadline: string;
+  sponsorBody: string;
+  sponsorRating: string;
+  sponsorCtaText: string;
+  sponsorEmoji: string;
+  sponsorTargetUrl: string;
+  updatedAt?: string;
+}

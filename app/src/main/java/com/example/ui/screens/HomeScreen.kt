@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.ads.NativeSponsoredJobCard
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -47,9 +49,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -183,6 +192,34 @@ fun HomeScreen(
             }
             sector.name to count
         }
+    }
+
+    val liveTickerItems = remember(closingSoonJobs, allJobs) {
+        val list = mutableListOf<String>()
+        if (closingSoonJobs.isNotEmpty()) {
+            closingSoonJobs.take(3).forEach { job ->
+                val deadline = if (job.applicationClosingDate.isNotBlank()) " (Last Date: ${job.applicationClosingDate})" else ""
+                list.add("🔥 Closing Soon: ${job.title} - ${job.organization}$deadline")
+            }
+        }
+        if (allJobs.isNotEmpty()) {
+            allJobs.take(5).forEach { job ->
+                val vac = if (job.totalVacancies > 0) " (${job.totalVacancies} Posts)" else ""
+                list.add("📢 Active: ${job.title} - ${job.organization}$vac")
+            }
+        }
+        if (list.isEmpty()) {
+            list.add("🔥 SSC CGL 2026 Tier-1 Online Application Open - Apply Now")
+            list.add("⚠️ UPSC CSE 2026 Prelims Registration Closing Soon")
+            list.add("🚆 RRB Railway Non-Technical Vacancies Active - 11,558 Posts")
+            list.add("🏆 IBPS PO & Clerk Scorecards & Cut-off Released")
+            list.add("🎓 NTA CUET & NEET 2026 Registration Portal Live")
+            list.add("🛡️ State Police & Defence Recruitment Notification Available")
+        }
+        list
+    }
+    val fullTickerText = remember(liveTickerItems) {
+        liveTickerItems.joinToString(separator = "   ✦   ")
     }
 
     LazyColumn(
@@ -355,12 +392,32 @@ fun HomeScreen(
             }
         }
 
-        // 2. Verified Live Announcements Ticker
+        // 2. Verified Live Announcements Running Marquee Ticker
         item(key = "live_alerts") {
+            val infiniteTransition = rememberInfiniteTransition(label = "live_pulse")
+            val pulseAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.35f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 700),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "pulse_alpha"
+            )
+
             Surface(
                 color = PureWhite,
                 shadowElevation = 1.dp,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        if (closingSoonJobs.isNotEmpty()) {
+                            onJobClick(closingSoonJobs.first())
+                        } else {
+                            onNavigateTab(MainTab.JOBS)
+                        }
+                    }
+                    .testTag("live_alerts_running_ticker")
             ) {
                 Row(
                     modifier = Modifier
@@ -373,33 +430,39 @@ fun HomeScreen(
                         shape = RoundedCornerShape(20.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(6.dp)
+                                    .size(7.dp)
                                     .clip(CircleShape)
-                                    .background(StatusUrgent)
+                                    .background(StatusUrgent.copy(alpha = pulseAlpha))
                             )
                             Spacer(modifier = Modifier.width(5.dp))
                             Text(
                                 text = "LIVE ALERTS",
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StatusUrgent
+                                fontWeight = FontWeight.ExtraBold,
+                                color = StatusUrgent,
+                                letterSpacing = 0.5.sp
                             )
                         }
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "SSC CGL 2026 Tier-1 application open • UPSC CSE 2026 Prelims closing soon • RRB NTPC vacancies active",
+                        text = fullTickerText,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.SemiBold,
                         color = Slate800,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .basicMarquee(
+                                iterations = Int.MAX_VALUE,
+                                initialDelayMillis = 300,
+                                velocity = 45.dp
+                            )
                     )
                 }
             }
@@ -501,6 +564,13 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
+            }
+        }
+
+        // 2b-2. Native Sponsored Exam Prep & Coaching Partner
+        item(key = "home_sponsored_study_kit") {
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                NativeSponsoredJobCard(creativeIndex = 0)
             }
         }
 
@@ -1223,8 +1293,8 @@ fun HomeScreen(
 
         item { Spacer(modifier = Modifier.height(12.dp)) }
 
-        // 8. Latest Jobs List
-        items(topJobs, key = { "home_job_${it.id}" }, contentType = { "job_card" }) { job ->
+        // 8. Latest Jobs List with Native Sponsored Insertion
+        itemsIndexed(topJobs, key = { _, job -> "home_job_${job.id}" }, contentType = { _, _ -> "job_card" }) { index, job ->
             Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                 JobCard(
                     job = job,
@@ -1232,6 +1302,11 @@ fun HomeScreen(
                     onBookmarkToggle = { onBookmarkToggle(job) },
                     onShare = { AppUtils.shareJobAlert(context, job) }
                 )
+            }
+            if (index == 2) {
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                    NativeSponsoredJobCard(creativeIndex = 1)
+                }
             }
         }
 

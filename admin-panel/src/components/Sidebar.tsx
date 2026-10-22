@@ -11,7 +11,8 @@ import {
   Settings, 
   ExternalLink,
   ShieldCheck,
-  Server
+  Server,
+  Megaphone
 } from 'lucide-react';
 
 const navigation = [
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Pending Review', href: '/pending', icon: Clock, badge: 'Review' },
   { name: 'Official Sources (30+)', href: '/sources', icon: Globe2 },
   { name: 'Active Notices & Jobs', href: '/jobs', icon: Briefcase },
+  { name: 'Ads & Monetization', href: '/ads', icon: Megaphone, badge: 'Revenue' },
   { name: 'Import Runs & Logs', href: '/runs', icon: History },
   { name: 'Settings & Cloudflare', href: '/settings', icon: Settings },
 ];

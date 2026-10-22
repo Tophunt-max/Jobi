@@ -27,6 +27,9 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PictureAsPdf
+import android.app.Activity
+import android.widget.Toast
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -44,8 +47,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.example.ads.AdManager
+import com.example.ads.RewardedUnlockDialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -97,6 +103,40 @@ fun ResultsAndCardsScreen(
     var selectedSubTab by remember(initialSubTab) { mutableIntStateOf(initialSubTab) }
     val tabs = listOf("Results", "Admit Cards", "Syllabus", "Admission", "Answer Keys")
     val context = LocalContext.current
+
+    var rewardedTargetTitle by remember { mutableStateOf<String?>(null) }
+    var rewardedTargetUrl by remember { mutableStateOf<String?>(null) }
+
+    if (rewardedTargetTitle != null) {
+        RewardedUnlockDialog(
+            itemTitle = rewardedTargetTitle ?: "",
+            onDismiss = { rewardedTargetTitle = null },
+            onWatchAdClick = {
+                val act = context as? Activity
+                if (act != null) {
+                    AdManager.showRewardedAd(
+                        activity = act,
+                        onUserEarnedReward = {
+                            Toast.makeText(context, "🎉 Model Paper & Solved Key Unlocked!", Toast.LENGTH_SHORT).show()
+                            rewardedTargetUrl?.let { url ->
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    // ignore
+                                }
+                            }
+                        },
+                        onAdClosed = {
+                            rewardedTargetTitle = null
+                        }
+                    )
+                } else {
+                    rewardedTargetTitle = null
+                }
+            }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -440,6 +480,31 @@ fun ResultsAndCardsScreen(
                                         text = "Download Full Official Syllabus PDF",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                OutlinedButton(
+                                    onClick = {
+                                        rewardedTargetTitle = "${syl.examName} Solved Model Test Paper & Prep Kit"
+                                        rewardedTargetUrl = syl.officialPdfUrl
+                                    },
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CardGiftcard,
+                                        contentDescription = null,
+                                        tint = RoyalBlue,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "🎁 Unlock Solved Model Paper (Free)",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = RoyalBlue
                                     )
                                 }
                             }

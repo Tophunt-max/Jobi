@@ -460,3 +460,18 @@ INSERT INTO jobs (
     'src-upsc', 'upsc.gov.in', 'UPSC-SYLLABUS-2026',
     'ACTIVE', 1, 'Chief Admin', '2026-02-14 09:00:00', '2026-02-14 09:00:00', 0
 );
+
+-- ============================================================
+-- Application Settings & Monetization Configuration Table
+-- ============================================================
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed default safe ad settings
+INSERT OR REPLACE INTO app_settings (key, value) VALUES (
+    'ad_config',
+    '{"masterEnabled":true,"bannerEnabled":true,"interstitialEnabled":true,"nativeEnabled":true,"rewardedEnabled":true,"bannerId":"","interstitialId":"","nativeId":"","rewardedId":"","interstitialClickInterval":3,"interstitialCooldownSeconds":60,"customSponsorActive":false,"sponsorName":"Sarkari Pariksha Partner","sponsorHeadline":"🎯 All India Mock Test Series 2026","sponsorBody":"500+ Sectional & Full-length tests with live All-India rank predictor & video solutions.","sponsorRating":"4.9 ★","sponsorCtaText":"Start Free Test","sponsorEmoji":"🎯","sponsorTargetUrl":"https://play.google.com/store/search?q=sarkari+mock+test&c=apps"}'
+);

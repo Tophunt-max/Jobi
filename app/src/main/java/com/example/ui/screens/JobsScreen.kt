@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.ads.NativeSponsoredJobCard
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
@@ -328,12 +330,15 @@ fun JobsScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(jobs, key = { it.id }) { job ->
+                itemsIndexed(jobs, key = { _, job -> job.id }) { index, job ->
                     JobCard(
                         job = job,
                         onClick = { onJobClick(job) },
                         onBookmarkToggle = { onBookmarkToggle(job) }
                     )
+                    if (index > 0 && (index + 1) % 4 == 0) {
+                        NativeSponsoredJobCard(creativeIndex = (index / 4))
+                    }
                 }
             }
         }

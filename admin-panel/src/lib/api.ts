@@ -1,4 +1,4 @@
-import { DashboardStats, ImportRun, JobItem, JobSource } from './types';
+import { AdConfig, DashboardStats, ImportRun, JobItem, JobSource } from './types';
 
 export function getApiConfig() {
   if (typeof window !== 'undefined') {
@@ -164,5 +164,18 @@ export const adminApi = {
 
     const res = await request<{ success: boolean; data: JobItem[] }>(`/api/jobs?${q.toString()}`);
     return res.data || [];
+  },
+
+  // Ads & Monetization Configuration
+  async getAdConfig(): Promise<AdConfig> {
+    const res = await request<{ success: boolean; data: AdConfig }>('/api/admin/ads');
+    return res.data;
+  },
+
+  async saveAdConfig(config: AdConfig): Promise<{ success: boolean; message: string; data?: AdConfig }> {
+    return await request('/api/admin/ads', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
   },
 };

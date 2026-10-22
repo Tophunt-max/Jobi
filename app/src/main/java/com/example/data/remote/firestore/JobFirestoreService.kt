@@ -1,5 +1,6 @@
 package com.example.data.remote.firestore
 
+import android.content.Context
 import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
@@ -16,9 +17,22 @@ import kotlin.coroutines.resume
  * Supports real-time snapshot streams, direct queries, and full CRUD operations.
  */
 class JobFirestoreService(
+    private val context: Context? = null,
     private val firestoreProvider: () -> FirebaseFirestore? = {
         try {
-            FirebaseFirestore.getInstance()
+            val hasApps = context?.let {
+                try {
+                    FirebaseApp.getApps(it).isNotEmpty()
+                } catch (_: Exception) {
+                    false
+                }
+            } ?: false
+
+            if (hasApps) {
+                FirebaseFirestore.getInstance()
+            } else {
+                null
+            }
         } catch (e: Throwable) {
             Log.w("JobFirestoreService", "Firestore not initialized or unavailable: ${e.message}")
             null
@@ -55,7 +69,7 @@ class JobFirestoreService(
                 .orderBy("applicationClosingDate", Query.Direction.ASCENDING)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
-                        Log.e(TAG, "Error listening to jobs collection", error)
+                        Log.w(TAG, "Error listening to jobs collection", error)
                         // Don't close flow, keep waiting for reconnection
                         return@addSnapshotListener
                     }
@@ -65,7 +79,7 @@ class JobFirestoreService(
                             try {
                                 doc.toObject(JobFirestoreDocument::class.java)?.copy(id = doc.id)
                             } catch (e: Exception) {
-                                Log.e(TAG, "Error deserializing job doc ${doc.id}", e)
+                                Log.w(TAG, "Error deserializing job doc ${doc.id}", e)
                                 null
                             }
                         }
@@ -94,7 +108,7 @@ class JobFirestoreService(
                 .whereEqualTo("category", category)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
-                        Log.e(TAG, "Error listening to category $category", error)
+                        Log.w(TAG, "Error listening to category $category", error)
                         return@addSnapshotListener
                     }
                     if (snapshot != null) {
@@ -102,7 +116,7 @@ class JobFirestoreService(
                             try {
                                 doc.toObject(JobFirestoreDocument::class.java)?.copy(id = doc.id)
                             } catch (e: Exception) {
-                                Log.e(TAG, "Error deserializing job doc ${doc.id}", e)
+                                Log.w(TAG, "Error deserializing job doc ${doc.id}", e)
                                 null
                             }
                         }
@@ -137,7 +151,7 @@ class JobFirestoreService(
 
             val registration = baseQuery.addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.e(TAG, "Error in searchAndFilterJobs", error)
+                    Log.w(TAG, "Error in searchAndFilterJobs", error)
                     return@addSnapshotListener
                 }
 
@@ -185,14 +199,14 @@ class JobFirestoreService(
                         try {
                             doc.toObject(JobFirestoreDocument::class.java)?.copy(id = doc.id)
                         } catch (e: Exception) {
-                            Log.e(TAG, "Error deserializing job doc ${doc.id}", e)
+                            Log.w(TAG, "Error deserializing job doc ${doc.id}", e)
                             null
                         }
                     }
                     continuation.resume(Result.success(docs))
                 }
                 .addOnFailureListener { exception ->
-                    Log.e(TAG, "Error fetching jobs from Firestore", exception)
+                    Log.w(TAG, "Error fetching jobs from Firestore", exception)
                     continuation.resume(Result.failure(exception))
                 }
         }
@@ -217,7 +231,7 @@ class JobFirestoreService(
                     }
                 }
                 .addOnFailureListener { exception ->
-                    Log.e(TAG, "Error fetching job $jobId", exception)
+                    Log.w(TAG, "Error fetching job $jobId", exception)
                     continuation.resume(Result.failure(exception))
                 }
         }
@@ -244,7 +258,7 @@ class JobFirestoreService(
                     continuation.resume(Result.success(docRef.id))
                 }
                 .addOnFailureListener { exception ->
-                    Log.e(TAG, "Failed to publish job doc", exception)
+                    Log.w(TAG, "Failed to publish job doc", exception)
                     continuation.resume(Result.failure(exception))
                 }
         }
@@ -268,7 +282,7 @@ class JobFirestoreService(
                     continuation.resume(Result.success(Unit))
                 }
                 .addOnFailureListener { exception ->
-                    Log.e(TAG, "Failed to update job doc ${document.id}", exception)
+                    Log.w(TAG, "Failed to update job doc ${document.id}", exception)
                     continuation.resume(Result.failure(exception))
                 }
         }
@@ -292,7 +306,7 @@ class JobFirestoreService(
                     continuation.resume(Result.success(Unit))
                 }
                 .addOnFailureListener { exception ->
-                    Log.e(TAG, "Failed to delete job $jobId", exception)
+                    Log.w(TAG, "Failed to delete job $jobId", exception)
                     continuation.resume(Result.failure(exception))
                 }
         }

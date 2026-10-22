@@ -17,6 +17,11 @@ import com.example.model.AnswerKeyItem
 import com.example.model.AppLanguage
 import com.example.model.ContentReport
 import com.example.model.JobEntity
+import android.content.Context
+import android.content.Intent
+import com.example.model.AppliedExamRecord
+import com.example.model.AspirantDocumentLocker
+import com.example.model.ExamApplicationStage
 import com.example.data.local.JobAlertPreferencesManager
 import com.example.data.repository.BackendDataSyncManager
 import com.example.data.repository.BackendSyncState
@@ -67,7 +72,7 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getDatabase(application)
     val repository = JobRepository(db.jobDao(), db.resultDao(), db.notificationDao())
-    val firestoreService = JobFirestoreService()
+    val firestoreService = JobFirestoreService(application)
     val syncCoordinator = JobSyncCoordinator(firestoreService, db.jobDao())
     val syncStatus: StateFlow<SyncStatus> = syncCoordinator.syncStatus
 
@@ -84,6 +89,43 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _userProfile = MutableStateFlow(UserEligibilityProfile())
     val userProfile: StateFlow<UserEligibilityProfile> = _userProfile.asStateFlow()
+
+    private val _documentLocker = MutableStateFlow(AspirantDocumentLocker())
+    val documentLocker: StateFlow<AspirantDocumentLocker> = _documentLocker.asStateFlow()
+
+    private val _appliedExams = MutableStateFlow(
+        listOf(
+            AppliedExamRecord(
+                id = "app-upsc-cse-2026",
+                jobTitle = "Civil Services Examination 2026 (IAS/IPS/IFS)",
+                organization = "Union Public Service Commission (UPSC)",
+                advtNumber = "05/2026-CSP",
+                applicationNo = "UPSC-2026-991823",
+                rollNo = "0819283",
+                examDate = "24 May 2026 (Prelims)",
+                examCenter = "Lucknow Center 04",
+                stage = ExamApplicationStage.SUBMITTED,
+                feeReceiptNo = "SBI-REC-994821",
+                appliedDate = "18 Oct 2026",
+                notes = "Admit card download expected 3 weeks prior to exam."
+            ),
+            AppliedExamRecord(
+                id = "app-ssc-cgl-2026",
+                jobTitle = "Combined Graduate Level (CGL Tier-I) 2026",
+                organization = "Staff Selection Commission (SSC)",
+                advtNumber = "SSC-CGL/2026/01",
+                applicationNo = "SSC-2026-449102",
+                rollNo = "30091827",
+                examDate = "12 Dec 2026",
+                examCenter = "Prayagraj / Delhi NCR",
+                stage = ExamApplicationStage.ADMIT_CARD_OUT,
+                feeReceiptNo = "UPI-REF-110293",
+                appliedDate = "02 Oct 2026",
+                notes = "Hall ticket downloaded. Shift 1 morning report at 08:30 AM."
+            )
+        )
+    )
+    val appliedExams: StateFlow<List<AppliedExamRecord>> = _appliedExams.asStateFlow()
 
     val allJobs: StateFlow<List<JobEntity>> = repository.allJobs
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -307,6 +349,75 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateUserProfile(profile: UserEligibilityProfile) {
         _userProfile.value = profile
+    }
+
+    fun updateDocumentLocker(locker: AspirantDocumentLocker) {
+        _documentLocker.value = locker
+    }
+
+    fun addAppliedExam(record: AppliedExamRecord) {
+        _appliedExams.value = listOf(record) + _appliedExams.value.filter { it.id != record.id }
+    }
+
+    fun updateExamStage(id: String, stage: ExamApplicationStage, notes: String = "") {
+        _appliedExams.value = _appliedExams.value.map {
+            if (it.id == id) it.copy(stage = stage, notes = if (notes.isNotBlank()) notes else it.notes)
+            else it
+        }
+    }
+
+    fun deleteAppliedExam(id: String) {
+        _appliedExams.value = _appliedExams.value.filter { it.id != id }
+    }
+
+    fun generateAspirantDossierText(): String {
+        val p = _userProfile.value
+        val d = _documentLocker.value
+        val exams = _appliedExams.value
+        val sb = StringBuilder()
+        sb.appendLine("==================================================")
+        sb.appendLine("       SARKARI ASPIRANT CAREER DOSSIER           ")
+        sb.appendLine("==================================================")
+        sb.appendLine("Candidate Name: ${p.candidateName}")
+        sb.appendLine("Father's Name : ${d.fatherName}")
+        sb.appendLine("Date of Birth : ${d.dob} (Age: ${p.age} Years)")
+        sb.appendLine("Gender        : ${p.gender}")
+        sb.appendLine("Category      : ${p.category.displayName}")
+        sb.appendLine("Home State    : ${p.homeState} (State Domicile Eligible)")
+        sb.appendLine("Education     : ${p.qualification.displayName}")
+        sb.appendLine("Specific Stream: ${p.specificDegree}")
+        sb.appendLine("Physical Stats: Height ${p.heightCm} cm | Chest ${p.chestUnexpandedCm}-${p.chestExpandedCm} cm")
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("DOCUMENT & CERTIFICATE LOCKER:")
+        sb.appendLine("• 10th (Matric) : ${d.tenthBoard} (${d.tenthYear}) - Roll: ${d.tenthRollNo} | ${d.tenthPercentage}")
+        sb.appendLine("• 12th (Inter)  : ${d.twelfthBoard} (${d.twelfthYear}) - Roll: ${d.twelfthRollNo} | ${d.twelfthPercentage}")
+        sb.appendLine("• Graduation    : ${d.gradDegree} (${d.gradYear}) - ${d.gradCgpaOrPercentage}")
+        sb.appendLine("• Category Cert : ${d.categoryCertNo} (Issued by ${d.categoryIssueAuthority})")
+        sb.appendLine("• Domicile Cert : ${d.domicileCertNo} (${d.domicileState})")
+        sb.appendLine("• Photo ID Card : ${d.idType} (${d.idNumberMasked})")
+        sb.appendLine("--------------------------------------------------")
+        sb.appendLine("ACTIVE EXAM APPLICATIONS (${exams.size}):")
+        exams.forEachIndexed { i, ex ->
+            sb.appendLine("${i + 1}. ${ex.jobTitle} - ${ex.organization}")
+            sb.appendLine("   Advt: ${ex.advtNumber} | App No: ${ex.applicationNo} | Roll: ${ex.rollNo.ifBlank { "Pending" }}")
+            sb.appendLine("   Status: ${ex.stage.displayName} | Exam Date: ${ex.examDate}")
+            if (ex.notes.isNotBlank()) sb.appendLine("   Note: ${ex.notes}")
+        }
+        sb.appendLine("==================================================")
+        sb.appendLine("Generated via Sarkari Portal • Verified Aspirant Profile")
+        return sb.toString()
+    }
+
+    fun shareAspirantDossier(context: Context) {
+        val text = generateAspirantDossierText()
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "Sarkari Aspirant Profile Dossier - ${_userProfile.value.candidateName}")
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        val chooser = Intent.createChooser(intent, "Share / Print Aspirant Dossier")
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
     }
 
     fun openReportDialog(job: JobEntity) {
