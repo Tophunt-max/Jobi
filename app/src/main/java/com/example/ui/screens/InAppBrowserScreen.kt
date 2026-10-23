@@ -5,7 +5,13 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.net.http.SslError
+import android.os.Build
+import android.view.View
 import android.view.ViewGroup
+import android.webkit.CookieManager
+import android.webkit.RenderProcessGoneDetail
+import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -19,6 +25,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +49,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.WarningAmber
@@ -55,7 +63,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,10 +77,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.delay
 import com.example.model.InAppBrowserState
 import com.example.ui.theme.DeepNavy
 import com.example.ui.theme.EmeraldGreen
@@ -134,6 +146,20 @@ fun InAppBrowserScreen(
     var canGoForward by remember { mutableStateOf(false) }
     var hasError by remember { mutableStateOf(false) }
     var errorDescription by remember { mutableStateOf<String?>(null) }
+    var showSlowServerOption by remember { mutableStateOf(false) }
+
+    // If government server is slow or sluggish, show quick external browser option after 5 seconds
+    LaunchedEffect(isLoading, finalLoadUrl) {
+        if (isLoading) {
+            showSlowServerOption = false
+            delay(5000L)
+            if (isLoading) {
+                showSlowServerOption = true
+            }
+        } else {
+            showSlowServerOption = false
+        }
+    }
 
     // Domain display and SSL status
     val parsedUri = runCatching { Uri.parse(currentUrl) }.getOrNull()
@@ -349,119 +375,288 @@ fun InAppBrowserScreen(
             }
         }
 
+        // PDF Document Quick Helper Strip
+        if (isPdfDocument) {
+            Surface(
+                color = Color(0xFFFEF3C7),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PictureAsPdf,
+                            contentDescription = null,
+                            tint = StatusUrgent,
+                            modifier = Modifier.size(17.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Official PDF Document Preview",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Slate800
+                        )
+                    }
+                    Text(
+                        text = "Open in PDF App / Chrome",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RoyalBlue,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { openInExternalBrowser(context, initialRawUrl) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
         // Web Content Viewport & Error Overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .weight(1f)
+                .background(PureWhite)
         ) {
-            AndroidView<WebView>(
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
+            key(finalLoadUrl) {
+                AndroidView<WebView>(
+                    factory = { ctx ->
+                        WebView(ctx).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+
+                            // Prevent black screen flash / compositing void
+                            setBackgroundColor(android.graphics.Color.WHITE)
+                            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+                            // Enable modern cookie policies for session-based government application forms
+                            try {
+                                val cookieManager = CookieManager.getInstance()
+                                cookieManager.setAcceptCookie(true)
+                                cookieManager.setAcceptThirdPartyCookies(this, true)
+                            } catch (_: Exception) {}
+
+                            settings.apply {
+                                javaScriptEnabled = true
+                                domStorageEnabled = true
+                                databaseEnabled = true
+                                useWideViewPort = true
+                                loadWithOverviewMode = true
+                                setSupportZoom(true)
+                                builtInZoomControls = true
+                                displayZoomControls = false
+                                allowFileAccess = false
+                                allowContentAccess = true
+                                loadsImagesAutomatically = true
+                                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+                                // Prevent dark mode inversion from turning government pages into unreadable black surfaces
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    @Suppress("DEPRECATION")
+                                    forceDark = WebSettings.FORCE_DARK_OFF
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    isAlgorithmicDarkeningAllowed = false
+                                }
+                            }
+
+                            webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView?,
+                                    request: WebResourceRequest?
+                                ): Boolean {
+                                    val reqUrl = request?.url?.toString() ?: return false
+                                    if (reqUrl.startsWith("http://") || reqUrl.startsWith("https://")) {
+                                        return false // Let WebView load government URLs
+                                    }
+
+                                    // External protocols (mailto:, tel:, whatsapp:)
+                                    return try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(reqUrl)).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        ctx.startActivity(intent)
+                                        true
+                                    } catch (_: Exception) {
+                                        true
+                                    }
+                                }
+
+                                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                                    super.onPageStarted(view, url, favicon)
+                                    isLoading = true
+                                    hasError = false
+                                    url?.let { currentUrl = it }
+                                }
+
+                                // Instant visible commit dismisses loading overlay early without black screen waiting
+                                override fun onPageCommitVisible(view: WebView?, url: String?) {
+                                    super.onPageCommitVisible(view, url)
+                                    isLoading = false
+                                }
+
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    isLoading = false
+                                    canGoBack = view?.canGoBack() == true
+                                    canGoForward = view?.canGoForward() == true
+                                    url?.let { currentUrl = it }
+                                }
+
+                                @SuppressLint("WebViewClientOnReceivedSslError")
+                                override fun onReceivedSslError(
+                                    view: WebView?,
+                                    handler: SslErrorHandler?,
+                                    error: SslError?
+                                ) {
+                                    // Government portals (*.gov.in, *.nic.in) often use CCA India certificates
+                                    // that trigger standard SSL warnings. Proceed to avoid a blank black screen.
+                                    handler?.proceed()
+                                }
+
+                                override fun onReceivedError(
+                                    view: WebView?,
+                                    request: WebResourceRequest?,
+                                    error: WebResourceError?
+                                ) {
+                                    super.onReceivedError(view, request, error)
+                                    if (request?.isForMainFrame == true) {
+                                        isLoading = false
+                                        hasError = true
+                                        errorDescription = error?.description?.toString()
+                                    }
+                                }
+
+                                override fun onRenderProcessGone(
+                                    view: WebView?,
+                                    detail: RenderProcessGoneDetail?
+                                ): Boolean {
+                                    // Prevent whole app crash if Android WebView renderer memory limit is reached
+                                    return true
+                                }
+                            }
+
+                            webChromeClient = object : WebChromeClient() {
+                                override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                    progress = newProgress / 100f
+                                    if (newProgress >= 70) {
+                                        isLoading = false
+                                    }
+                                }
+
+                                override fun onReceivedTitle(view: WebView?, title: String?) {
+                                    super.onReceivedTitle(view, title)
+                                    if (!title.isNullOrBlank() && !title.startsWith("http")) {
+                                        pageTitle = title
+                                    }
+                                }
+                            }
+
+                            loadUrl(finalLoadUrl)
+                            webViewInstance = this
+                        }
+                    },
+                    update = { wv ->
+                        webViewInstance = wv
+                    },
+                    onRelease = { wv ->
+                        try {
+                            wv.stopLoading()
+                            wv.destroy()
+                        } catch (_: Throwable) {}
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("in_app_webview")
+                )
+            }
+
+            // Smooth Pure White Loading Screen Overlay with Slow Server Warning
+            if (isLoading && !hasError) {
+                Surface(
+                    color = PureWhite,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            color = RoyalBlue,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(44.dp)
+                        )
+                        Spacer(modifier = Modifier.height(18.dp))
+                        Text(
+                            text = "Loading Official Portal...",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Slate800
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Connecting to government recruitment server",
+                            fontSize = 12.sp,
+                            color = Slate500
                         )
 
-                        settings.apply {
-                            javaScriptEnabled = true
-                            domStorageEnabled = true
-                            databaseEnabled = true
-                            useWideViewPort = true
-                            loadWithOverviewMode = true
-                            setSupportZoom(true)
-                            builtInZoomControls = true
-                            displayZoomControls = false
-                            allowFileAccess = false
-                            allowContentAccess = true
-                            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                            userAgentString = settings.userAgentString + " SarkariJobAlert/1.0"
-                        }
-
-                        webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?
-                            ): Boolean {
-                                val reqUrl = request?.url?.toString() ?: return false
-                                if (reqUrl.startsWith("http://") || reqUrl.startsWith("https://")) {
-                                    return false // Let WebView load it
-                                }
-
-                                // External protocols (mailto:, tel:, whatsapp:)
-                                return try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(reqUrl)).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    ctx.startActivity(intent)
-                                    true
-                                } catch (_: Exception) {
-                                    true
-                                }
-                            }
-
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                super.onPageStarted(view, url, favicon)
-                                isLoading = true
-                                hasError = false
-                                url?.let { currentUrl = it }
-                            }
-
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                super.onPageFinished(view, url)
-                                isLoading = false
-                                canGoBack = view?.canGoBack() == true
-                                canGoForward = view?.canGoForward() == true
-                                url?.let { currentUrl = it }
-                            }
-
-                            override fun onReceivedError(
-                                view: WebView?,
-                                request: WebResourceRequest?,
-                                error: WebResourceError?
+                        if (showSlowServerOption) {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Surface(
+                                color = Color(0xFFF1F5F9),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.padding(horizontal = 16.dp)
                             ) {
-                                super.onReceivedError(view, request, error)
-                                if (request?.isForMainFrame == true) {
-                                    isLoading = false
-                                    hasError = true
-                                    errorDescription = error?.description?.toString()
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Government server taking longer than usual?",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Slate700,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Button(
+                                        onClick = { openInExternalBrowser(context, initialRawUrl) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = RoyalBlue),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.OpenInBrowser,
+                                            contentDescription = null,
+                                            tint = PureWhite,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Open Directly in Chrome",
+                                            fontSize = 12.sp,
+                                            color = PureWhite
+                                        )
+                                    }
                                 }
                             }
                         }
-
-                        webChromeClient = object : WebChromeClient() {
-                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                                progress = newProgress / 100f
-                                if (newProgress >= 100) {
-                                    isLoading = false
-                                }
-                            }
-
-                            override fun onReceivedTitle(view: WebView?, title: String?) {
-                                super.onReceivedTitle(view, title)
-                                if (!title.isNullOrBlank() && !title.startsWith("http")) {
-                                    pageTitle = title
-                                }
-                            }
-                        }
-
-                        loadUrl(finalLoadUrl)
-                        webViewInstance = this
                     }
-                },
-                update = { wv ->
-                    webViewInstance = wv
-                },
-                onRelease = { wv ->
-                    try {
-                        wv.stopLoading()
-                        wv.destroy()
-                    } catch (_: Throwable) {}
-                },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("in_app_webview")
-            )
+                }
+            }
 
             // High-touch Error / Server Down Fallback
             if (hasError) {
@@ -507,7 +702,8 @@ fun InAppBrowserScreen(
                             fontSize = 13.sp,
                             color = Slate500,
                             modifier = Modifier.padding(horizontal = 8.dp),
-                            lineHeight = 18.sp
+                            lineHeight = 18.sp,
+                            textAlign = TextAlign.Center
                         )
 
                         Spacer(modifier = Modifier.height(20.dp))

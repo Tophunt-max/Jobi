@@ -104,7 +104,15 @@ fun ResultsAndCardsScreen(
     modifier: Modifier = Modifier
 ) {
     var selectedSubTab by remember(initialSubTab) { mutableIntStateOf(initialSubTab) }
-    val tabs = listOf("Results", "Admit Cards", "Syllabus", "Admission", "Answer Keys")
+    val tabItems = remember(results, admitCards, syllabi, admissions, answerKeys) {
+        listOf(
+            Triple("Results", results.size, "🏆"),
+            Triple("Admit Cards", admitCards.size, "🎫"),
+            Triple("Syllabus", syllabi.size, "📚"),
+            Triple("Admission", admissions.size, "🎓"),
+            Triple("Answer Keys", answerKeys.size, "🔑")
+        )
+    }
     val context = LocalContext.current
 
     var rewardedTargetTitle by remember { mutableStateOf<String?>(null) }
@@ -141,35 +149,58 @@ fun ResultsAndCardsScreen(
             .fillMaxSize()
             .background(Color(0xFFF8FAFC))
     ) {
-        // Tab Row
+        // Tab Row with Live Dynamic Count Badges
         ScrollableTabRow(
             selectedTabIndex = selectedSubTab,
             containerColor = PureWhite,
-            contentColor = DeepNavy,
+            contentColor = RoyalBlue,
             edgePadding = 16.dp,
             indicator = { tabPositions ->
                 if (selectedSubTab < tabPositions.size) {
                     TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedSubTab]),
-                        color = DeepNavy,
+                        color = RoyalBlue,
                         height = 3.dp
                     )
                 }
             }
         ) {
-            tabs.forEachIndexed { index, tabTitle ->
+            tabItems.forEachIndexed { index, (tabTitle, count, emoji) ->
+                val isSelected = selectedSubTab == index
                 Tab(
-                    selected = selectedSubTab == index,
+                    selected = isSelected,
                     onClick = {
                         selectedSubTab = index
                         onSubTabChange?.invoke(index)
                     },
                     text = {
-                        Text(
-                            text = tabTitle,
-                            fontSize = 13.sp,
-                            fontWeight = if (selectedSubTab == index) FontWeight.Bold else FontWeight.Medium
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            Text(text = emoji, fontSize = 14.sp)
+                            Text(
+                                text = tabTitle,
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) RoyalBlue else Slate700
+                            )
+                            if (count > 0) {
+                                Surface(
+                                    color = if (isSelected) RoyalBlueContainer else Slate100,
+                                    shape = CircleShape
+                                ) {
+                                    Text(
+                                        text = count.toString(),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) RoyalBlue else Slate600,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                        }
                     },
                     modifier = Modifier.testTag("results_subtab_$index")
                 )
@@ -208,13 +239,18 @@ fun ResultsAndCardsScreen(
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = OnGreenContainer,
+                                            maxLines = 1,
+                                            softWrap = false,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
                                     }
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = "Declared: ${res.publicationDate}",
                                         fontSize = 11.sp,
-                                        color = Slate500
+                                        color = Slate500,
+                                        maxLines = 1,
+                                        softWrap = false
                                     )
                                 }
 
@@ -328,13 +364,18 @@ fun ResultsAndCardsScreen(
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = DeepNavy,
+                                            maxLines = 1,
+                                            softWrap = false,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
                                     }
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = "Released: ${card.releaseDate}",
                                         fontSize = 11.sp,
-                                        color = Slate500
+                                        color = Slate500,
+                                        maxLines = 1,
+                                        softWrap = false
                                     )
                                 }
 

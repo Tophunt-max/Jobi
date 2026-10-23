@@ -33,9 +33,11 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
@@ -63,6 +65,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -111,6 +115,8 @@ data class SarkariPortalPillar(
     val iconEmoji: String,
     val containerBg: Color,
     val accentColor: Color,
+    val badgeText: String,
+    val badgeBg: Color,
     val testTag: String,
     val actionType: Int // 0: Latest Jobs, 1: Results, 2: Admit Card, 3: Syllabus, 4: Admission, 5: Answer Key
 )
@@ -123,12 +129,12 @@ data class JobSectorDef(
 )
 
 private val SarkariPillarsList = listOf(
-    SarkariPortalPillar("Latest Job", "Active Recruitments", "💼", Color(0xFFEFF6FF), Color(0xFF1D4ED8), "pillar_latest_job", 0),
-    SarkariPortalPillar("Admit Card", "Exam Hall Tickets", "🎫", Color(0xFFFFF7ED), Color(0xFFC2410C), "pillar_admit_card", 2),
-    SarkariPortalPillar("Results", "Cut-off & Merit", "🏆", Color(0xFFF0FDF4), Color(0xFF15803D), "pillar_results", 1),
-    SarkariPortalPillar("Syllabus", "Exam Pattern & Marks", "📚", Color(0xFFFAF5FF), Color(0xFF7E22CE), "pillar_syllabus", 3),
-    SarkariPortalPillar("Admission", "Colleges & NTA", "🎓", Color(0xFFFDF2F8), Color(0xFFBE185D), "pillar_admission", 4),
-    SarkariPortalPillar("Answer Key", "Official Objections", "🔑", Color(0xFFFFFBEB), Color(0xFFB45309), "pillar_answer_key", 5)
+    SarkariPortalPillar("Latest Job", "Active Recruitments", "💼", Color(0xFFEFF6FF), Color(0xFF1D4ED8), "ACTIVE", Color(0xFF2563EB), "pillar_latest_job", 0),
+    SarkariPortalPillar("Admit Card", "Exam Hall Tickets", "🎫", Color(0xFFFFF7ED), Color(0xFFC2410C), "LIVE", Color(0xFFEA580C), "pillar_admit_card", 2),
+    SarkariPortalPillar("Results", "Cut-off & Merit", "🏆", Color(0xFFF0FDF4), Color(0xFF15803D), "NEW", Color(0xFF059669), "pillar_results", 1),
+    SarkariPortalPillar("Syllabus", "Exam Pattern & Marks", "📚", Color(0xFFFAF5FF), Color(0xFF7E22CE), "2026", Color(0xFF7C3AED), "pillar_syllabus", 3),
+    SarkariPortalPillar("Admission", "Colleges & NTA", "🎓", Color(0xFFFDF2F8), Color(0xFFBE185D), "OPEN", Color(0xFFDB2777), "pillar_admission", 4),
+    SarkariPortalPillar("Answer Key", "Official Objections", "🔑", Color(0xFFFFFBEB), Color(0xFFB45309), "KEYS", Color(0xFFD97706), "pillar_answer_key", 5)
 )
 
 private val TopJobSectorsList = listOf(
@@ -234,7 +240,24 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(HeroGradientBrush)
-                    .padding(horizontal = 16.dp, vertical = 18.dp)
+                    .drawBehind {
+                        // Ambient luminous radial highlights for futuristic national portal aesthetic
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(Color(0xFF38BDF8).copy(alpha = 0.22f), Color.Transparent),
+                                center = Offset(size.width * 0.9f, size.height * 0.15f),
+                                radius = size.width * 0.55f
+                            )
+                        )
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(Color(0xFFF97316).copy(alpha = 0.14f), Color.Transparent),
+                                center = Offset(size.width * 0.1f, size.height * 0.85f),
+                                radius = size.width * 0.45f
+                            )
+                        )
+                    }
+                    .padding(horizontal = 16.dp, vertical = 20.dp)
             ) {
                 Column {
                     Row(
@@ -243,19 +266,49 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
+                            Surface(
+                                color = PureWhite.copy(alpha = 0.14f),
+                                shape = RoundedCornerShape(20.dp),
+                                border = BorderStroke(1.dp, PureWhite.copy(alpha = 0.22f))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Shield,
+                                        contentDescription = null,
+                                        tint = SaffronOrange,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = "BHARAT SARKARI JOBS 2026",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = PureWhite,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
                             Text(
                                 text = "Find Your Dream Government Career",
                                 style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 20.sp,
-                                    color = PureWhite
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 21.sp,
+                                    color = PureWhite,
+                                    letterSpacing = 0.2.sp
                                 )
                             )
                             Text(
-                                text = "Real-time verified recruitment notices across India",
+                                text = "Real-time verified recruitment notices, admit cards & results across India",
                                 fontSize = 12.sp,
-                                color = PureWhite.copy(alpha = 0.8f),
-                                modifier = Modifier.padding(top = 2.dp)
+                                color = PureWhite.copy(alpha = 0.85f),
+                                modifier = Modifier.padding(top = 2.dp),
+                                lineHeight = 16.sp
                             )
                         }
                     }
@@ -308,32 +361,81 @@ fun HomeScreen(
                             .testTag("home_search_input")
                     )
 
+                    // Popular Fast Search Tags Carousel
+                    val hotKeywords = remember {
+                        listOf(
+                            "🔥 SSC CGL",
+                            "🚆 Railway RRB",
+                            "🏛️ UPSC CSE",
+                            "🏦 Bank PO",
+                            "👮 Police Bharti",
+                            "🧑‍🏫 Teaching TET",
+                            "🎓 10th/12th Pass",
+                            "🇮🇳 All India"
+                        )
+                    }
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 10.dp)
+                    ) {
+                        items(hotKeywords) { tag ->
+                            val cleanTag = tag.substringAfter(" ")
+                            Surface(
+                                onClick = { onSearchChange(cleanTag) },
+                                shape = RoundedCornerShape(20.dp),
+                                color = PureWhite.copy(alpha = 0.15f),
+                                border = BorderStroke(1.dp, PureWhite.copy(alpha = 0.22f)),
+                                modifier = Modifier.testTag("hot_tag_$cleanTag")
+                            ) {
+                                Text(
+                                    text = tag,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = PureWhite,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                )
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Hero Quick Metric Pills (Vacancies, Official, Updates)
+                    // Hero Quick Metric Pills (Vacancies, Official, Updates) with Icons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Surface(
-                            color = PureWhite.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(10.dp),
+                            color = PureWhite.copy(alpha = 0.14f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, PureWhite.copy(alpha = 0.18f)),
                             modifier = Modifier.weight(1f)
                         ) {
                             Column(
-                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp),
+                                modifier = Modifier.padding(vertical = 9.dp, horizontal = 8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(
-                                    text = "48,200+",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = PureWhite
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.People,
+                                        contentDescription = null,
+                                        tint = PureWhite,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "48,200+",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = PureWhite
+                                    )
+                                }
                                 Text(
                                     text = "Active Posts",
                                     fontSize = 10.sp,
-                                    color = PureWhite.copy(alpha = 0.8f)
+                                    fontWeight = FontWeight.Medium,
+                                    color = PureWhite.copy(alpha = 0.85f),
+                                    modifier = Modifier.padding(top = 1.dp)
                                 )
                             }
                         }
@@ -341,24 +443,36 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.width(8.dp))
 
                         Surface(
-                            color = PureWhite.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(10.dp),
+                            color = PureWhite.copy(alpha = 0.14f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, PureWhite.copy(alpha = 0.18f)),
                             modifier = Modifier.weight(1f)
                         ) {
                             Column(
-                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp),
+                                modifier = Modifier.padding(vertical = 9.dp, horizontal = 8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(
-                                    text = "100% Official",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = EmeraldMint
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = EmeraldMint,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "100% Official",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = EmeraldMint
+                                    )
+                                }
                                 Text(
                                     text = "Gazette Verified",
                                     fontSize = 10.sp,
-                                    color = PureWhite.copy(alpha = 0.8f)
+                                    fontWeight = FontWeight.Medium,
+                                    color = PureWhite.copy(alpha = 0.85f),
+                                    modifier = Modifier.padding(top = 1.dp)
                                 )
                             }
                         }
@@ -366,24 +480,36 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.width(8.dp))
 
                         Surface(
-                            color = PureWhite.copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(10.dp),
+                            color = PureWhite.copy(alpha = 0.14f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, PureWhite.copy(alpha = 0.18f)),
                             modifier = Modifier.weight(1f)
                         ) {
                             Column(
-                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp),
+                                modifier = Modifier.padding(vertical = 9.dp, horizontal = 8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(
-                                    text = "14 Languages",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = SaffronOrange
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Language,
+                                        contentDescription = null,
+                                        tint = SaffronOrange,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "14 Languages",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = SaffronOrange
+                                    )
+                                }
                                 Text(
                                     text = "Multilingual",
                                     fontSize = 10.sp,
-                                    color = PureWhite.copy(alpha = 0.8f)
+                                    fontWeight = FontWeight.Medium,
+                                    color = PureWhite.copy(alpha = 0.85f),
+                                    modifier = Modifier.padding(top = 1.dp)
                                 )
                             }
                         }
@@ -518,44 +644,74 @@ fun HomeScreen(
                                         5 -> onOpenResultsSubTab(4)
                                     }
                                 },
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 color = PureWhite,
-                                border = BorderStroke(1.dp, Slate200),
-                                shadowElevation = 1.dp,
+                                border = BorderStroke(1.dp, pillar.accentColor.copy(alpha = 0.22f)),
+                                shadowElevation = 2.dp,
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag(pillar.testTag)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(38.dp)
-                                            .clip(CircleShape)
-                                            .background(pillar.containerBg),
-                                        contentAlignment = Alignment.Center
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    // Top-Right Micro Status Badge
+                                    Surface(
+                                        color = pillar.badgeBg,
+                                        shape = RoundedCornerShape(bottomStart = 8.dp, topEnd = 14.dp),
+                                        modifier = Modifier.align(Alignment.TopEnd)
                                     ) {
-                                        Text(text = pillar.iconEmoji, fontSize = 18.sp)
+                                        Text(
+                                            text = pillar.badgeText,
+                                            fontSize = 7.5.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = PureWhite,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp),
+                                            lineHeight = 9.sp
+                                        )
                                     }
 
-                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 10.dp, bottom = 10.dp, start = 6.dp, end = 6.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(
+                                                    Brush.linearGradient(
+                                                        listOf(
+                                                            pillar.containerBg,
+                                                            pillar.accentColor.copy(alpha = 0.14f)
+                                                        )
+                                                    )
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(text = pillar.iconEmoji, fontSize = 20.sp)
+                                        }
 
-                                    Text(
-                                        text = pillar.title,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Slate900,
-                                        maxLines = 1
-                                    )
+                                        Spacer(modifier = Modifier.height(7.dp))
 
-                                    Text(
-                                        text = pillar.subtitle,
-                                        fontSize = 9.sp,
-                                        color = Slate500,
-                                        maxLines = 1
-                                    )
+                                        Text(
+                                            text = pillar.title,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Slate900,
+                                            maxLines = 1
+                                        )
+
+                                        Spacer(modifier = Modifier.height(2.dp))
+
+                                        Text(
+                                            text = pillar.subtitle,
+                                            fontSize = 9.5.sp,
+                                            color = Slate500,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1046,6 +1202,8 @@ fun HomeScreen(
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.ExtraBold,
                                                 color = StatusUrgent,
+                                                maxLines = 1,
+                                                softWrap = false,
                                                 modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                                             )
                                         }

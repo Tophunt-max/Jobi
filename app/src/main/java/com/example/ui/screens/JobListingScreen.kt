@@ -844,7 +844,7 @@ fun GovernmentJobOpeningCard(
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = job.organization,
                             style = MaterialTheme.typography.bodyMedium.copy(
@@ -864,7 +864,8 @@ fun GovernmentJobOpeningCard(
                                 fontSize = 10.5.sp,
                                 color = Slate500,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                             if (job.isVerified) {
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -879,12 +880,16 @@ fun GovernmentJobOpeningCard(
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = VerifiedBlue,
+                                    maxLines = 1,
+                                    softWrap = false,
                                     modifier = Modifier.padding(start = 2.dp)
                                 )
                             }
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 // Dynamic Status Pill
                 when (job.status) {
@@ -908,7 +913,9 @@ fun GovernmentJobOpeningCard(
                                     text = "Closing Soon",
                                     fontSize = 9.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = StatusUrgent
+                                    color = StatusUrgent,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
@@ -933,7 +940,9 @@ fun GovernmentJobOpeningCard(
                                     text = "Upcoming",
                                     fontSize = 9.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = StatusUpcoming
+                                    color = StatusUpcoming,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
@@ -958,7 +967,9 @@ fun GovernmentJobOpeningCard(
                                     text = "Active",
                                     fontSize = 9.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = OnGreenContainer
+                                    color = OnGreenContainer,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
@@ -1009,7 +1020,9 @@ fun GovernmentJobOpeningCard(
                             text = "${job.totalVacancies} Posts",
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Slate800
+                            color = Slate800,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -1053,6 +1066,7 @@ fun GovernmentJobOpeningCard(
                         fontWeight = FontWeight.Medium,
                         color = Slate700,
                         maxLines = 1,
+                        softWrap = false,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.5.dp)
                     )
