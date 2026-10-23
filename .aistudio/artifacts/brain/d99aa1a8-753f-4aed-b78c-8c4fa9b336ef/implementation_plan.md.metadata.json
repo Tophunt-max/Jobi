@@ -1,6 +1,6 @@
 {
-  "summary":  "Revised implementation plan to implement the Ads & Monetization Control Panel inside the standalone Next.js Web Admin Panel (admin-panel), backed by Cloudflare Worker D1 storage, and connect the Android app to sync ad configurations remotely.",
-  "updatedAt":  "2026-10-22T03:33:50.538820393Z",
+  "summary":  "Comprehensive bugfix and UI overhaul plan for the Latest Jobs page (JobListingScreen) resolving badge wrapping, text collision, search desync, state filter integration, and two clean horizontal scroll filter rows.",
+  "updatedAt":  "2026-10-23T09:16:34.629589761Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

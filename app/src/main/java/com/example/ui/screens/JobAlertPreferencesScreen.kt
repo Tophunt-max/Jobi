@@ -68,6 +68,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ads.NativeSponsoredJobCard
 import com.example.model.AlertFrequency
 import com.example.model.JobAlertMatcher
 import com.example.model.JobAlertPreferences
@@ -842,7 +843,11 @@ fun JobAlertPreferencesScreen(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(40.dp)) }
+            item {
+                Spacer(modifier = Modifier.height(10.dp))
+                NativeSponsoredJobCard(creativeIndex = 0)
+                Spacer(modifier = Modifier.height(40.dp))
+            }
         }
     }
 }

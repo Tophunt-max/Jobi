@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import com.example.ads.AdSettingsRepository
+import com.example.ads.NativeSponsoredJobCard
 import com.example.data.repository.BackendSyncState
 import com.example.model.AppLanguage
 import com.example.model.AppliedExamRecord
@@ -1297,6 +1298,9 @@ fun ProfileScreen(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    NativeSponsoredJobCard(creativeIndex = 1)
                 }
             }
 
@@ -1376,6 +1380,9 @@ fun ProfileScreen(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    NativeSponsoredJobCard(creativeIndex = 2)
                 }
             }
 

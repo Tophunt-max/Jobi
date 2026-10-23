@@ -39,12 +39,14 @@ import android.app.Activity
 import androidx.compose.foundation.layout.Column
 import com.example.ads.AdManager
 import com.example.ads.AdaptiveBannerAdView
+import com.example.ui.screens.InAppBrowserScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.ResultsAndCardsScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.AiMentorViewModel
 import com.example.ui.viewmodel.JobViewModel
 import com.example.ui.viewmodel.MainTab
+import com.example.util.AppUtils
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,6 +108,13 @@ fun MainAppContent() {
         }
     }
 
+    // Connect AppUtils to In-App WebView Browser
+    LaunchedEffect(Unit) {
+        AppUtils.onOpenInAppBrowser = { url, title ->
+            jobViewModel.openInAppBrowser(url, title)
+        }
+    }
+
     // Modal Sheets
     if (uiState.showLanguageSheet) {
         LanguageSelectorSheet(
@@ -163,6 +172,16 @@ fun MainAppContent() {
             onDismiss = { jobViewModel.dismissReportDialog() },
             onSubmit = { reason, details -> jobViewModel.submitReport(reason, details) }
         )
+    }
+
+    // In-App WebView Browser Overlay (highest priority over main app and modals)
+    val inAppBrowser = uiState.inAppBrowserState
+    if (inAppBrowser != null) {
+        InAppBrowserScreen(
+            state = inAppBrowser,
+            onClose = { jobViewModel.closeInAppBrowser() }
+        )
+        return
     }
 
     // Detail Screen Overlay

@@ -2,6 +2,7 @@ package com.example.ads
 
 import android.content.Intent
 import android.net.Uri
+import com.example.util.AppUtils
 import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -93,7 +94,7 @@ fun AdaptiveBannerAdView(
         ) {
             // Live AdMob Banner View (re-creates if unit ID changes in admin)
             key(effectiveBannerId) {
-                AndroidView(
+                AndroidView<android.view.View>(
                     factory = { ctx ->
                         try {
                             AdView(ctx).apply {
@@ -129,10 +130,10 @@ fun AdaptiveBannerAdView(
                             android.view.View(ctx)
                         }
                     },
-                    onRelease = { adView ->
+                    onRelease = { view ->
                         try {
-                            adView.destroy()
-                        } catch (_: Exception) {}
+                            (view as? AdView)?.destroy()
+                        } catch (_: Throwable) {}
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -175,10 +176,7 @@ fun AdaptiveBannerAdView(
                         .border(1.dp, Slate200, RoundedCornerShape(8.dp))
                         .clickable {
                             onAdClicked()
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
-                                context.startActivity(intent)
-                            } catch (_: Exception) {}
+                            AppUtils.openUrl(context, targetUrl, bannerTitle)
                         }
                         .padding(horizontal = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,

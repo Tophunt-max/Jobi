@@ -2,6 +2,7 @@ package com.example.ads
 
 import android.content.Intent
 import android.net.Uri
+import com.example.util.AppUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -92,10 +93,7 @@ fun NativeSponsoredJobCard(
                 if (onSponsorClicked != null) {
                     onSponsorClicked(creative)
                 } else {
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(creative.targetUrl))
-                        context.startActivity(intent)
-                    } catch (_: Exception) {}
+                    AppUtils.openUrl(context, creative.targetUrl, creative.headline)
                 }
             },
         shape = RoundedCornerShape(16.dp),

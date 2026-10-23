@@ -125,11 +125,23 @@ object AppUtils {
     }
 
     /**
-     * Opens official notification PDF in browser or system PDF viewer
+     * Global callback hook to route web links into the In-App WebView Browser.
+     * Initialized in MainActivity to point to JobViewModel.openInAppBrowser.
      */
-    fun openOfficialPdf(context: Context, url: String) {
+    var onOpenInAppBrowser: ((url: String, title: String?) -> Unit)? = null
+
+    /**
+     * Opens official notification PDF in in-app browser or system PDF viewer
+     */
+    fun openOfficialPdf(context: Context, url: String, title: String? = "Official Notification PDF") {
+        if (url.isBlank()) return
+        val targetUrl = if (url.startsWith("http://") || url.startsWith("https://")) url else "https://$url"
+        val inApp = onOpenInAppBrowser
+        if (inApp != null) {
+            inApp(targetUrl, title)
+            return
+        }
         try {
-            val targetUrl = if (url.startsWith("http://") || url.startsWith("https://")) url else "https://$url"
             val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(targetUrl)).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
@@ -139,11 +151,37 @@ object AppUtils {
     }
 
     /**
-     * Opens official recruitment portal in browser
+     * Opens official recruitment portal in in-app browser
      */
-    fun openApplyPortal(context: Context, url: String) {
+    fun openApplyPortal(context: Context, url: String, title: String? = "Apply Online Portal") {
+        if (url.isBlank()) return
+        val targetUrl = if (url.startsWith("http://") || url.startsWith("https://")) url else "https://$url"
+        val inApp = onOpenInAppBrowser
+        if (inApp != null) {
+            inApp(targetUrl, title)
+            return
+        }
         try {
-            val targetUrl = if (url.startsWith("http://") || url.startsWith("https://")) url else "https://$url"
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(targetUrl)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+        }
+    }
+
+    /**
+     * Opens any general government or exam link in in-app browser
+     */
+    fun openUrl(context: Context, url: String, title: String? = null) {
+        if (url.isBlank()) return
+        val targetUrl = if (url.startsWith("http://") || url.startsWith("https://")) url else "https://$url"
+        val inApp = onOpenInAppBrowser
+        if (inApp != null) {
+            inApp(targetUrl, title)
+            return
+        }
+        try {
             val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(targetUrl)).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }

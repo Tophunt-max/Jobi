@@ -1,8 +1,11 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import com.example.ads.AdManager
+import com.example.ads.AdaptiveBannerAdView
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -206,69 +209,84 @@ fun JobDetailScreen(
             )
         },
         bottomBar = {
-            // Primary Application Action Bar
-            Surface(
-                color = PureWhite,
-                shadowElevation = 8.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            // Adaptive Banner & Primary Application Action Bar
+            Column(modifier = Modifier.fillMaxWidth()) {
+                AdaptiveBannerAdView()
+                Surface(
+                    color = PureWhite,
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(job.officialNotificationUrl))
-                            context.startActivity(intent)
-                        },
-                        border = BorderStroke(1.dp, DeepNavy),
-                        shape = RoundedCornerShape(12.dp),
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .testTag("download_notification_btn")
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PictureAsPdf,
-                            contentDescription = null,
-                            tint = DeepNavy,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Official PDF",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = DeepNavy
-                        )
-                    }
+                        OutlinedButton(
+                            onClick = {
+                                val act = context as? Activity
+                                if (act != null) {
+                                    AdManager.showInterstitialIfAllowed(act) {
+                                        AppUtils.openOfficialPdf(context, job.officialNotificationUrl, "Official PDF: ${job.title}")
+                                    }
+                                } else {
+                                    AppUtils.openOfficialPdf(context, job.officialNotificationUrl, "Official PDF: ${job.title}")
+                                }
+                            },
+                            border = BorderStroke(1.dp, DeepNavy),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("download_notification_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PictureAsPdf,
+                                contentDescription = null,
+                                tint = DeepNavy,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Official PDF",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = DeepNavy
+                            )
+                        }
 
-                    Button(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(job.applyOnlineUrl))
-                            context.startActivity(intent)
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = SaffronOrange),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .weight(1.3f)
-                            .testTag("apply_online_btn")
-                    ) {
-                        Text(
-                            text = LanguageRegistry.getString("apply_online", language),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PureWhite
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = null,
-                            tint = PureWhite,
-                            modifier = Modifier.size(14.dp)
-                        )
+                        Button(
+                            onClick = {
+                                val act = context as? Activity
+                                if (act != null) {
+                                    AdManager.showInterstitialIfAllowed(act) {
+                                        AppUtils.openApplyPortal(context, job.applyOnlineUrl, "Apply Online: ${job.title}")
+                                    }
+                                } else {
+                                    AppUtils.openApplyPortal(context, job.applyOnlineUrl, "Apply Online: ${job.title}")
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SaffronOrange),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1.3f)
+                                .testTag("apply_online_btn")
+                        ) {
+                            Text(
+                                text = LanguageRegistry.getString("apply_online", language),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = PureWhite
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = null,
+                                tint = PureWhite,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -532,6 +550,11 @@ fun JobDetailScreen(
                     DetailRow(label = "Admit Card Release", value = job.admitCardDate)
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Sponsored Exam Prep Partner Card (Mid-content placement)
+            NativeSponsoredJobCard(creativeIndex = 0)
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import com.example.util.AppUtils
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.example.ads.NativeSponsoredJobCard
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -119,12 +122,7 @@ fun ResultsAndCardsScreen(
                         onUserEarnedReward = {
                             Toast.makeText(context, "🎉 Model Paper & Solved Key Unlocked!", Toast.LENGTH_SHORT).show()
                             rewardedTargetUrl?.let { url ->
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    // ignore
-                                }
+                                AppUtils.openUrl(context, url, rewardedTargetTitle ?: "Unlocked Paper")
                             }
                         },
                         onAdClosed = {
@@ -186,7 +184,7 @@ fun ResultsAndCardsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(results, key = { "result_${it.id}" }, contentType = { "result_item" }) { res ->
+                    itemsIndexed(results, key = { _, it -> "result_${it.id}" }, contentType = { _, _ -> "result_item" }) { index, res ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = PureWhite),
                             shape = RoundedCornerShape(16.dp),
@@ -262,8 +260,14 @@ fun ResultsAndCardsScreen(
 
                                 Button(
                                     onClick = {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(res.officialResultUrl))
-                                        context.startActivity(intent)
+                                        val act = context as? Activity
+                                        if (act != null) {
+                                            AdManager.showInterstitialIfAllowed(act) {
+                                                AppUtils.openOfficialPdf(context, res.officialResultUrl, "Result: ${res.examName}")
+                                            }
+                                        } else {
+                                            AppUtils.openOfficialPdf(context, res.officialResultUrl, "Result: ${res.examName}")
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = DeepNavy),
                                     shape = RoundedCornerShape(10.dp),
@@ -283,6 +287,12 @@ fun ResultsAndCardsScreen(
                                 }
                             }
                         }
+
+                        // Native Sponsored Test Series / Career Partner Card every 3 items
+                        if (index > 0 && (index + 1) % 3 == 0) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            NativeSponsoredJobCard(creativeIndex = (index / 3) % 3)
+                        }
                     }
                 }
             }
@@ -294,7 +304,7 @@ fun ResultsAndCardsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(admitCards, key = { "admit_${it.id}" }, contentType = { "admit_item" }) { card ->
+                    itemsIndexed(admitCards, key = { _, it -> "admit_${it.id}" }, contentType = { _, _ -> "admit_item" }) { index, card ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = PureWhite),
                             shape = RoundedCornerShape(16.dp),
@@ -365,8 +375,14 @@ fun ResultsAndCardsScreen(
 
                                 Button(
                                     onClick = {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(card.officialDownloadUrl))
-                                        context.startActivity(intent)
+                                        val act = context as? Activity
+                                        if (act != null) {
+                                            AdManager.showInterstitialIfAllowed(act) {
+                                                AppUtils.openApplyPortal(context, card.officialDownloadUrl, "Admit Card: ${card.examName}")
+                                            }
+                                        } else {
+                                            AppUtils.openApplyPortal(context, card.officialDownloadUrl, "Admit Card: ${card.examName}")
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = SaffronOrange),
                                     shape = RoundedCornerShape(10.dp),
@@ -385,6 +401,12 @@ fun ResultsAndCardsScreen(
                                     )
                                 }
                             }
+                        }
+
+                        // Native Sponsored Exam Mock & Hall Ticket Prep Kit Card every 3 items
+                        if (index > 0 && (index + 1) % 3 == 0) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            NativeSponsoredJobCard(creativeIndex = (index / 3 + 1) % 3)
                         }
                     }
                 }
@@ -405,7 +427,7 @@ fun ResultsAndCardsScreen(
                         )
                     }
 
-                    items(syllabi, key = { "syl_${it.id}" }, contentType = { "syl_item" }) { syl ->
+                    itemsIndexed(syllabi, key = { _, it -> "syl_${it.id}" }, contentType = { _, _ -> "syl_item" }) { index, syl ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = PureWhite),
                             shape = RoundedCornerShape(16.dp),
@@ -463,8 +485,14 @@ fun ResultsAndCardsScreen(
 
                                 Button(
                                     onClick = {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(syl.officialPdfUrl))
-                                        context.startActivity(intent)
+                                        val act = context as? Activity
+                                        if (act != null) {
+                                            AdManager.showInterstitialIfAllowed(act) {
+                                                AppUtils.openOfficialPdf(context, syl.officialPdfUrl, "Syllabus: ${syl.examName}")
+                                            }
+                                        } else {
+                                            AppUtils.openOfficialPdf(context, syl.officialPdfUrl, "Syllabus: ${syl.examName}")
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = DeepNavy),
                                     shape = RoundedCornerShape(10.dp),
@@ -509,6 +537,12 @@ fun ResultsAndCardsScreen(
                                 }
                             }
                         }
+
+                        // Native Sponsored E-Book / Study Notes Partner Card every 3 items
+                        if (index > 0 && (index + 1) % 3 == 0) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            NativeSponsoredJobCard(creativeIndex = (index / 3 + 2) % 3)
+                        }
                     }
                 }
             }
@@ -550,7 +584,7 @@ fun ResultsAndCardsScreen(
                         }
                     }
 
-                    items(admissions, key = { "adm_${it.id}" }, contentType = { "adm_item" }) { adm ->
+                    itemsIndexed(admissions, key = { _, it -> "adm_${it.id}" }, contentType = { _, _ -> "adm_item" }) { index, adm ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = PureWhite),
                             shape = RoundedCornerShape(16.dp),
@@ -676,8 +710,14 @@ fun ResultsAndCardsScreen(
                                 ) {
                                     Button(
                                         onClick = {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(adm.officialApplyUrl))
-                                            context.startActivity(intent)
+                                            val act = context as? Activity
+                                            if (act != null) {
+                                                AdManager.showInterstitialIfAllowed(act) {
+                                                    AppUtils.openApplyPortal(context, adm.officialApplyUrl, "Apply Online: ${adm.examOrCourseName}")
+                                                }
+                                            } else {
+                                                AppUtils.openApplyPortal(context, adm.officialApplyUrl, "Apply Online: ${adm.examOrCourseName}")
+                                            }
                                         },
                                         colors = ButtonDefaults.buttonColors(containerColor = DeepNavy),
                                         shape = RoundedCornerShape(10.dp),
@@ -698,8 +738,14 @@ fun ResultsAndCardsScreen(
 
                                     OutlinedButton(
                                         onClick = {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(adm.officialInformationBulletinUrl))
-                                            context.startActivity(intent)
+                                            val act = context as? Activity
+                                            if (act != null) {
+                                                AdManager.showInterstitialIfAllowed(act) {
+                                                    AppUtils.openOfficialPdf(context, adm.officialInformationBulletinUrl, "Bulletin: ${adm.examOrCourseName}")
+                                                }
+                                            } else {
+                                                AppUtils.openOfficialPdf(context, adm.officialInformationBulletinUrl, "Bulletin: ${adm.examOrCourseName}")
+                                            }
                                         },
                                         shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier.weight(1f)
@@ -721,6 +767,12 @@ fun ResultsAndCardsScreen(
                                 }
                             }
                         }
+
+                        // Native Sponsored University & Entrance Test Partner Card every 3 items
+                        if (index > 0 && (index + 1) % 3 == 0) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            NativeSponsoredJobCard(creativeIndex = (index / 3) % 3)
+                        }
                     }
                 }
             }
@@ -732,7 +784,7 @@ fun ResultsAndCardsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(answerKeys, key = { "ans_${it.id}" }, contentType = { "ans_item" }) { keyItem ->
+                    itemsIndexed(answerKeys, key = { _, it -> "ans_${it.id}" }, contentType = { _, _ -> "ans_item" }) { index, keyItem ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = PureWhite),
                             shape = RoundedCornerShape(16.dp),
@@ -807,8 +859,14 @@ fun ResultsAndCardsScreen(
 
                                 Button(
                                     onClick = {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(keyItem.officialLink))
-                                        context.startActivity(intent)
+                                        val act = context as? Activity
+                                        if (act != null) {
+                                            AdManager.showInterstitialIfAllowed(act) {
+                                                AppUtils.openUrl(context, keyItem.officialLink, "Answer Key: ${keyItem.examName}")
+                                            }
+                                        } else {
+                                            AppUtils.openUrl(context, keyItem.officialLink, "Answer Key: ${keyItem.examName}")
+                                        }
                                     },
                                     colors = ButtonDefaults.buttonColors(containerColor = DeepNavy),
                                     shape = RoundedCornerShape(10.dp),
@@ -827,6 +885,12 @@ fun ResultsAndCardsScreen(
                                     )
                                 }
                             }
+                        }
+
+                        // Native Sponsored Answer Key & Cutoff Analysis Partner Card every 3 items
+                        if (index > 0 && (index + 1) % 3 == 0) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            NativeSponsoredJobCard(creativeIndex = (index / 3 + 1) % 3)
                         }
                     }
                 }

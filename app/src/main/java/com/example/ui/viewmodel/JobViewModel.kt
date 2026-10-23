@@ -25,6 +25,7 @@ import com.example.model.ExamApplicationStage
 import com.example.data.local.JobAlertPreferencesManager
 import com.example.data.repository.BackendDataSyncManager
 import com.example.data.repository.BackendSyncState
+import com.example.model.InAppBrowserState
 import com.example.model.JobAlertMatcher
 import com.example.model.JobAlertPreferences
 import com.example.model.MatchedJob
@@ -65,7 +66,8 @@ data class JobUiState(
     val showNotificationsSheet: Boolean = false,
     val showJobAlertsScreen: Boolean = false,
     val reportingJob: JobEntity? = null,
-    val reportSubmittedMessage: String? = null
+    val reportSubmittedMessage: String? = null,
+    val inAppBrowserState: InAppBrowserState? = null
 )
 
 class JobViewModel(application: Application) : AndroidViewModel(application) {
@@ -259,6 +261,17 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sendTestJobAlert() {
         alertPreferencesManager.sendTestJobAlertNotification(matchedJobs.value.firstOrNull())
+    }
+
+    fun openInAppBrowser(url: String, title: String? = null) {
+        if (url.isBlank()) return
+        _uiState.value = _uiState.value.copy(
+            inAppBrowserState = InAppBrowserState(url = url.trim(), title = title)
+        )
+    }
+
+    fun closeInAppBrowser() {
+        _uiState.value = _uiState.value.copy(inAppBrowserState = null)
     }
 
     fun setTab(tab: MainTab) {

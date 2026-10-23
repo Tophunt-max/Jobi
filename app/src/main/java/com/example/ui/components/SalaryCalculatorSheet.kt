@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Payments
+import com.example.ads.NativeSponsoredJobCard
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -425,6 +426,8 @@ fun SalaryCalculatorSheet(
             }
 
             item {
+                Spacer(modifier = Modifier.height(10.dp))
+                NativeSponsoredJobCard(creativeIndex = 1)
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }

@@ -1,121 +1,93 @@
-# Implementation Plan - Next.js Web Admin Panel: Ads & Monetization Management
+# Latest Jobs Page UI Overhaul & Bugfix Plan
 
-Revise the architecture to implement the complete Ads and Monetization Control Center inside the **standalone Next.js Web Admin Panel** (`/admin-panel`), rather than the Android mobile client. The Next.js panel will store and manage configurations via Cloudflare Worker API & D1 database, and the Android mobile app will fetch this remote configuration in real-time.
+Resolve all visual layout bugs, badge clipping, search/filter desync, and header overlap issues on the **Latest Jobs** screen (`JobListingScreen.kt`) to deliver a bug-free, candidate-centric experience.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> - **Primary Interface**: All AdMob switches, unit ID management, frequency capping, and direct sponsor campaigns will be managed exclusively in the **Next.js Web Admin Panel** at route `/ads` (with a dedicated sidebar navigation item).
-> - **Android App Role**: The Android app acts as a pure consumer: it fetches `/api/ads/config` on launch and caches it locally, so any changes made in the Next.js panel reflect immediately across all candidate devices.
-> - **Mobile UI Cleanup**: The PIN verification and Admin Ads screen inside the Android app will be cleanly removed to keep the mobile experience dedicated strictly to job aspirants.
+> - **Card Action Style (Confirmed)**: Clean, focused card design with only the **Bookmark toggle button** and **"View Details" button**, eliminating visual clutter and accidental mis-clicks.
+> - **Filter Organization (Confirmed)**: **Two dedicated horizontal scroll rows**:
+>   - Row 1: **Categories** with live vacancy count badges (`All`, `UPSC`, `SSC`, `Railways`, `Banking`, `Teaching`, `Police/Defence`, etc.).
+>   - Row 2: **Indian States & Central** with live vacancy count badges (`All India`, `UP`, `Bihar`, `Rajasthan`, `MP`, `Delhi`, etc.).
+> - **Bugfixes Addressed (Confirmed 1, 2, 3)**:
+>   1. Fix card overflow, badge collisions, and line-wrapping issues on narrow screens.
+>   2. Eliminate duplicate search header, streamline status tabs ("All", "Active", "Closing Soon", "Upcoming").
+>   3. Separate job vacancies from admit cards and results (with smart redirection banner to Results & Cards tab).
 
 ---
 
 ### 1. Overview & Core Concept
 
-- **What It Does**: Provides portal administrators with a centralized Web Dashboard in Next.js to toggle AdMob ad formats (Banner, Interstitial, Native, Rewarded), configure production unit IDs, tune candidate UX frequency guardrails, and run direct coaching affiliate campaigns.
-- **Target Persona**: Portal Administrator & Operations Team managing monetization, sponsor banners, and Google AdMob compliance.
-- **Key Value**: 100% remote control over app monetization without needing to rebuild, re-sign, or push new APK updates to the Google Play Store.
+- **What It Does**: Transforms the "Latest Jobs" screen into a fast, fluid, and robust directory of verified government vacancies with zero layout clipping, instant reactive filtering, and smooth navigation into detailed vacancy briefings.
+- **Target Persona**: Government job seekers filtering opportunities across central ministries and specific state commissions.
+- **Key Value**: Clean visual hierarchy, prominent deadline countdowns, and responsive layout across all Android device screen sizes.
 
 ---
 
-### 2. User Experience & Visual Design (Next.js Admin Panel)
+### 2. User Experience & Visual Design
 
-#### Visual Identity & Theme
-- Built using the Next.js admin design system: Dark slate sidebar (`bg-slate-900`), clean white content cards (`bg-white border-slate-200`), royal blue accents (`bg-blue-600`), and emerald status pills (`bg-emerald-500/10 text-emerald-600`).
-- Consistent with existing pages (`/jobs`, `/sources`, `/pending`, `/settings`).
+#### Header & Search Area
+- **Unified Single Header**: Compact, high-contrast search field (`Slate50` background, rounded 14dp, active clear icon) seamlessly integrated with the top status indicator.
+- **Status Filter Tabs**:
+  - `All Jobs`, `Active Openings`, `Closing Soon (🚨)`, and `Upcoming Notifications`.
+  - Material 3 sliding pill indicator in `DeepNavy`.
 
-#### Web Admin Navigation
-- New Sidebar Item: **Ads & Monetization** (`/ads`, Icon: `Megaphone` / `DollarSign`, Badge: `Revenue`).
+#### Dual Horizontal Filter Rows
+- **Category Filter Row**:
+  - Chips with emoji icons and dynamic vacancy count badges (e.g. `🏛️ UPSC (18)`, `🚆 Railways (42)`).
+  - Selected chip in solid `DeepNavy` with white text.
+- **State Filter Row**:
+  - Chips for `All India` and all 28+ states/UTs with live vacancy count tags.
+  - Full two-way state binding with `JobViewModel.uiState.selectedState` so selecting a state from Home Screen properly reflects here.
 
-#### Interactive Sections on `/ads`
-1. **Master Revenue Banner**:
-   - Master Switch with active pulse indicator (`Monetization Active` vs `Monetization Paused`).
-   - Quick Mode Badge: `Google AdMob Official Test Mode` vs `Production Live IDs Active`.
-2. **Granular Format Toggles (4 Cards)**:
-   - **Adaptive Banner**: Docked above bottom bar.
-   - **Full-Screen Interstitials**: Vacancy detail transition ads.
-   - **Native In-Feed Sponsored Cards**: Job listings and Home feed.
-   - **Rewarded Video Ads**: Syllabus & Mock Paper unlock ads.
-3. **UX & Frequency Capping Controls**:
-   - Interactive Slider: Job view interval before showing an interstitial (1 to 10 clicks).
-   - Interactive Slider: Minimum cooldown gap between interstitials (15s to 180s).
-4. **AdMob Unit IDs Configuration Form**:
-   - Inputs for Banner, Interstitial, Native, and Rewarded Ad Unit IDs.
-   - "One-Click Load Official Test IDs" button.
-   - Live validation showing whether an ID is a Google test unit or custom production unit.
-5. **Direct Sponsor & Affiliate Campaign Manager**:
-   - Toggle: `Enable Direct Sponsor Override`.
-   - Fields: Advertiser Name, Campaign Headline, Description, Rating, CTA Button, Emoji, and Destination URL.
-   - **Interactive Live Feed Card Preview**: Real-time component showing exactly how candidates see the card on mobile screens.
-6. **Diagnostics & Status**:
-   - Direct link to test API response (`/api/ads/config`).
-   - "Save & Deploy Changes to Mobile Apps" action button with toast notifications.
+#### Card Component Redesign (`GovernmentJobOpeningCard`)
+- **Header**: Organization monogram inside gradient avatar (UPSC, SSC, RRB, etc.) + Org name + Advt number + Verified blue shield badge.
+- **Status Pill**: Dynamic pill with pulsing dot (`Active` green, `Closing Soon` red, `Upcoming` blue).
+- **Title**: Up to 2 lines with `TextOverflow.Ellipsis` and 22sp line height.
+- **Responsive Metadata Badges**:
+  - Vacancy badge (`👥 4,120 Posts`), Qualification badge (`🎓 Graduate`), and Location badge (`📍 Central / State`).
+  - Implemented with flexible spacing to avoid overlapping or clipping on small screens.
+- **Footer Container**:
+  - Left: Calendar icon + "Closes: 28 Oct 2026" with high-contrast text.
+  - Right: Gold Star Bookmark button (48dp touch target) + "View Details →" primary button in `DeepNavy`.
 
 ---
 
-### 3. Key Product Decisions & Trade-Offs
+### 3. Key Technical Decisions & Trade-Offs
 
-- **Decision 1: Cloudflare D1 Backend Storage vs Local Storage**
-  - *Chosen Approach*: Persist ad configuration in Cloudflare D1 database (`app_settings` key-value table) via Worker API.
-  - *Why*: Allows changes made in the Next.js web panel to propagate instantly to all mobile devices worldwide.
-- **Decision 2: Mobile App Offline Resilience**
-  - *Chosen Approach*: Android app caches the latest configuration in `SharedPreferences`. If the device is offline or the backend is unreachable, it seamlessly falls back to cached settings or safe official test defaults without crashing.
-- **Decision 3: Separation of Concerns**
-  - *Chosen Approach*: Remove admin controls from the Android client. The mobile app remains clean and fast for job seekers, while administrative tasks remain strictly on the web portal.
+- **Decision 1: Full Two-Way Synchronization with `JobViewModel`**
+  - *Chosen Approach*: Bind `searchQuery`, `selectedCategory`, `selectedState`, and `selectedStatus` directly to `JobViewModel` state flows rather than disconnected local screen state.
+  - *Why*: Eliminates desync bugs where selecting a state on the Home Screen was ignored when navigating to the Latest Jobs tab.
+
+- **Decision 2: Remove Mixed Admit Card & Result Dumps**
+  - *Chosen Approach*: Keep the Latest Jobs list dedicated purely to job opening vacancies. If a query matches admit cards or results, show a prominent quick-switch banner that deep-links directly to the dedicated "Results & Cards" tab.
+  - *Why*: Prevents candidate confusion and eliminates fragmented UI lists.
+
+- **Decision 3: Navigation Bar & AdDock Content Padding**
+  - *Chosen Approach*: Calculate bottom padding as `PaddingValues(bottom = 110.dp)` to guarantee that the last job card is 100% visible and not obscured by the docked adaptive banner or bottom bar.
 
 ---
 
-### 4. Technical Architecture & Data Strategy
+### 4. Technical Architecture & Component Flow
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│             Next.js Web Admin Panel                    │
-│      Route: /ads (Sidebar > Ads & Monetization)        │
-│  - Master & Format Toggles                             │
-│  - AdMob Unit IDs & Test Mode                          │
-│  - UX Frequency Capping (Sliders)                      │
-│  - Direct Sponsor Campaign & Live Mobile Preview       │
-└──────────────────────────┬─────────────────────────────┘
-                           │ POST /api/admin/ads (X-Admin-Key)
-                           ▼
-┌────────────────────────────────────────────────────────┐
-│           Cloudflare Worker Backend                    │
-│  - GET  /api/ads/config  (Public for Android App)       │
-│  - GET  /api/admin/ads   (Authenticated for Next.js)   │
-│  - POST /api/admin/ads   (Authenticated for Next.js)   │
-│  - Cloudflare D1 Storage: `app_settings`               │
-└──────────────────────────┬─────────────────────────────┘
-                           │ GET /api/ads/config
-                           ▼
-┌────────────────────────────────────────────────────────┐
-│                 Android Mobile Client                  │
-│  - AdSettingsRepository fetches /api/ads/config        │
-│  - AdManager: dynamic frequency capping & IDs          │
-│  - AdaptiveBannerAdView: dynamic show/hide & unit ID   │
-│  - NativeSponsoredJobCard: dynamic sponsor campaign   │
+│             JobListingScreen (Latest Jobs)             │
+├────────────────────────────────────────────────────────┤
+│ [Search Bar: Query + Clear Button]                     │
+│ [Status Tabs: All | Active | Closing Soon | Upcoming]  │
+│ [Row 1: Category Filter Chips with Live Count Badges]  │
+│ [Row 2: State Filter Chips with Live Count Badges]     │
+│ [Active Filter Bar & Reset Button]                     │
+├────────────────────────────────────────────────────────┤
+│ LazyColumn (Content padding: 110dp bottom)             │
+│  ├─ GovernmentJobOpeningCard (Fixed layout & badges)   │
+│  ├─ NativeSponsoredJobCard (In-feed sponsor card)      │
+│  └─ ResultsTabRedirectBanner (Optional when relevant)  │
 └────────────────────────────────────────────────────────┘
 ```
 
-#### Deliverables & File Changes Planned:
-1. **Next.js Web Admin Panel**:
-   - `/admin-panel/src/app/ads/page.tsx`: Complete web interface for ad management.
-   - `/admin-panel/src/components/Sidebar.tsx`: Add "Ads & Monetization" navigation item.
-   - `/admin-panel/src/lib/types.ts`: Define `AdConfig` interface.
-   - `/admin-panel/src/lib/api.ts`: Add `getAdConfig()` and `saveAdConfig()` methods.
-2. **Cloudflare Worker Backend**:
-   - `/backend-cloudflare/src/index.js`:
-     - Add `GET /api/ads/config` (Public endpoint for mobile app).
-     - Add `GET /api/admin/ads` & `POST /api/admin/ads` (Protected with `X-Admin-Key`).
-     - Persist settings in D1 table `app_settings`.
-3. **Android Client Synchronization & Cleanup**:
-   - `/app/src/main/java/com/example/ads/AdSettingsRepository.kt`: Add network sync method fetching from `/api/ads/config` on startup with local cache fallback.
-   - `/app/src/main/java/com/example/ui/screens/ProfileScreen.kt` & `MainActivity.kt`: Clean up mobile PIN dialog and mobile admin entry, maintaining clean candidate UX.
-
----
-
-## Verification Plan
-
-- **Next.js Web Admin**: Build and test Next.js frontend pages (`npm run build` in `admin-panel`) ensuring zero syntax or TypeScript errors.
-- **Backend API**: Verify `GET /api/ads/config` returns expected JSON structure and `POST /api/admin/ads` updates values.
-- **Android App**: Run `compile_applet` to verify Android app builds cleanly and correctly handles the remote configuration.
+### Verification & Testing Plan
+1. **Compilation Check**: Run `gradle :app:compileDebugKotlin` to verify type safety and resource references.
+2. **Unit & Robolectric Tests**: Run `gradle :app:testDebugUnitTest`.
+3. **APK Build**: Run `gradle :app:assembleDebug` to ensure package integrity.

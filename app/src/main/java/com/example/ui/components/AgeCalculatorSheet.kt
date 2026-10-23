@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.ads.NativeSponsoredJobCard
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Cake
@@ -491,6 +492,8 @@ fun AgeCalculatorSheet(
             }
 
             item {
+                Spacer(modifier = Modifier.height(10.dp))
+                NativeSponsoredJobCard(creativeIndex = 0)
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }

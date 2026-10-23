@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import com.example.ads.NativeSponsoredJobCard
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -604,5 +605,12 @@ fun AiMentorScreen(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Native Sponsored Exam Preparation & Live Test Series Partner
+        NativeSponsoredJobCard(creativeIndex = 0)
+
+        Spacer(modifier = Modifier.height(80.dp))
     }
 }

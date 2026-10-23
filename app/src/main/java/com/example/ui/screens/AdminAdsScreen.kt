@@ -903,6 +903,90 @@ fun AdminAdsScreen(
                                 }
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Active Ad Placements Inventory & Coverage Map
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = PureWhite),
+                            shape = RoundedCornerShape(16.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                            border = BorderStroke(1.dp, Slate200)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "🗺️ Complete App Ad Inventory Map",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Slate900
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Overview of active monetization placements across all screens in Sarkari Job Alert.",
+                                    fontSize = 12.sp,
+                                    color = Slate500
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                val placements = listOf(
+                                    Triple("Latest Vacancies Feed", "Native In-Feed Cards", "Inserted every 4 items"),
+                                    Triple("Job Details Screen", "Sticky Banner + Native Mid-Card", "Above Apply bar & mid-content"),
+                                    Triple("In-App WebView Browser", "Sticky Bottom Adaptive Banner", "Docked while viewing official links"),
+                                    Triple("Results & Merit Lists", "Native Sponsored Cards", "Every 3 items + download interstitial"),
+                                    Triple("Admit Cards / Hall Tickets", "Native Sponsored Cards", "Every 3 items + download interstitial"),
+                                    Triple("Syllabus & Exam Pattern", "Native Cards + Rewarded Unlock", "Every 3 items + model paper unlock"),
+                                    Triple("Admissions & Entrance Tests", "Native Sponsored Cards", "Every 3 items + apply interstitial"),
+                                    Triple("Answer Keys & Objections", "Native Sponsored Cards", "Every 3 items + link interstitial"),
+                                    Triple("AI Career Mentor", "Native Partner Card", "Below AI advice & suggested queries"),
+                                    Triple("Age & Salary Calculators", "Native Partner Card", "Bottom of calculation result sheets"),
+                                    Triple("Profile & Applied Tracker", "Native Partner Card", "Saved Jobs & My Applications tabs"),
+                                    Triple("Main Screen Dock", "Adaptive Banner AdView", "Persistent above bottom navigation bar")
+                                )
+
+                                placements.forEach { (screen, format, details) ->
+                                    Surface(
+                                        color = Color(0xFFF8FAFC),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = screen,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Slate800
+                                                )
+                                                Text(
+                                                    text = details,
+                                                    fontSize = 10.sp,
+                                                    color = Slate500
+                                                )
+                                            }
+                                            Surface(
+                                                color = Color(0xFFFEF3C7),
+                                                shape = RoundedCornerShape(6.dp)
+                                            ) {
+                                                Text(
+                                                    text = format,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF92400E),
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
