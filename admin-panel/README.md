@@ -1,75 +1,52 @@
-# Sarkari Job Portal — Next.js Admin Panel (Cloudflare Deployment)
+# Sarkari Job Portal admin panel
 
-Modern, lightweight, production-grade Next.js Admin Panel designed to be deployed for **₹0 budget** on **Cloudflare Pages** or **Cloudflare Workers**. It connects seamlessly to your existing Cloudflare Worker backend (`backend-cloudflare/src/index.js`), Cloudflare D1 (SQLite database), and Cloudflare R2 (PDF storage).
+A static Next.js app for reviewing scraped notices, publishing jobs, managing sources, ads, user reports and the admin team.
 
----
+Production: https://sarkari-jobs-admin.bubunmohanta14.workers.dev
 
-## 🚀 Key Features
+## How it is served
 
-1. **Dashboard Overview**: Real-time counts of pending review notices, active jobs, admit cards, exam results, and active official recruitment portals.
-2. **Pending Review Queue**: Review freshly scraped government job notices from official portals (All India & Odisha).
-   - One-click **Approve & Publish to Mobile App** (automatically queues FCM push notification).
-   - **Reject with Reason** modal dialog.
-   - Inspect full details: title, organization, advt number, posts, salary scale, dates, and official notification PDF/apply URLs.
-3. **Official Sources Manager (30+ Sources)**:
-   - Configure All India (SSC, UPSC, RRB, IBPS, SBI, RBI, NABARD, India Post GDS, DRDO, ISRO, LIC, DSSSB) and Odisha (OPSC, OSSC, OSSSC, BSE, OAVS, GRIDCO, OPTCL, OHPC) sources.
-   - Enable/disable toggles for any portal.
-   - Live **Test Adapter** button to inspect crawler output directly in the browser.
-   - One-click **Crawl Now** for a single source.
-4. **Active Notices & Database Browser**:
-   - Filter all live published records in Cloudflare D1 by category (`Latest Job`, `Admit Card`, `Result`, `Answer Key`, `Syllabus`) and status.
-5. **Execution Logs & Audit History**:
-   - Track automated 6-hour cron triggers and manual crawler runs with counts for fetched, newly inserted, and duplicate skipped records.
-6. **Manual Recruitment Notice Publisher**: Directly create and publish verified government job openings, admit cards, or exam results with total vacancies, pay levels, eligibility, official PDF URLs, and online apply links.
+`wrangler.toml` deploys one Worker that:
 
-7. **Configurable Connection**:
-   - Change your Cloudflare Worker URL and Admin Secret Key directly in the UI with local persistence.
+- serves the static export in `out/` (Workers Static Assets);
+- forwards `/api/*` to the backend Worker `sarkari-jobs-worker` over a **service binding** (`worker/index.js`).
 
----
+So the panel and its API share one origin. No CORS is involved and the session cookie can be strict.
 
-## ⚡ Deployment to Cloudflare Pages (₹0 Cost)
+## Sign-in
 
-### Option A: 1-Command CLI Deployment (Fastest)
+- Email + password accounts are stored in D1 (`admin_users`). Passwords are hashed with PBKDF2-SHA256 (100k iterations, random salt).
+- Signing in creates a server-side session. The browser holds only an opaque token in a `__Host-` cookie that is `HttpOnly`, `Secure` and `SameSite=Strict`. JavaScript cannot read it, and nothing is kept in localStorage or sessionStorage.
+- Sessions end after 12 hours, after 2 hours of inactivity, on sign-out, when the password changes, or when an owner disables the account.
+- After 5 wrong passwords the account locks for 15 minutes. Sign-in is also rate limited to 10 attempts per minute per IP.
+- Cookie-authenticated write requests must carry the panel's `Origin` (CSRF protection).
+- Roles: **owner** can add, disable and enable members and reset their passwords (Settings > Team). **Editor** can do everything else.
 
-1. Make sure you have Node.js installed.
-2. Navigate into `admin-panel`:
+### First owner / lost access
+
+An owner account can always be created with the backend's `ADMIN_API_KEY` (kept for automation and recovery):
+
+```bash
+curl -X POST https://sarkari-jobs-worker.bubunmohanta14.workers.dev/api/admin/users \
+  -H "Authorization: Bearer $ADMIN_API_KEY" -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","password":"at-least-12-characters","role":"owner"}'
+```
+
+To reset an owner's password without the panel, use `POST /api/admin/users/<id>/reset-password` with the same header (`GET /api/admin/users` lists ids).
+
+## Deploy
+
+Deploy the backend first (the service binding needs it), then:
+
 ```bash
 cd admin-panel
-npm install
+npm ci
 npm run build
-```
-3. Deploy directly to Cloudflare Pages using Wrangler:
-```bash
-npx wrangler pages deploy out --project-name=sarkari-jobs-admin
-```
-4. Wrangler will output your live URL: `https://sarkari-jobs-admin.pages.dev`!
-
----
-
-### Option B: Cloudflare Dashboard (GitHub / GitLab Continuous Deployment)
-
-1. Push your repository to GitHub or GitLab.
-2. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) > **Workers & Pages** > **Create Application** > **Pages** > **Connect to Git**.
-3. Select your repository.
-4. Configure Build Settings:
-   - **Framework preset**: `Next.js (Static HTML Export)`
-   - **Root directory**: `admin-panel`
-   - **Build command**: `npm run build`
-   - **Build output directory**: `out`
-5. Under **Environment variables (Advanced)**, add:
-   - `NEXT_PUBLIC_DEFAULT_API_URL`: Your Cloudflare Worker URL (e.g. `https://sarkari-jobs-worker.<your-subdomain>.workers.dev`)
-   - `NEXT_PUBLIC_DEFAULT_ADMIN_KEY`: Your admin secret key matching `backend-cloudflare/wrangler.toml`
-6. Click **Save and Deploy**. Cloudflare will automatically build and publish your admin panel!
-
----
-
-## 🛠 Local Development
-
-```bash
-cd admin-panel
-npm install
-npm run dev
+npx wrangler deploy
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-In the **Settings** tab, enter your Cloudflare Worker URL and Admin Secret Key, then click **Test Connection** to verify live communication with Cloudflare D1!
+## Local development
+
+Run the backend with `wrangler dev` (port 8787), then start the Next.js dev server with
+`NEXT_PUBLIC_API_URL=http://localhost:8787`. Add `ADMIN_ALLOWED_ORIGINS="http://localhost:3000"`
+to `backend-cloudflare/.dev.vars` so the backend accepts the panel's cookie requests in development.

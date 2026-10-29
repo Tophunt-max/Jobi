@@ -1,62 +1,27 @@
 package com.example.ads
 
+import com.example.BuildConfig
+
 /**
- * Google AdMob Configuration & Official Sample Ad Unit IDs.
- * These demo unit IDs are guaranteed to work in development/testing without policy violations.
- * Replace with production ad unit IDs from your Google AdMob console when publishing.
+ * AdMob ad unit IDs, injected per build type (see app/build.gradle.kts):
+ * - debug: always Google's public test IDs;
+ * - release: ADMOB_*_ID from .env / CI env (falling back to test IDs if not configured).
+ * The admin panel can override unit IDs remotely for release builds only.
  */
 object AdMobConfig {
-    // Official Google AdMob Sample App ID
-    const val APP_ID = "ca-app-pub-3940256099942544~3347511713"
+    val ADAPTIVE_BANNER_AD_UNIT_ID: String = BuildConfig.ADMOB_BANNER_ID
+    val BANNER_AD_UNIT_ID: String = BuildConfig.ADMOB_BANNER_ID
+    val INTERSTITIAL_AD_UNIT_ID: String = BuildConfig.ADMOB_INTERSTITIAL_ID
+    val REWARDED_AD_UNIT_ID: String = BuildConfig.ADMOB_REWARDED_ID
+    val NATIVE_AD_UNIT_ID: String = BuildConfig.ADMOB_NATIVE_ID
 
-    // Standard Adaptive & Fixed Banner Sample ID
-    const val BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
-    const val ADAPTIVE_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/9214589741"
-
-    // Full-screen Interstitial Sample ID
-    const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
-
-    // Rewarded Video Sample ID
-    const val REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
-
-    // Native Advanced Sample ID
-    const val NATIVE_AD_UNIT_ID = "ca-app-pub-3940256099942544/2247696110"
+    /** Remote overrides are ignored in debug builds to avoid invalid traffic on real units. */
+    val ALLOW_REMOTE_AD_UNITS: Boolean = BuildConfig.ALLOW_REMOTE_AD_UNITS
 
     // Frequency capping: show interstitial at most once every 3 job views
     const val INTERSTITIAL_CLICK_FREQUENCY = 3
     // Frequency capping: minimum milliseconds between interstitials (60 seconds)
     const val INTERSTITIAL_MIN_INTERVAL_MS = 60_000L
-
-    // Educational & Coaching Sponsors for Native Cards
-    val SPONSOR_PRESETS = listOf(
-        SponsorCreative(
-            headline = "Sarkari Pariksha 2026 Live Test Series",
-            body = "500+ All India Mock Tests with Rank Predictor & Detailed Video Solutions for SSC, UPSC & RRB.",
-            advertiser = "Exampur & Testbook Partner",
-            rating = "4.8 ★",
-            ctaText = "Start Free Test",
-            iconEmoji = "🎯",
-            targetUrl = "https://play.google.com/store/search?q=sarkari+test+series&c=apps"
-        ),
-        SponsorCreative(
-            headline = "Daily Current Affairs & GK Capsule 2026",
-            body = "100% Exam-targeted monthly e-book PDF in Hindi & English. Downloaded by 2 Lakh+ aspirants.",
-            advertiser = "Drishti IAS & Chronicle Digest",
-            rating = "4.9 ★",
-            ctaText = "Download Free PDF",
-            iconEmoji = "📚",
-            targetUrl = "https://play.google.com/store/search?q=current+affairs+pdf&c=apps"
-        ),
-        SponsorCreative(
-            headline = "Speed Typing Master for SSC & High Court",
-            body = "Improve English & Hindi typing speed up to 45 WPM before typing skill tests with accuracy tracker.",
-            advertiser = "TypingHero Pro",
-            rating = "4.7 ★",
-            ctaText = "Practice Typing",
-            iconEmoji = "⌨️",
-            targetUrl = "https://play.google.com/store/search?q=typing+practice&c=apps"
-        )
-    )
 }
 
 data class SponsorCreative(

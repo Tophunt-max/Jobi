@@ -87,12 +87,9 @@ export default function AdsManagementPage() {
     setSaveSuccess(false);
     try {
       const res = await adminApi.saveAdConfig(config);
-      if (res.success) {
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3500);
-      } else {
-        setErrorMessage(res.message || 'Failed to save configuration.');
-      }
+      if (res.data) setConfig({ ...DEFAULT_CONFIG, ...res.data });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err: any) {
       setErrorMessage(err.message || 'Error communicating with Cloudflare Worker.');
     } finally {

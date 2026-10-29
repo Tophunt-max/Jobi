@@ -3,14 +3,12 @@ package com.example.data.remote.cloudflare
 import com.example.model.JobEntity
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
+import java.time.temporal.ChronoUnit
 
-@JsonClass(generateAdapter = true)
-data class CloudflareListResponse(
-    @Json(name = "success") val success: Boolean = false,
-    @Json(name = "count") val count: Int = 0,
-    @Json(name = "data") val data: List<CloudflareJobDto> = emptyList(),
-    @Json(name = "message") val message: String? = null
-)
+/** Shown when the backend did not provide a value. Never invent official details. */
+const val NOT_SPECIFIED = "Refer official notification"
 
 @JsonClass(generateAdapter = true)
 data class CloudflareSingleResponse(
@@ -23,24 +21,7 @@ data class CloudflareSingleResponse(
 data class CloudflareActionResponse(
     @Json(name = "success") val success: Boolean = false,
     @Json(name = "message") val message: String? = null,
-    @Json(name = "id") val id: String? = null,
-    @Json(name = "summary") val summary: CloudflareImportSummaryDto? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class CloudflareStatsResponse(
-    @Json(name = "success") val success: Boolean = false,
-    @Json(name = "data") val data: CloudflareStatsDto? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class CloudflareStatsDto(
-    @Json(name = "totalJobs") val totalJobs: Int = 0,
-    @Json(name = "latestJobs") val latestJobs: Int = 0,
-    @Json(name = "admitCards") val admitCards: Int = 0,
-    @Json(name = "results") val results: Int = 0,
-    @Json(name = "pendingReview") val pendingReview: Int = 0,
-    @Json(name = "activeSources") val activeSources: Int = 0
+    @Json(name = "id") val id: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -58,119 +39,111 @@ data class CloudflareJobDto(
     @Json(name = "id") val id: String,
     @Json(name = "title") val title: String,
     @Json(name = "slug") val slug: String? = null,
-    @Json(name = "organization") val organization: String? = "",
-    @Json(name = "department") val department: String? = "",
-    @Json(name = "post_name") val postName: String? = "",
-    @Json(name = "category") val category: String? = "Latest Job",
-    @Json(name = "state") val state: String? = "All India",
-    @Json(name = "total_posts") val totalPosts: Int? = 0,
-    @Json(name = "qualification") val qualification: String? = "",
-    @Json(name = "age_limit") val ageLimit: String? = "",
-    @Json(name = "min_age") val minAge: Int? = 18,
-    @Json(name = "max_age") val maxAge: Int? = 40,
-    @Json(name = "salary_scale") val salaryScale: String? = "Standard Pay Matrix",
-    @Json(name = "fee_general") val feeGeneral: String? = "₹100",
-    @Json(name = "fee_sc_st") val feeScSt: String? = "Nil",
-    @Json(name = "selection_process") val selectionProcess: String? = "Written Exam, Interview",
-    @Json(name = "application_start_date") val applicationStartDate: String? = "",
-    @Json(name = "last_date") val lastDate: String? = "",
-    @Json(name = "exam_date") val examDate: String? = "",
-    @Json(name = "official_url") val officialUrl: String? = "",
-    @Json(name = "official_notification_url") val officialNotificationUrl: String? = "",
-    @Json(name = "official_apply_url") val applyUrl: String? = "",
-    @Json(name = "notification_pdf_r2_key") val notificationPdfR2Key: String? = "",
-    @Json(name = "source_id") val sourceId: String? = "",
-    @Json(name = "source_domain") val sourceDomain: String? = "",
-    @Json(name = "advertisement_number") val advertisementNumber: String? = "",
-    @Json(name = "status") val status: String? = "ACTIVE",
-    @Json(name = "verified") val verified: Int? = 1,
-    @Json(name = "is_featured") val isFeatured: Int? = 0
+    @Json(name = "organization") val organization: String? = null,
+    @Json(name = "department") val department: String? = null,
+    @Json(name = "post_name") val postName: String? = null,
+    @Json(name = "category") val category: String? = null,
+    @Json(name = "state") val state: String? = null,
+    @Json(name = "total_posts") val totalPosts: Int? = null,
+    @Json(name = "qualification") val qualification: String? = null,
+    @Json(name = "min_age") val minAge: Int? = null,
+    @Json(name = "max_age") val maxAge: Int? = null,
+    @Json(name = "salary_scale") val salaryScale: String? = null,
+    @Json(name = "fee_general") val feeGeneral: String? = null,
+    @Json(name = "fee_sc_st") val feeScSt: String? = null,
+    @Json(name = "selection_process") val selectionProcess: String? = null,
+    @Json(name = "application_start_date") val applicationStartDate: String? = null,
+    @Json(name = "last_date") val lastDate: String? = null,
+    @Json(name = "exam_date") val examDate: String? = null,
+    @Json(name = "admit_card_date") val admitCardDate: String? = null,
+    @Json(name = "official_url") val officialUrl: String? = null,
+    @Json(name = "official_notification_url") val officialNotificationUrl: String? = null,
+    @Json(name = "official_apply_url") val applyUrl: String? = null,
+    @Json(name = "notification_pdf_r2_key") val notificationPdfR2Key: String? = null,
+    @Json(name = "source_id") val sourceId: String? = null,
+    @Json(name = "source_domain") val sourceDomain: String? = null,
+    @Json(name = "advertisement_number") val advertisementNumber: String? = null,
+    @Json(name = "status") val status: String? = null,
+    @Json(name = "verified") val verified: Int? = null,
+    @Json(name = "is_featured") val isFeatured: Int? = null,
+    @Json(name = "published_at") val publishedAt: String? = null,
+    @Json(name = "created_at") val createdAt: String? = null
 ) {
-    fun toJobEntity(): JobEntity {
-        val org = organization?.takeIf { it.isNotBlank() } ?: department?.takeIf { it.isNotBlank() } ?: "Government Department"
-        val stateVal = state?.takeIf { it.isNotBlank() } ?: "All India"
-        val pdfUrl = if (!notificationPdfR2Key.isNullOrBlank()) {
-            "${CloudflareConfig.getActiveWorkerUrl()}/api/files/${notificationPdfR2Key}"
-        } else if (!officialNotificationUrl.isNullOrBlank()) {
-            officialNotificationUrl
-        } else {
-            officialUrl ?: "https://india.gov.in"
+    /**
+     * Maps the server row to the local entity. [isBookmarked] is local user state and is
+     * merged in by the DAO, never taken from the server.
+     */
+    fun toJobEntity(today: LocalDate = LocalDate.now()): JobEntity {
+        val org = organization?.takeIf { it.isNotBlank() } ?: department?.takeIf { it.isNotBlank() } ?: NOT_SPECIFIED
+        val notificationUrl = when {
+            !notificationPdfR2Key.isNullOrBlank() -> "${CloudflareConfig.getActiveWorkerUrl()}/api/files/$notificationPdfR2Key"
+            !officialNotificationUrl.isNullOrBlank() -> officialNotificationUrl
+            else -> officialUrl.orEmpty()
         }
-        val advt = advertisementNumber?.takeIf { it.isNotBlank() } ?: "ADVT-${id.takeLast(6).uppercase()}"
+        val website = officialUrl?.takeIf { it.isNotBlank() } ?: notificationUrl
+        val domain = sourceDomain?.takeIf { it.isNotBlank() }
+            ?: runCatching { java.net.URI(website).host }.getOrNull().orEmpty()
 
         return JobEntity(
             id = id,
-            slug = slug ?: id.lowercase().replace(" ", "-"),
+            slug = slug?.takeIf { it.isNotBlank() } ?: id,
             title = title,
             organization = org,
-            department = department ?: org,
-            advtNumber = advt,
-            stateOrAllIndia = stateVal,
-            category = category ?: "Latest Job",
+            department = department.orEmpty(),
+            advtNumber = advertisementNumber.orEmpty(),
+            stateOrAllIndia = state?.takeIf { it.isNotBlank() } ?: "All India",
+            category = category?.takeIf { it.isNotBlank() } ?: "Latest Job",
             totalVacancies = totalPosts ?: 0,
-            qualification = qualification ?: "Check Official Notification",
-            minAge = minAge ?: 18,
-            maxAge = maxAge ?: 40,
-            ageCutoffDate = applicationStartDate?.takeIf { it.isNotBlank() } ?: "01-08-2026",
-            salaryScale = salaryScale ?: "Pay Scale as per rules",
-            feeGeneral = feeGeneral ?: "₹100",
-            feeReserved = feeScSt ?: "Nil",
-            feeMode = "Online via Net Banking / UPI / Debit Card",
-            selectionProcess = selectionProcess ?: "Written Exam, Skill Test",
-            detailedEligibility = qualification ?: "Bachelor Degree / Diploma / 10+2 from recognized institute.",
-            applicationStartDate = applicationStartDate ?: "Active",
-            applicationClosingDate = lastDate ?: "Closing Soon",
-            examDate = examDate?.takeIf { it.isNotBlank() } ?: "As per schedule",
-            admitCardDate = "Available before exam",
-            officialNotificationUrl = pdfUrl,
-            applyOnlineUrl = applyUrl?.takeIf { it.isNotBlank() } ?: officialUrl ?: "https://india.gov.in",
-            officialWebsiteUrl = officialUrl ?: "https://india.gov.in",
-            verifiedSourceDomain = sourceDomain ?: (officialUrl ?: "official.gov.in").removePrefix("https://").removePrefix("http://").split("/").firstOrNull() ?: "gov.in",
-            isVerified = (verified ?: 0) == 1,
-            status = status ?: "ACTIVE",
-            publishedAt = System.currentTimeMillis()
+            qualification = qualification?.takeIf { it.isNotBlank() } ?: NOT_SPECIFIED,
+            minAge = minAge ?: 0,
+            maxAge = maxAge ?: 0,
+            ageCutoffDate = applicationStartDate?.takeIf { it.isNotBlank() } ?: NOT_SPECIFIED,
+            salaryScale = salaryScale?.takeIf { it.isNotBlank() } ?: NOT_SPECIFIED,
+            feeGeneral = feeGeneral?.takeIf { it.isNotBlank() } ?: NOT_SPECIFIED,
+            feeReserved = feeScSt?.takeIf { it.isNotBlank() } ?: NOT_SPECIFIED,
+            feeMode = NOT_SPECIFIED,
+            selectionProcess = selectionProcess?.takeIf { it.isNotBlank() } ?: NOT_SPECIFIED,
+            detailedEligibility = qualification?.takeIf { it.isNotBlank() } ?: NOT_SPECIFIED,
+            applicationStartDate = applicationStartDate.orEmpty(),
+            applicationClosingDate = lastDate.orEmpty(),
+            examDate = examDate?.takeIf { it.isNotBlank() } ?: NOT_SPECIFIED,
+            admitCardDate = admitCardDate?.takeIf { it.isNotBlank() } ?: NOT_SPECIFIED,
+            officialNotificationUrl = notificationUrl,
+            applyOnlineUrl = applyUrl?.takeIf { it.isNotBlank() } ?: website,
+            officialWebsiteUrl = website,
+            verifiedSourceDomain = domain,
+            isVerified = verified == 1,
+            status = deriveStatus(status, lastDate, today),
+            publishedAt = parseServerTimestamp(publishedAt ?: createdAt)
         )
     }
-}
 
-fun JobEntity.toCloudflareDto(): CloudflareJobDto {
-    return CloudflareJobDto(
-        id = id,
-        title = title,
-        slug = slug,
-        organization = organization,
-        department = department.ifBlank { organization },
-        postName = title,
-        category = category,
-        state = stateOrAllIndia,
-        totalPosts = totalVacancies,
-        qualification = qualification,
-        ageLimit = "${minAge}-${maxAge} Years",
-        minAge = minAge,
-        maxAge = maxAge,
-        salaryScale = salaryScale,
-        feeGeneral = feeGeneral,
-        feeScSt = feeReserved,
-        selectionProcess = selectionProcess,
-        applicationStartDate = applicationStartDate,
-        lastDate = applicationClosingDate,
-        examDate = examDate,
-        officialUrl = officialWebsiteUrl,
-        officialNotificationUrl = officialNotificationUrl,
-        applyUrl = applyOnlineUrl,
-        notificationPdfR2Key = "",
-        sourceId = "manual-admin",
-        sourceDomain = verifiedSourceDomain,
-        advertisementNumber = advtNumber,
-        status = status,
-        verified = if (isVerified) 1 else 0,
-        isFeatured = 1
-    )
-}
+    companion object {
+        /** ACTIVE notices closing within 7 days are surfaced as CLOSING_SOON. */
+        fun deriveStatus(serverStatus: String?, lastDate: String?, today: LocalDate): String {
+            val base = serverStatus?.takeIf { it.isNotBlank() } ?: "ACTIVE"
+            if (base != "ACTIVE") return base
+            val closing = try {
+                lastDate?.takeIf { it.length == 10 }?.let { LocalDate.parse(it) }
+            } catch (_: DateTimeParseException) {
+                null
+            } ?: return base
+            val days = ChronoUnit.DAYS.between(today, closing)
+            return when {
+                days < 0 -> "EXPIRED"
+                days <= 7 -> "CLOSING_SOON"
+                else -> base
+            }
+        }
 
-// ====================================================================
-// Sources & Importer Runs DTOs
-// ====================================================================
+        fun parseServerTimestamp(value: String?): Long {
+            if (value.isNullOrBlank()) return 0L
+            val iso = if (value.contains('T')) value else value.replace(' ', 'T')
+            return runCatching { java.time.Instant.parse(if (iso.endsWith("Z")) iso else "${iso}Z").toEpochMilli() }
+                .getOrDefault(0L)
+        }
+    }
+}
 
 @JsonClass(generateAdapter = true)
 data class CloudflareSourcesResponse(
@@ -185,60 +158,6 @@ data class CloudflareSourceDto(
     @Json(name = "name") val name: String,
     @Json(name = "official_domain") val officialDomain: String,
     @Json(name = "listing_url") val listingUrl: String,
-    @Json(name = "parser_type") val parserType: String = "HTML_TABLE",
     @Json(name = "state") val state: String = "All India",
-    @Json(name = "enabled") val enabled: Int = 1,
-    @Json(name = "polling_interval_hours") val pollingIntervalHours: Int = 6,
-    @Json(name = "last_fetched_at") val lastFetchedAt: String? = null,
-    @Json(name = "last_successful_fetch_at") val lastSuccessfulFetchAt: String? = null,
-    @Json(name = "last_error") val lastError: String? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class CloudflareImportSummaryDto(
-    @Json(name = "runId") val runId: String = "",
-    @Json(name = "status") val status: String = "",
-    @Json(name = "startedAt") val startedAt: String = "",
-    @Json(name = "finishedAt") val finishedAt: String? = null,
-    @Json(name = "totalFetched") val totalFetched: Int = 0,
-    @Json(name = "totalInserted") val totalInserted: Int = 0,
-    @Json(name = "totalDuplicates") val totalDuplicates: Int = 0,
-    @Json(name = "totalErrors") val totalErrors: Int = 0,
-    @Json(name = "errors") val errors: List<String> = emptyList()
-)
-
-@JsonClass(generateAdapter = true)
-data class CloudflareImportRunsResponse(
-    @Json(name = "success") val success: Boolean = false,
-    @Json(name = "runs") val runs: List<CloudflareImportRunItemDto> = emptyList()
-)
-
-@JsonClass(generateAdapter = true)
-data class CloudflareImportRunItemDto(
-    @Json(name = "id") val id: String,
-    @Json(name = "source_id") val sourceId: String? = "ALL",
-    @Json(name = "started_at") val startedAt: String,
-    @Json(name = "finished_at") val finishedAt: String? = null,
-    @Json(name = "fetched_count") val fetchedCount: Int = 0,
-    @Json(name = "inserted_count") val insertedCount: Int = 0,
-    @Json(name = "duplicate_count") val duplicateCount: Int = 0,
-    @Json(name = "error_count") val errorCount: Int = 0,
-    @Json(name = "status") val status: String = "SUCCESS",
-    @Json(name = "error_summary") val errorSummary: String? = null,
-    @Json(name = "triggered_by") val triggeredBy: String? = "ADMIN_MANUAL"
-)
-
-@JsonClass(generateAdapter = true)
-data class CloudflareApproveRequest(
-    @Json(name = "approved_by") val approvedBy: String = "Verified Admin"
-)
-
-@JsonClass(generateAdapter = true)
-data class CloudflareRejectRequest(
-    @Json(name = "reason") val reason: String = "Rejected by administrator"
-)
-
-@JsonClass(generateAdapter = true)
-data class CloudflareRunImportRequest(
-    @Json(name = "source_id") val sourceId: String? = null
+    @Json(name = "last_successful_fetch_at") val lastSuccessfulFetchAt: String? = null
 )

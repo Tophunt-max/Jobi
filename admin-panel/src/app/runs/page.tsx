@@ -17,13 +17,16 @@ export default function RunsPage() {
   const [runs, setRuns] = useState<ImportRun[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState<string | null>(null);
+
   const loadRuns = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await adminApi.getImportRuns();
       setRuns(data);
     } catch (err: any) {
-      console.error(err);
+      setError(err?.message || 'Failed to load import runs');
     } finally {
       setLoading(false);
     }
@@ -50,6 +53,9 @@ export default function RunsPage() {
             </span>
           </div>
 
+          {error && (
+            <div className="p-4 text-xs text-rose-700 bg-rose-50 border-b border-rose-200">{error}</div>
+          )}
           {loading ? (
             <div className="p-16 text-center text-slate-400 text-sm">Loading execution logs...</div>
           ) : runs.length === 0 ? (
@@ -78,15 +84,15 @@ export default function RunsPage() {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
-                          run.trigger_type.includes('CRON')
+                          (run.triggered_by || '').includes('CRON')
                             ? 'bg-purple-100 text-purple-800'
                             : 'bg-blue-100 text-blue-800'
                         }`}>
-                          {run.trigger_type}
+                          {run.triggered_by || 'UNKNOWN'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 font-sans text-slate-700 font-medium">
-                        {run.source_id || 'All 30+ Sources'}
+                        {!run.source_id || run.source_id === 'ALL_ENABLED' ? 'All enabled sources' : run.source_id}
                       </td>
                       <td className="py-3.5 px-4 text-slate-700">
                         {run.fetched_count}
@@ -103,10 +109,19 @@ export default function RunsPage() {
                             <CheckCircle className="w-3.5 h-3.5" />
                             <span>SUCCESS</span>
                           </span>
+                        ) : run.status === 'RUNNING' ? (
+                          <span className="inline-flex items-center gap-1 text-blue-700 font-bold text-[10px]">
+                            <Clock className="w-3.5 h-3.5 animate-spin" />
+                            <span>RUNNING</span>
+                          </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-rose-700 font-bold text-[10px]">
+                          <span
+                            title={run.error_summary || ''}
+                            className={`inline-flex items-center gap-1 font-bold text-[10px] ${run.status === 'PARTIAL' ? 'text-amber-700' : 'text-rose-700'}`}
+                          >
                             <AlertCircle className="w-3.5 h-3.5" />
                             <span>{run.status}</span>
+                            {run.error_count > 0 && <span className="font-normal">({run.error_count} errors)</span>}
                           </span>
                         )}
                       </td>

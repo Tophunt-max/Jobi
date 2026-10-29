@@ -1,21 +1,29 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ---- Stack traces ----
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ---- Moshi ----
+# Network DTOs use @JsonClass(generateAdapter = true) codegen; models persisted as JSON
+# (user profile, document locker) go through KotlinJsonAdapterFactory reflection.
+-keep class kotlin.Metadata { *; }
+-keepclassmembers class kotlin.Metadata { public <methods>; }
+-keep class com.example.data.remote.** { *; }
+-keep class com.example.model.** { *; }
+-keepclassmembers enum com.example.model.** { *; }
+-keep @com.squareup.moshi.JsonClass class * { *; }
+-keepnames @com.squareup.moshi.JsonClass class *
+-if @com.squareup.moshi.JsonClass class *
+-keep class <1>JsonAdapter { <init>(...); <fields>; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ---- Retrofit (interfaces + suspend functions) ----
+-keep,allowobfuscation,allowshrinking interface retrofit2.Call
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
+-keepattributes Signature, InnerClasses, EnclosingMethod, RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations, AnnotationDefault
+-keepclassmembers,allowshrinking,allowobfuscation interface * { @retrofit2.http.* <methods>; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ---- OkHttp ----
+-dontwarn okhttp3.internal.platform.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**

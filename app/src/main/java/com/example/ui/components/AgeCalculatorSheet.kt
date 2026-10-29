@@ -131,7 +131,8 @@ fun AgeCalculatorSheet(
             val userAge = ageCalculation.first
             allJobs.filter { job ->
                 val effectiveMaxAge = job.maxAge + relaxationYears
-                userAge in job.minAge..effectiveMaxAge
+                // Jobs without published age limits can't be evaluated here.
+                job.maxAge > 0 && userAge in job.minAge..effectiveMaxAge
             }
         }
     }

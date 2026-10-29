@@ -16,3 +16,17 @@
 local.properties
 .env
 debug.keystore
+
+# Node / web tooling
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# Signing material
+*.jks
+*.keystore
+*.keystore.base64

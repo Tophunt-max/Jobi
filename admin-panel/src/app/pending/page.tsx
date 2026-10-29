@@ -45,7 +45,7 @@ export default function PendingReviewPage() {
       const data = await adminApi.getPendingJobs();
       setJobs(data);
     } catch (err: any) {
-      console.error(err);
+      setBannerNotice(`Failed to load pending notices: ${err?.message || err}`);
     } finally {
       setLoading(false);
     }
@@ -58,8 +58,8 @@ export default function PendingReviewPage() {
   const handleApprove = async (job: JobItem) => {
     try {
       setProcessingId(job.id);
-      await adminApi.approveJob(job.id, 'Admin User');
-      setBannerNotice(`Approved "${job.title}". Successfully published to mobile app & FCM notification queued.`);
+      await adminApi.approveJob(job.id);
+      setBannerNotice(`Approved "${job.title}". Published to the app.`);
       setSelectedJob(null);
       loadPendingJobs();
     } catch (err: any) {
@@ -92,7 +92,7 @@ export default function PendingReviewPage() {
       j.title.toLowerCase().includes(search.toLowerCase()) ||
       j.organization.toLowerCase().includes(search.toLowerCase()) ||
       (j.advertisement_number || '').toLowerCase().includes(search.toLowerCase());
-    const matchesState = stateFilter === 'ALL' || j.state === stateFilter || (stateFilter === 'Odisha' && j.state.includes('Odisha'));
+    const matchesState = stateFilter === 'ALL' || j.state === stateFilter || (stateFilter === 'Odisha' && (j.state || '').includes('Odisha'));
     const matchesCategory = categoryFilter === 'ALL' || j.category === categoryFilter;
     return matchesSearch && matchesState && matchesCategory;
   });
@@ -149,9 +149,9 @@ export default function PendingReviewPage() {
 
     setIsBatchApproving(true);
     try {
-      const res = await adminApi.batchApproveJobs(idsToApprove, 'Admin Batch');
-      const count = res.approvedCount ?? idsToApprove.length;
-      setBannerNotice(`Successfully batch approved ${count} notices. Published to mobile app & FCM push notifications queued.`);
+      const res = await adminApi.batchApproveJobs(idsToApprove);
+      const count = res.approvedCount;
+      setBannerNotice(`Approved ${count} of ${idsToApprove.length} selected notices.`);
       setSelectedIds(new Set());
       await loadPendingJobs();
     } catch (err: any) {
@@ -333,12 +333,12 @@ export default function PendingReviewPage() {
                           {job.state}
                         </td>
                         <td className="py-3.5 px-4 text-slate-600">
-                          <div className="font-medium text-slate-800">{job.total_posts || 'Check Notice'}</div>
-                          <div className="text-[10px] text-slate-500 line-clamp-1">{job.qualification || 'Graduation / Relevant'}</div>
+                          <div className="font-medium text-slate-800">{job.total_posts || '—'}</div>
+                          <div className="text-[10px] text-slate-500 line-clamp-1">{job.qualification || '—'}</div>
                         </td>
                         <td className="py-3.5 px-4 font-mono text-slate-700">
-                          <div>Start: {job.start_date || 'Active'}</div>
-                          <div className="text-rose-600 font-semibold">Last: {job.last_date || 'Check Notice'}</div>
+                          <div>Start: {job.application_start_date || '—'}</div>
+                          <div className="text-rose-600 font-semibold">Last: {job.last_date || '—'}</div>
                         </td>
                         <td className="py-3.5 px-4 space-y-1">
                           {job.official_notification_url && (
@@ -422,30 +422,30 @@ export default function PendingReviewPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <span className="text-slate-400 text-[10px] font-bold uppercase">Total Posts</span>
-                    <p className="text-sm font-bold text-slate-900">{selectedJob.total_posts || 'Not Specified'}</p>
+                    <p className="text-sm font-bold text-slate-900">{selectedJob.total_posts || 'Not stated'}</p>
                   </div>
                   <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <span className="text-slate-400 text-[10px] font-bold uppercase">Salary Scale</span>
-                    <p className="text-sm font-bold text-slate-900">{selectedJob.salary || '7th CPC Scale'}</p>
+                    <p className="text-sm font-bold text-slate-900">{selectedJob.salary_scale || 'Not stated'}</p>
                   </div>
                   <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <span className="text-slate-400 text-[10px] font-bold uppercase">Start Date</span>
-                    <p className="text-sm font-bold text-slate-900">{selectedJob.start_date || 'Active'}</p>
+                    <p className="text-sm font-bold text-slate-900">{selectedJob.application_start_date || 'Not stated'}</p>
                   </div>
                   <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <span className="text-slate-400 text-[10px] font-bold uppercase">Last Date</span>
-                    <p className="text-sm font-bold text-rose-600">{selectedJob.last_date || 'Check Notice'}</p>
+                    <p className="text-sm font-bold text-rose-600">{selectedJob.last_date || 'Not stated'}</p>
                   </div>
                 </div>
 
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
                   <span className="text-slate-400 text-[10px] font-bold uppercase">Qualification / Eligibility</span>
-                  <p className="text-slate-800 leading-relaxed font-medium">{selectedJob.qualification || 'Graduation / Relevant qualification from recognized university'}</p>
+                  <p className="text-slate-800 leading-relaxed font-medium">{selectedJob.qualification || 'Not stated. Verify in the official notice before approving.'}</p>
                 </div>
 
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
                   <span className="text-slate-400 text-[10px] font-bold uppercase">Age Limit & Application Fee</span>
-                  <p className="text-slate-800">Age: {selectedJob.age_limit || '18-32 years (Relaxation as per rules)'} • Fee: {selectedJob.application_fee || '₹100 (SC/ST/Female Exempted)'}</p>
+                  <p className="text-slate-800">Age: {selectedJob.min_age && selectedJob.max_age ? `${selectedJob.min_age}–${selectedJob.max_age} years` : 'Not stated'} • Fee (General): {selectedJob.fee_general || 'Not stated'} • Fee (SC/ST): {selectedJob.fee_sc_st || 'Not stated'}</p>
                 </div>
 
                 <div className="space-y-2">

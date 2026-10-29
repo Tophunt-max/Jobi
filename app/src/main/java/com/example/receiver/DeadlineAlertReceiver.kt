@@ -1,122 +1,131 @@
 package com.example.receiver
 
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.example.MainActivity
 import com.example.R
 import com.example.data.local.AppDatabase
 import com.example.model.NotificationItem
 import com.example.scheduler.DeadlineNotificationScheduler
+import com.example.util.NotificationPermission
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class DeadlineAlertReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != ACTION_DEADLINE_ALERT) return
         val jobId = intent.getStringExtra(EXTRA_JOB_ID) ?: return
-        val jobTitle = intent.getStringExtra(EXTRA_JOB_TITLE) ?: "Government Job Opening"
-        val organization = intent.getStringExtra(EXTRA_ORGANIZATION) ?: "Official Recruitment"
-        val closingDate = intent.getStringExtra(EXTRA_CLOSING_DATE) ?: "Approaching Soon"
+        val jobTitle = intent.getStringExtra(EXTRA_JOB_TITLE) ?: "Government job notice"
+        val organization = intent.getStringExtra(EXTRA_ORGANIZATION) ?: ""
+        val closingDate = intent.getStringExtra(EXTRA_CLOSING_DATE) ?: ""
         val applyUrl = intent.getStringExtra(EXTRA_APPLY_URL) ?: ""
-        val daysLeft = intent.getLongExtra(EXTRA_DAYS_LEFT, -1L)
+        val daysBefore = intent.getIntExtra(EXTRA_DAYS_BEFORE, -1)
         val isTest = intent.getBooleanExtra(EXTRA_IS_TEST, false)
 
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // Compute from the actual deadline at delivery time (alarms can be deferred).
+        val daysLeft = DeadlineNotificationScheduler.calculateDaysRemaining(closingDate)
+        if (!isTest && daysLeft < 0) return
+
+        if (!isTest && daysBefore > 0) {
+            DeadlineNotificationScheduler.markFired(context, jobId, daysBefore)
+        }
+
         DeadlineNotificationScheduler.createNotificationChannel(context)
 
-        val contentIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(EXTRA_JOB_ID, jobId)
-        }
         val contentPendingIntent = PendingIntent.getActivity(
             context,
-            jobId.hashCode(),
-            contentIntent,
+            0,
+            MainActivity.openJobIntent(context, jobId),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         val urgencyPrefix = when {
-            isTest -> "🔔 [Test Alert] "
-            daysLeft == 0L -> "🚨 FINAL DAY: "
-            daysLeft == 1L -> "⚠️ CLOSES TOMORROW: "
-            daysLeft in 2..3 -> "⏰ CLOSING IN $daysLeft DAYS: "
-            else -> "📅 DEADLINE REMINDER: "
+            isTest -> "🔔 [Test] "
+            daysLeft == 0L -> "🚨 Last day: "
+            daysLeft == 1L -> "⚠ Closes tomorrow: "
+            daysLeft in 2..3 -> "⏰ Closes in $daysLeft days: "
+            else -> "📅 Deadline reminder: "
+        }
+        val title = "$urgencyPrefix${organization.ifBlank { jobTitle }}"
+        val body = if (closingDate.isNotBlank()) {
+            "Last date to apply for $jobTitle is $closingDate."
+        } else {
+            "Check the last date to apply for $jobTitle."
         }
 
-        val notificationTitle = "$urgencyPrefix$organization"
-        val notificationBody = "Last date to submit application for $jobTitle is $closingDate. Apply before the portal closes!"
-
-        val notificationBuilder = NotificationCompat.Builder(context, DeadlineNotificationScheduler.CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, DeadlineNotificationScheduler.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(notificationTitle)
-            .setContentText(notificationBody)
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText("$notificationBody\n\nOrganization: $organization\nDeadline: $closingDate\nEnsure all documents & fee receipts are verified.")
-            )
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
-            .setVibrate(longArrayOf(0, 300, 200, 300))
             .setContentIntent(contentPendingIntent)
 
-        // Action: Apply Online if URL available
-        if (applyUrl.isNotBlank() && (applyUrl.startsWith("http://") || applyUrl.startsWith("https://"))) {
-            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(applyUrl)).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
+        if (applyUrl.startsWith("https://")) {
             val webPendingIntent = PendingIntent.getActivity(
                 context,
-                (jobId + "_web").hashCode(),
-                webIntent,
+                0,
+                Intent(Intent.ACTION_VIEW, Uri.parse(applyUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            notificationBuilder.addAction(
-                android.R.drawable.ic_menu_send,
-                "Apply Online",
-                webPendingIntent
-            )
+            builder.addAction(android.R.drawable.ic_menu_send, "Apply online", webPendingIntent)
         }
 
-        val notificationId = (jobId.hashCode() + (if (isTest) 9999 else 0)).coerceAtLeast(1)
-        notificationManager.notify(notificationId, notificationBuilder.build())
-
-        // Also persist alert in local Room database so it shows up in in-app notifications
-        CoroutineScope(Dispatchers.IO).launch {
+        if (NotificationPermission.isGranted(context)) {
             try {
-                val db = AppDatabase.getDatabase(context)
-                val inAppNotification = NotificationItem(
-                    id = "deadline_${jobId}_${System.currentTimeMillis()}",
-                    title = notificationTitle,
-                    body = notificationBody,
-                    type = "DEADLINE_ALERT",
-                    targetSlug = jobId,
-                    timestamp = System.currentTimeMillis(),
-                    isRead = false,
-                    priority = if (daysLeft in 0..2) "URGENT" else "HIGH"
+                NotificationManagerCompat.from(context)
+                    .notify("deadline:$jobId", if (isTest) 1 else 0, builder.build())
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Notification permission revoked: ${e.message}")
+            }
+        }
+
+        // Persist to the in-app inbox. goAsync() keeps the process alive until the write completes.
+        val pending = goAsync()
+        scope.launch {
+            try {
+                AppDatabase.getDatabase(context).notificationDao().insertNotification(
+                    NotificationItem(
+                        id = "deadline_${jobId}_${if (isTest) "test" else daysBefore}",
+                        title = title,
+                        body = body,
+                        type = "DEADLINE_ALERT",
+                        targetSlug = jobId,
+                        timestamp = System.currentTimeMillis(),
+                        isRead = false,
+                        priority = if (daysLeft in 0..2) "URGENT" else "HIGH"
+                    )
                 )
-                db.notificationDao().insertNotification(inAppNotification)
             } catch (e: Exception) {
-                // Ignore DB logging failure in receiver
+                Log.w(TAG, "Could not store in-app notification: ${e.message}")
+            } finally {
+                pending.finish()
             }
         }
     }
 
     companion object {
+        private const val TAG = "DeadlineAlertReceiver"
+        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
         const val ACTION_DEADLINE_ALERT = "com.example.action.DEADLINE_ALERT"
         const val EXTRA_JOB_ID = "extra_job_id"
         const val EXTRA_JOB_TITLE = "extra_job_title"
         const val EXTRA_ORGANIZATION = "extra_organization"
         const val EXTRA_CLOSING_DATE = "extra_closing_date"
         const val EXTRA_APPLY_URL = "extra_apply_url"
-        const val EXTRA_DAYS_LEFT = "extra_days_left"
+        const val EXTRA_DAYS_BEFORE = "extra_days_before"
         const val EXTRA_IS_TEST = "extra_is_test"
     }
 }

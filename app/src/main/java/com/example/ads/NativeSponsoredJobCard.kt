@@ -68,8 +68,13 @@ fun NativeSponsoredJobCard(
         return
     }
 
+    // Only real, admin-configured sponsors are shown; there are no placeholder ads.
+    if (!adSettings.hasValidSponsor()) {
+        return
+    }
+
     val creative = remember(creativeIndex, adSettings.customSponsorActive, adSettings.sponsorHeadline) {
-        if (adSettings.customSponsorActive) {
+        run {
             SponsorCreative(
                 headline = adSettings.sponsorHeadline,
                 body = adSettings.sponsorBody,
@@ -79,9 +84,6 @@ fun NativeSponsoredJobCard(
                 iconEmoji = adSettings.sponsorIconEmoji,
                 targetUrl = adSettings.sponsorTargetUrl
             )
-        } else {
-            val presets = AdMobConfig.SPONSOR_PRESETS
-            presets[creativeIndex % presets.size]
         }
     }
 

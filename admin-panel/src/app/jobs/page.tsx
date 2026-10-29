@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Header } from '../../components/Header';
 import { StatusBadge } from '../../components/StatusBadge';
 import { adminApi } from '../../lib/api';
-import { JobItem } from '../../lib/types';
+import { JobCategory, JobItem, JOB_CATEGORIES } from '../../lib/types';
 import { 
   Briefcase, 
   Search, 
@@ -32,19 +32,24 @@ export default function AllJobsPage() {
   const [formTitle, setFormTitle] = useState('');
   const [formOrg, setFormOrg] = useState('');
   const [formAdvtNo, setFormAdvtNo] = useState('');
-  const [formCategory, setFormCategory] = useState('Latest Job');
+  const [formCategory, setFormCategory] = useState<JobCategory>('Latest Job');
   const [formState, setFormState] = useState('All India');
-  const [formVacancies, setFormVacancies] = useState('500');
-  const [formQual, setFormQual] = useState('Graduate Degree');
-  const [formSalary, setFormSalary] = useState('Level 7 Pay Matrix (Rs. 44,900 - 1,42,400)');
-  const [formClosingDate, setFormClosingDate] = useState('30-11-2026');
-  const [formPdfUrl, setFormPdfUrl] = useState('https://official.gov.in/notice.pdf');
-  const [formApplyUrl, setFormApplyUrl] = useState('https://official.gov.in/apply');
+  const [formVacancies, setFormVacancies] = useState('');
+  const [formQual, setFormQual] = useState('');
+  const [formSalary, setFormSalary] = useState('');
+  const [formClosingDate, setFormClosingDate] = useState('');
+  const [formPdfUrl, setFormPdfUrl] = useState('');
+  const [formApplyUrl, setFormApplyUrl] = useState('');
+
+  const resetForm = () => {
+    setFormTitle(''); setFormOrg(''); setFormAdvtNo(''); setFormCategory('Latest Job'); setFormState('All India');
+    setFormVacancies(''); setFormQual(''); setFormSalary(''); setFormClosingDate(''); setFormPdfUrl(''); setFormApplyUrl('');
+  };
 
   const handleCreateJobSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formTitle.trim() || !formOrg.trim()) {
-      setAlertMsg({ type: 'error', text: 'Title and Organization are required.' });
+    if (!formTitle.trim() || !formOrg.trim() || !formPdfUrl.trim()) {
+      setAlertMsg({ type: 'error', text: 'Title, organization and official notice URL are required.' });
       return;
     }
     setIsSubmitting(true);
@@ -53,21 +58,19 @@ export default function AllJobsPage() {
       const res = await adminApi.createJob({
         title: formTitle.trim(),
         organization: formOrg.trim(),
-        advt_number: formAdvtNo.trim() || 'ADV-2026/01',
+        advertisement_number: formAdvtNo.trim() || undefined,
         category: formCategory,
-        state: formState,
-        total_posts: parseInt(formVacancies, 10) || 100,
-        qualification: formQual,
-        salary_scale: formSalary,
-        last_date: formClosingDate,
-        official_pdf: formPdfUrl,
-        apply_url: formApplyUrl,
+        state: formState.trim() || 'All India',
+        total_posts: formVacancies ? parseInt(formVacancies, 10) : undefined,
+        qualification: formQual.trim() || undefined,
+        salary_scale: formSalary.trim() || undefined,
+        last_date: formClosingDate || undefined,
+        official_notification_url: formPdfUrl.trim(),
+        official_apply_url: formApplyUrl.trim() || undefined,
       });
       setAlertMsg({ type: 'success', text: res.message || 'Job published successfully!' });
       setShowCreateModal(false);
-      setFormTitle('');
-      setFormOrg('');
-      setFormAdvtNo('');
+      resetForm();
       loadJobs();
     } catch (err: any) {
       setAlertMsg({ type: 'error', text: err.message || 'Failed to publish job' });
@@ -82,12 +85,11 @@ export default function AllJobsPage() {
       const data = await adminApi.getAllJobs({
         status: statusFilter,
         category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
-        search: search || undefined,
-        limit: 100,
+        limit: 200,
       });
       setJobs(data);
     } catch (err: any) {
-      console.error(err);
+      setAlertMsg({ type: 'error', text: err?.message || 'Failed to load jobs' });
     } finally {
       setLoading(false);
     }
@@ -99,8 +101,14 @@ export default function AllJobsPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadJobs();
   };
+
+  const term = search.trim().toLowerCase();
+  const visibleJobs = term
+    ? jobs.filter((j) =>
+        [j.title, j.organization, j.advertisement_number, j.post_name]
+          .some((v) => (v || '').toLowerCase().includes(term)))
+    : jobs;
 
   return (
     <>
@@ -118,7 +126,7 @@ export default function AllJobsPage() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search title, organization, advt... (Press Enter)"
+              placeholder="Filter by title, organization, advt..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -151,11 +159,7 @@ export default function AllJobsPage() {
               className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
               <option value="ALL">All Categories</option>
-              <option value="Latest Job">Latest Job</option>
-              <option value="Admit Card">Admit Card</option>
-              <option value="Result">Result</option>
-              <option value="Answer Key">Answer Key</option>
-              <option value="Syllabus">Syllabus</option>
+              {JOB_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         </div>
@@ -164,13 +168,13 @@ export default function AllJobsPage() {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
             <span className="text-xs font-bold text-slate-700">
-              Found {jobs.length} records in Cloudflare D1
+              Showing {visibleJobs.length} of {jobs.length} records
             </span>
           </div>
 
           {loading ? (
             <div className="p-16 text-center text-slate-400 text-sm">Querying Cloudflare D1 database...</div>
-          ) : jobs.length === 0 ? (
+          ) : visibleJobs.length === 0 ? (
             <div className="p-16 text-center text-slate-500 text-sm">No records match the current filters.</div>
           ) : (
             <div className="overflow-x-auto">
@@ -187,7 +191,7 @@ export default function AllJobsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {jobs.map((job) => (
+                  {visibleJobs.map((job) => (
                     <tr key={job.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3.5 px-5 max-w-sm">
                         <div className="font-bold text-slate-900 line-clamp-1">{job.title}</div>
@@ -204,12 +208,12 @@ export default function AllJobsPage() {
                         {job.state}
                       </td>
                       <td className="py-3.5 px-4 text-slate-600">
-                        <div className="font-medium text-slate-800">{job.total_posts || 'Check Notice'}</div>
-                        <div className="text-[10px] text-slate-400 line-clamp-1">{job.qualification || 'As per norms'}</div>
+                        <div className="font-medium text-slate-800">{job.total_posts || '—'}</div>
+                        <div className="text-[10px] text-slate-400 line-clamp-1">{job.qualification || '—'}</div>
                       </td>
                       <td className="py-3.5 px-4 font-mono text-slate-700 text-[11px]">
-                        <div>Start: {job.start_date || 'Active'}</div>
-                        <div className="text-slate-500">Last: {job.last_date || 'N/A'}</div>
+                        <div>Start: {job.application_start_date || '—'}</div>
+                        <div className="text-slate-500">Last: {job.last_date || '—'}</div>
                       </td>
                       <td className="py-3.5 px-4">
                         <StatusBadge status={job.status} />
@@ -315,14 +319,10 @@ export default function AllJobsPage() {
                     <label className="block font-semibold text-slate-700 mb-1">Category</label>
                     <select
                       value={formCategory}
-                      onChange={(e) => setFormCategory(e.target.value)}
+                      onChange={(e) => setFormCategory(e.target.value as JobCategory)}
                       className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     >
-                      <option value="Latest Job">Latest Job</option>
-                      <option value="Admit Card">Admit Card</option>
-                      <option value="Result">Result</option>
-                      <option value="Answer Key">Answer Key</option>
-                      <option value="Syllabus">Syllabus</option>
+                      {JOB_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div>
@@ -370,16 +370,18 @@ export default function AllJobsPage() {
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Closing Date</label>
                     <input
-                      type="text"
+                      type="date"
                       value={formClosingDate}
                       onChange={(e) => setFormClosingDate(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Official PDF URL</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Official Notice URL (https) *</label>
                     <input
                       type="url"
+                      required
+                      placeholder="https://…gov.in/notice.pdf"
                       value={formPdfUrl}
                       onChange={(e) => setFormPdfUrl(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -409,7 +411,7 @@ export default function AllJobsPage() {
                     disabled={isSubmitting}
                     className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-semibold shadow-sm flex items-center gap-1.5"
                   >
-                    {isSubmitting ? "Publishing..." : "Publish to Cloudflare D1"}
+                    {isSubmitting ? "Publishing..." : "Publish"}
                   </button>
                 </div>
               </form>

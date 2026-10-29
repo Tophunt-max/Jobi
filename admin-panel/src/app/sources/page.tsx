@@ -35,7 +35,7 @@ export default function SourcesPage() {
       const data = await adminApi.getSources();
       setSources(data);
     } catch (err: any) {
-      console.error(err);
+      setBannerMessage(`Failed to load sources: ${err?.message || err}`);
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,10 @@ export default function SourcesPage() {
     try {
       setRunningSourceId(sourceId);
       const res = await adminApi.runImport(sourceId);
-      setBannerMessage(`Crawled ${name}: ${res.summary?.inserted_count || 0} inserted, ${res.summary?.duplicate_count || 0} duplicates skipped.`);
+      const sm = res.summary;
+      setBannerMessage(sm.totalErrors > 0
+        ? `Crawl of ${name} failed: ${sm.errors.join('; ')}`
+        : `Crawled ${name}: ${sm.totalFetched} found, ${sm.totalInserted} new (queued for review), ${sm.totalDuplicates} already known.`);
       loadSources();
       setTimeout(() => setBannerMessage(null), 5000);
     } catch (err: any) {

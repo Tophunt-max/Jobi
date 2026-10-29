@@ -90,10 +90,10 @@ class JobAlertPreferencesManager(private val context: Context) {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            matchedJob?.let { putExtra("EXTRA_JOB_ID", it.job.id) }
-        }
+        if (!com.example.util.NotificationPermission.isGranted(context)) return
+
+        val intent = matchedJob?.let { MainActivity.openJobIntent(context, it.job.id) }
+            ?: Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val pendingIntent = PendingIntent.getActivity(
             context,
             10099,
@@ -124,7 +124,11 @@ class JobAlertPreferencesManager(private val context: Context) {
             .setContentIntent(pendingIntent)
             .build()
 
-        notificationManager.notify(7771, notification)
+        try {
+            notificationManager.notify(7771, notification)
+        } catch (e: SecurityException) {
+            android.util.Log.w("JobAlertPrefs", "Notification permission revoked: ${e.message}")
+        }
     }
 
     companion object {

@@ -1,45 +1,45 @@
 package com.example.model
 
 data class AspirantDocumentLocker(
-    val candidateName: String = "Sarkari Aspirant",
-    val fatherName: String = "Govt Employee",
-    val dob: String = "14/08/2003",
+    val candidateName: String = "",
+    val fatherName: String = "",
+    val dob: String = "",
     
     // 10th Matriculation
-    val tenthBoard: String = "CBSE / State Board",
-    val tenthRollNo: String = "24681012",
-    val tenthYear: String = "2019",
-    val tenthPercentage: String = "86.4%",
-    val tenthMarksheetNo: String = "CBSE-10-882910",
+    val tenthBoard: String = "",
+    val tenthRollNo: String = "",
+    val tenthYear: String = "",
+    val tenthPercentage: String = "",
+    val tenthMarksheetNo: String = "",
     
     // 12th Intermediate
-    val twelfthBoard: String = "CBSE / State Board",
-    val twelfthStream: String = "PCM (Physics, Chemistry, Maths)",
-    val twelfthRollNo: String = "19283746",
-    val twelfthYear: String = "2021",
-    val twelfthPercentage: String = "84.2%",
-    val twelfthCertificateNo: String = "CBSE-12-993821",
+    val twelfthBoard: String = "",
+    val twelfthStream: String = "",
+    val twelfthRollNo: String = "",
+    val twelfthYear: String = "",
+    val twelfthPercentage: String = "",
+    val twelfthCertificateNo: String = "",
     
     // Graduation / Degree
-    val gradDegree: String = "B.Sc / B.Tech Computer Science",
-    val gradUniversity: String = "State Technical University",
-    val gradRollNo: String = "210492810",
-    val gradYear: String = "2024",
-    val gradCgpaOrPercentage: String = "7.8 CGPA (78%)",
-    val gradDegreeSerialNo: String = "DEG-2024-449102",
+    val gradDegree: String = "",
+    val gradUniversity: String = "",
+    val gradRollNo: String = "",
+    val gradYear: String = "",
+    val gradCgpaOrPercentage: String = "",
+    val gradDegreeSerialNo: String = "",
     
     // Reservation & Domicile
-    val categoryCertNo: String = "OBC-UP-2024-883921",
-    val categoryIssueAuthority: String = "Tehsildar / Sub-Divisional Magistrate",
-    val categoryIssueDate: String = "12/04/2024",
+    val categoryCertNo: String = "",
+    val categoryIssueAuthority: String = "",
+    val categoryIssueDate: String = "",
     
-    val domicileCertNo: String = "DOM-UP-2023-749201",
-    val domicileState: String = "Uttar Pradesh",
-    val domicileIssueDate: String = "05/09/2023",
+    val domicileCertNo: String = "",
+    val domicileState: String = "",
+    val domicileIssueDate: String = "",
     
     // Identity Verification
-    val idType: String = "Aadhaar Card",
-    val idNumberMasked: String = "XXXX-XXXX-8921"
+    val idType: String = "",
+    val idNumberMasked: String = ""
 )
 
 enum class ExamApplicationStage(val displayName: String, val badgeColorHex: Long) {
@@ -58,10 +58,10 @@ data class AppliedExamRecord(
     val advtNumber: String,
     val applicationNo: String,
     val rollNo: String = "",
-    val examDate: String = "15 Dec 2026",
-    val examCenter: String = "Lucknow / Delhi NCR",
+    val examDate: String = "",
+    val examCenter: String = "",
     val stage: ExamApplicationStage = ExamApplicationStage.SUBMITTED,
-    val feeReceiptNo: String = "SBI-REC-994821",
-    val appliedDate: String = "18 Oct 2026",
-    val notes: String = "Admit card download expected 10 days before exam."
+    val feeReceiptNo: String = "",
+    val appliedDate: String = "",
+    val notes: String = ""
 )

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSession } from './AuthGate';
 import { 
   LayoutDashboard, 
   Clock, 
@@ -12,21 +13,25 @@ import {
   ExternalLink,
   ShieldCheck,
   Server,
-  Megaphone
+  Megaphone,
+  Flag,
+  LogOut
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Pending Review', href: '/pending', icon: Clock, badge: 'Review' },
-  { name: 'Official Sources (30+)', href: '/sources', icon: Globe2 },
+  { name: 'Official Sources', href: '/sources', icon: Globe2 },
   { name: 'Active Notices & Jobs', href: '/jobs', icon: Briefcase },
+  { name: 'User Reports', href: '/reports', icon: Flag },
   { name: 'Ads & Monetization', href: '/ads', icon: Megaphone, badge: 'Revenue' },
   { name: 'Import Runs & Logs', href: '/runs', icon: History },
-  { name: 'Settings & Cloudflare', href: '/settings', icon: Settings },
+  { name: 'Settings & Team', href: '/settings', icon: Settings },
 ];
 
 export function Sidebar() {
   const [currentPath, setCurrentPath] = useState('/');
+  const { user, signOut } = useSession();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -88,11 +93,22 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Signed-in user */}
+      <div className="px-4 py-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[11px] text-white font-semibold truncate" title={user.email}>{user.email}</div>
+          <div className="text-[10px] text-slate-500 capitalize">{user.role}</div>
+        </div>
+        <button onClick={signOut} title="Sign out" aria-label="Sign out" className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+          <LogOut className="w-4 h-4" />
+        </button>
+      </div>
+
       {/* Footer Info */}
       <div className="p-4 border-t border-slate-800/80 text-xs text-slate-400">
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-slate-500">Cron Schedule</span>
-          <span className="text-[11px] text-emerald-400 font-mono font-medium">Every 6 Hours</span>
+          <span className="text-[11px] text-emerald-400 font-mono font-medium">Every 3 Hours</span>
         </div>
         <p className="text-[10px] text-slate-500 mt-1">
           SSC • UPSC • RRB • OPSC • OSSC

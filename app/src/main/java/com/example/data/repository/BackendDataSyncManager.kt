@@ -1,6 +1,5 @@
 package com.example.data.repository
 
-import android.content.Context
 import android.util.Log
 import com.example.data.local.JobDao
 import com.example.data.local.NotificationDao
@@ -11,7 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+import java.io.IOException
 
 sealed class BackendSyncState {
     object Idle : BackendSyncState()
@@ -21,6 +24,8 @@ sealed class BackendSyncState {
         val totalSynced: Int,
         val timestamp: Long = System.currentTimeMillis()
     ) : BackendSyncState()
+
+    /** Sync failed; the UI keeps showing whatever is cached locally. */
     data class OfflineCached(
         val message: String,
         val timestamp: Long = System.currentTimeMillis()
@@ -28,282 +33,64 @@ sealed class BackendSyncState {
 }
 
 /**
- * Enterprise sync manager responsible for fetching all application data from the
- * backend API (Jobs, Results, Admit Cards, Syllabus, Admissions, Answer Keys, Notifications),
- * with dual-layer HTTP disk caching and Room database persistent caching.
+ * Single source of truth for pulling server content into Room.
+ * One request (`/api/sync/all`) fetches every category; writes are transactional and
+ * preserve local user state (bookmarks, read flags). Concurrent calls are serialised.
  */
 class BackendDataSyncManager(
-    private val context: Context,
     private val jobDao: JobDao,
     private val resultDao: ResultDao,
     private val notificationDao: NotificationDao
 ) {
     companion object {
-        private const val TAG = "BackendDataSyncManager"
+        private const val TAG = "BackendDataSync"
     }
 
+    private val mutex = Mutex()
     private val _syncState = MutableStateFlow<BackendSyncState>(BackendSyncState.Idle)
     val syncState: StateFlow<BackendSyncState> = _syncState.asStateFlow()
 
-    init {
-        CloudflareClient.init(context)
-        CloudflareConfig.init(context)
-    }
+    suspend fun syncAllData(): Result<Int> = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            if (!CloudflareConfig.isConfigured()) {
+                val msg = "Backend URL is not configured in this build"
+                _syncState.value = BackendSyncState.OfflineCached(msg)
+                return@withContext Result.failure(IllegalStateException(msg))
+            }
 
-    /**
-     * Synchronizes ALL data categories from backend API into local Room cache.
-     */
-    suspend fun syncAllData(): Result<Int> = withContext(Dispatchers.IO) {
-        _syncState.value = BackendSyncState.Syncing("Initiating full backend sync...")
-        Log.d(TAG, "Starting comprehensive backend API data synchronization")
-
-        var totalItems = 0
-        try {
-            val api = CloudflareClient.getService()
-
-            // 1. Fetch & Cache Jobs
-            _syncState.value = BackendSyncState.Syncing("Fetching latest government jobs...")
+            _syncState.value = BackendSyncState.Syncing("Fetching latest notices…")
             try {
-                val jobsResponse = api.getJobs(limit = 100)
-                if (jobsResponse.success && jobsResponse.data.isNotEmpty()) {
-                    val entities = jobsResponse.data.map { it.toJobEntity() }
-                    jobDao.insertJobs(entities)
-                    totalItems += entities.size
-                    Log.d(TAG, "Backend API: Cached ${entities.size} jobs into Room")
+                val response = CloudflareClient.getService().getSyncAllData()
+                val data = response.data
+                if (!response.success || data == null) {
+                    throw IOException(response.message ?: "Backend returned no data")
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Jobs sync fallback: ${e.message}")
-            }
 
-            // 2. Fetch & Cache Results
-            _syncState.value = BackendSyncState.Syncing("Fetching exam results & cut-offs...")
-            try {
-                val resultsResponse = api.getResults(limit = 50)
-                if (resultsResponse.success && resultsResponse.data.isNotEmpty()) {
-                    val entities = resultsResponse.data.map { it.toResultItem() }
-                    resultDao.insertResults(entities)
-                    totalItems += entities.size
-                    Log.d(TAG, "Backend API: Cached ${entities.size} results into Room")
+                val jobs = data.jobs.map { it.toJobEntity() }
+                jobDao.replaceFromServer(jobs)
+                resultDao.replaceAll(
+                    results = data.results.map { it.toResultItem() },
+                    admitCards = data.admitCards.map { it.toAdmitCardItem() },
+                    syllabi = data.syllabi.map { it.toSyllabusItem() },
+                    answerKeys = data.answerKeys.map { it.toAnswerKeyItem() },
+                    admissions = data.admissions.map { it.toAdmissionItem() }
+                )
+                notificationDao.upsertFromServer(data.notifications.map { it.toNotificationItem() })
+
+                val total = jobs.size + data.results.size + data.admitCards.size + data.syllabi.size +
+                    data.admissions.size + data.answerKeys.size
+                _syncState.value = BackendSyncState.Success("Up to date", total)
+                Result.success(total)
+            } catch (e: Exception) {
+                val msg = when (e) {
+                    is HttpException -> "Server error (HTTP ${e.code()}). Showing saved data."
+                    is IOException -> "No connection. Showing saved data."
+                    else -> "Sync failed. Showing saved data."
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Results sync fallback: ${e.message}")
+                Log.w(TAG, "Sync failed: ${e.javaClass.simpleName}: ${e.message}")
+                _syncState.value = BackendSyncState.OfflineCached(msg)
+                Result.failure(e)
             }
-
-            // 3. Fetch & Cache Admit Cards
-            _syncState.value = BackendSyncState.Syncing("Fetching admit cards & hall tickets...")
-            try {
-                val admitResponse = api.getAdmitCards(limit = 50)
-                if (admitResponse.success && admitResponse.data.isNotEmpty()) {
-                    val entities = admitResponse.data.map { it.toAdmitCardItem() }
-                    resultDao.insertAdmitCards(entities)
-                    totalItems += entities.size
-                    Log.d(TAG, "Backend API: Cached ${entities.size} admit cards into Room")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Admit cards sync fallback: ${e.message}")
-            }
-
-            // 4. Fetch & Cache Syllabi
-            _syncState.value = BackendSyncState.Syncing("Fetching syllabus & exam patterns...")
-            try {
-                val syllabiResponse = api.getSyllabi(limit = 50)
-                if (syllabiResponse.success && syllabiResponse.data.isNotEmpty()) {
-                    val entities = syllabiResponse.data.map { it.toSyllabusItem() }
-                    resultDao.insertSyllabi(entities)
-                    totalItems += entities.size
-                    Log.d(TAG, "Backend API: Cached ${entities.size} syllabi into Room")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Syllabi sync fallback: ${e.message}")
-            }
-
-            // 5. Fetch & Cache Admissions
-            _syncState.value = BackendSyncState.Syncing("Fetching university admissions...")
-            try {
-                val admissionsResponse = api.getAdmissions(limit = 50)
-                if (admissionsResponse.success && admissionsResponse.data.isNotEmpty()) {
-                    val entities = admissionsResponse.data.map { it.toAdmissionItem() }
-                    resultDao.insertAdmissions(entities)
-                    totalItems += entities.size
-                    Log.d(TAG, "Backend API: Cached ${entities.size} admissions into Room")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Admissions sync fallback: ${e.message}")
-            }
-
-            // 6. Fetch & Cache Answer Keys
-            _syncState.value = BackendSyncState.Syncing("Fetching answer keys & objections...")
-            try {
-                val answerKeysResponse = api.getAnswerKeys(limit = 50)
-                if (answerKeysResponse.success && answerKeysResponse.data.isNotEmpty()) {
-                    val entities = answerKeysResponse.data.map { it.toAnswerKeyItem() }
-                    resultDao.insertAnswerKeys(entities)
-                    totalItems += entities.size
-                    Log.d(TAG, "Backend API: Cached ${entities.size} answer keys into Room")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Answer keys sync fallback: ${e.message}")
-            }
-
-            // 7. Fetch & Cache Notifications
-            _syncState.value = BackendSyncState.Syncing("Fetching live announcements...")
-            try {
-                val notifResponse = api.getNotifications(limit = 50)
-                if (notifResponse.success && notifResponse.data.isNotEmpty()) {
-                    val entities = notifResponse.data.map { it.toNotificationItem() }
-                    notificationDao.insertNotifications(entities)
-                    totalItems += entities.size
-                    Log.d(TAG, "Backend API: Cached ${entities.size} notifications into Room")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Notifications sync fallback: ${e.message}")
-            }
-
-            _syncState.value = BackendSyncState.Success(
-                message = "All data synchronized with backend API & cached locally",
-                totalSynced = totalItems
-            )
-            Result.success(totalItems)
-        } catch (e: Exception) {
-            val errorMsg = e.message ?: "Network error during sync"
-            Log.w(TAG, "Backend sync completed with local cached data: $errorMsg")
-            _syncState.value = BackendSyncState.OfflineCached(
-                message = "Operating in offline cache mode ($errorMsg)"
-            )
-            Result.success(totalItems)
-        }
-    }
-
-    /**
-     * Sync single category: Jobs
-     */
-    suspend fun syncJobs(): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            val api = CloudflareClient.getService()
-            val response = api.getJobs(limit = 100)
-            if (response.success && response.data.isNotEmpty()) {
-                val entities = response.data.map { it.toJobEntity() }
-                jobDao.insertJobs(entities)
-                Result.success(entities.size)
-            } else {
-                Result.success(0)
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Sync single category: Results
-     */
-    suspend fun syncResults(): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            val api = CloudflareClient.getService()
-            val response = api.getResults(limit = 50)
-            if (response.success && response.data.isNotEmpty()) {
-                val entities = response.data.map { it.toResultItem() }
-                resultDao.insertResults(entities)
-                Result.success(entities.size)
-            } else {
-                Result.success(0)
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Sync single category: Admit Cards
-     */
-    suspend fun syncAdmitCards(): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            val api = CloudflareClient.getService()
-            val response = api.getAdmitCards(limit = 50)
-            if (response.success && response.data.isNotEmpty()) {
-                val entities = response.data.map { it.toAdmitCardItem() }
-                resultDao.insertAdmitCards(entities)
-                Result.success(entities.size)
-            } else {
-                Result.success(0)
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Sync single category: Syllabus
-     */
-    suspend fun syncSyllabi(): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            val api = CloudflareClient.getService()
-            val response = api.getSyllabi(limit = 50)
-            if (response.success && response.data.isNotEmpty()) {
-                val entities = response.data.map { it.toSyllabusItem() }
-                resultDao.insertSyllabi(entities)
-                Result.success(entities.size)
-            } else {
-                Result.success(0)
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Sync single category: Admissions
-     */
-    suspend fun syncAdmissions(): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            val api = CloudflareClient.getService()
-            val response = api.getAdmissions(limit = 50)
-            if (response.success && response.data.isNotEmpty()) {
-                val entities = response.data.map { it.toAdmissionItem() }
-                resultDao.insertAdmissions(entities)
-                Result.success(entities.size)
-            } else {
-                Result.success(0)
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Sync single category: Answer Keys
-     */
-    suspend fun syncAnswerKeys(): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            val api = CloudflareClient.getService()
-            val response = api.getAnswerKeys(limit = 50)
-            if (response.success && response.data.isNotEmpty()) {
-                val entities = response.data.map { it.toAnswerKeyItem() }
-                resultDao.insertAnswerKeys(entities)
-                Result.success(entities.size)
-            } else {
-                Result.success(0)
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Sync single category: Notifications
-     */
-    suspend fun syncNotifications(): Result<Int> = withContext(Dispatchers.IO) {
-        try {
-            val api = CloudflareClient.getService()
-            val response = api.getNotifications(limit = 50)
-            if (response.success && response.data.isNotEmpty()) {
-                val entities = response.data.map { it.toNotificationItem() }
-                notificationDao.insertNotifications(entities)
-                Result.success(entities.size)
-            } else {
-                Result.success(0)
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
         }
     }
 }

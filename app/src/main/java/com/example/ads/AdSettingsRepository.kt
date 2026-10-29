@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.data.remote.cloudflare.CloudflareConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,32 +40,32 @@ data class AdSettings(
 
     // Custom direct sponsor / affiliate campaign
     val customSponsorActive: Boolean = false,
-    val sponsorName: String = "Sarkari Pariksha Partner",
-    val sponsorHeadline: String = "🎯 All India Mock Test Series 2026",
-    val sponsorBody: String = "500+ Sectional & Full-length tests with live All-India rank predictor & video solutions.",
-    val sponsorRating: String = "4.9 ★",
-    val sponsorCtaText: String = "Start Free Test",
-    val sponsorIconEmoji: String = "🎯",
-    val sponsorTargetUrl: String = "https://play.google.com/store/search?q=sarkari+mock+test&c=apps",
-
-    // Security
-    val adminPin: String = "1234"
+    val sponsorName: String = "",
+    val sponsorHeadline: String = "",
+    val sponsorBody: String = "",
+    val sponsorRating: String = "",
+    val sponsorCtaText: String = "",
+    val sponsorIconEmoji: String = "",
+    val sponsorTargetUrl: String = ""
 ) {
-    fun getEffectiveBannerId(): String =
-        customBannerUnitId.trim().ifEmpty { AdMobConfig.BANNER_AD_UNIT_ID }
+    /** A direct sponsor is shown only when fully configured with an https link. */
+    fun hasValidSponsor(): Boolean =
+        customSponsorActive && sponsorHeadline.isNotBlank() && sponsorTargetUrl.startsWith("https://")
 
-    fun getEffectiveInterstitialId(): String =
-        customInterstitialUnitId.trim().ifEmpty { AdMobConfig.INTERSTITIAL_AD_UNIT_ID }
+    private fun pick(remote: String, local: String): String =
+        if (AdMobConfig.ALLOW_REMOTE_AD_UNITS && AD_UNIT_REGEX.matches(remote.trim())) remote.trim() else local
 
-    fun getEffectiveNativeId(): String =
-        customNativeUnitId.trim().ifEmpty { AdMobConfig.NATIVE_AD_UNIT_ID }
+    fun getEffectiveBannerId(): String = pick(customBannerUnitId, AdMobConfig.BANNER_AD_UNIT_ID)
 
-    fun getEffectiveRewardedId(): String =
-        customRewardedUnitId.trim().ifEmpty { AdMobConfig.REWARDED_AD_UNIT_ID }
+    fun getEffectiveInterstitialId(): String = pick(customInterstitialUnitId, AdMobConfig.INTERSTITIAL_AD_UNIT_ID)
 
-    fun isUsingProductionIds(): Boolean =
-        customBannerUnitId.isNotBlank() || customInterstitialUnitId.isNotBlank() ||
-                customNativeUnitId.isNotBlank() || customRewardedUnitId.isNotBlank()
+    fun getEffectiveNativeId(): String = pick(customNativeUnitId, AdMobConfig.NATIVE_AD_UNIT_ID)
+
+    fun getEffectiveRewardedId(): String = pick(customRewardedUnitId, AdMobConfig.REWARDED_AD_UNIT_ID)
+
+    private companion object {
+        val AD_UNIT_REGEX = Regex("^ca-app-pub-\\d{16}/\\d{10}$")
+    }
 }
 
 /**
@@ -97,9 +98,9 @@ object AdSettingsRepository {
     private const val KEY_SPONSOR_EMOJI = "key_sponsor_emoji"
     private const val KEY_SPONSOR_URL = "key_sponsor_url"
 
-    private const val KEY_ADMIN_PIN = "key_admin_pin"
-
+    @Volatile
     private var sharedPrefs: SharedPreferences? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _settings = MutableStateFlow(AdSettings())
     val settings: StateFlow<AdSettings> = _settings.asStateFlow()
@@ -114,7 +115,7 @@ object AdSettingsRepository {
             loadFromPrefs(prefs)
         }
         // Asynchronously sync latest ad settings from Cloudflare Worker configured in Next.js web panel
-        CoroutineScope(Dispatchers.IO).launch {
+        scope.launch {
             fetchRemoteConfig()
         }
     }
@@ -136,15 +137,13 @@ object AdSettingsRepository {
             cooldownSeconds = prefs.getInt(KEY_COOLDOWN_SECONDS, 60),
 
             customSponsorActive = prefs.getBoolean(KEY_SPONSOR_ACTIVE, false),
-            sponsorName = prefs.getString(KEY_SPONSOR_NAME, "Sarkari Pariksha Partner") ?: "Sarkari Pariksha Partner",
-            sponsorHeadline = prefs.getString(KEY_SPONSOR_HEADLINE, "🎯 All India Mock Test Series 2026") ?: "🎯 All India Mock Test Series 2026",
-            sponsorBody = prefs.getString(KEY_SPONSOR_BODY, "500+ Sectional & Full-length tests with live All-India rank predictor & video solutions.") ?: "500+ Sectional & Full-length tests with live All-India rank predictor & video solutions.",
-            sponsorRating = prefs.getString(KEY_SPONSOR_RATING, "4.9 ★") ?: "4.9 ★",
-            sponsorCtaText = prefs.getString(KEY_SPONSOR_CTA, "Start Free Test") ?: "Start Free Test",
-            sponsorIconEmoji = prefs.getString(KEY_SPONSOR_EMOJI, "🎯") ?: "🎯",
-            sponsorTargetUrl = prefs.getString(KEY_SPONSOR_URL, "https://play.google.com/store/search?q=sarkari+mock+test&c=apps") ?: "https://play.google.com/store/search?q=sarkari+mock+test&c=apps",
-
-            adminPin = prefs.getString(KEY_ADMIN_PIN, "1234") ?: "1234"
+            sponsorName = prefs.getString(KEY_SPONSOR_NAME, "") ?: "",
+            sponsorHeadline = prefs.getString(KEY_SPONSOR_HEADLINE, "") ?: "",
+            sponsorBody = prefs.getString(KEY_SPONSOR_BODY, "") ?: "",
+            sponsorRating = prefs.getString(KEY_SPONSOR_RATING, "") ?: "",
+            sponsorCtaText = prefs.getString(KEY_SPONSOR_CTA, "") ?: "",
+            sponsorIconEmoji = prefs.getString(KEY_SPONSOR_EMOJI, "") ?: "",
+            sponsorTargetUrl = prefs.getString(KEY_SPONSOR_URL, "") ?: ""
         )
         _settings.value = loaded
     }
@@ -177,48 +176,9 @@ object AdSettingsRepository {
             putString(KEY_SPONSOR_CTA, newSettings.sponsorCtaText)
             putString(KEY_SPONSOR_EMOJI, newSettings.sponsorIconEmoji)
             putString(KEY_SPONSOR_URL, newSettings.sponsorTargetUrl)
-
-            putString(KEY_ADMIN_PIN, newSettings.adminPin)
+            remove("key_admin_pin")
             apply()
         }
-    }
-
-    /**
-     * Resets all ad settings back to defaults (official Google AdMob test IDs & enabled).
-     */
-    fun resetToDefaults() {
-        val defaultSettings = AdSettings()
-        updateSettings(defaultSettings)
-    }
-
-    /**
-     * Resets only unit IDs to official Google AdMob test IDs while keeping toggles & sponsors.
-     */
-    fun resetUnitIdsToTestMode() {
-        val current = _settings.value
-        updateSettings(
-            current.copy(
-                customBannerUnitId = "",
-                customInterstitialUnitId = "",
-                customNativeUnitId = "",
-                customRewardedUnitId = ""
-            )
-        )
-    }
-
-    /**
-     * Verifies if entered PIN matches saved admin PIN.
-     */
-    fun verifyPin(enteredPin: String): Boolean {
-        return _settings.value.adminPin == enteredPin.trim()
-    }
-
-    /**
-     * Updates Admin PIN.
-     */
-    fun updatePin(newPin: String) {
-        val updated = _settings.value.copy(adminPin = newPin.trim())
-        updateSettings(updated)
     }
 
     /**
@@ -227,6 +187,7 @@ object AdSettingsRepository {
      */
     suspend fun fetchRemoteConfig(workerBaseUrl: String? = null): Boolean = withContext(Dispatchers.IO) {
         try {
+            if (workerBaseUrl == null && !CloudflareConfig.isConfigured()) return@withContext false
             val baseUrl = (workerBaseUrl ?: CloudflareConfig.getActiveWorkerUrl()).trimEnd('/')
             val url = URL("$baseUrl/api/ads/config")
             val connection = (url.openConnection() as HttpURLConnection).apply {

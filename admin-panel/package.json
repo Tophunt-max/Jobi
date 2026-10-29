@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "NODE_ENV=production next build",
-    "start": "next start",
+    "build": "next build",
+    "start": "npx serve out",
     "lint": "next lint",
-    "pages:build": "next build",
-    "deploy:cloudflare": "npm run build && wrangler pages deploy out --project-name=sarkari-jobs-admin"
+    "typecheck": "tsc --noEmit",
+    "deploy:cloudflare": "npm run build && npx wrangler deploy"
   },
   "dependencies": {
     "clsx": "^2.1.1",
