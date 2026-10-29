@@ -112,10 +112,11 @@ fun InAppBrowserScreen(
     // Prepare normalized URL & Google Docs viewer for PDF links
     val initialRawUrl = remember(state.url) {
         val trimmed = state.url.trim()
-        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-            trimmed
-        } else {
-            "https://$trimmed"
+        when {
+            trimmed.startsWith("https://") -> trimmed
+            // Cleartext is blocked app-wide; most official portals also serve HTTPS.
+            trimmed.startsWith("http://") -> "https://" + trimmed.removePrefix("http://")
+            else -> "https://$trimmed"
         }
     }
 
@@ -444,22 +445,31 @@ fun InAppBrowserScreen(
                             try {
                                 val cookieManager = CookieManager.getInstance()
                                 cookieManager.setAcceptCookie(true)
-                                cookieManager.setAcceptThirdPartyCookies(this, true)
+                                // Third-party cookies stay off: official portals keep sessions first-party.
+                                cookieManager.setAcceptThirdPartyCookies(this, false)
                             } catch (_: Exception) {}
 
                             settings.apply {
                                 javaScriptEnabled = true
                                 domStorageEnabled = true
-                                databaseEnabled = true
                                 useWideViewPort = true
                                 loadWithOverviewMode = true
                                 setSupportZoom(true)
                                 builtInZoomControls = true
                                 displayZoomControls = false
                                 allowFileAccess = false
-                                allowContentAccess = true
+                                allowContentAccess = false
+                                @Suppress("DEPRECATION")
+                                allowFileAccessFromFileURLs = false
+                                @Suppress("DEPRECATION")
+                                allowUniversalAccessFromFileURLs = false
+                                javaScriptCanOpenWindowsAutomatically = false
+                                setGeolocationEnabled(false)
                                 loadsImagesAutomatically = true
-                                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    safeBrowsingEnabled = true
+                                }
 
                                 // Prevent dark mode inversion from turning government pages into unreadable black surfaces
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -476,20 +486,31 @@ fun InAppBrowserScreen(
                                     view: WebView?,
                                     request: WebResourceRequest?
                                 ): Boolean {
-                                    val reqUrl = request?.url?.toString() ?: return false
-                                    if (reqUrl.startsWith("http://") || reqUrl.startsWith("https://")) {
-                                        return false // Let WebView load government URLs
-                                    }
-
-                                    // External protocols (mailto:, tel:, whatsapp:)
-                                    return try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(reqUrl)).apply {
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    val uri = request?.url ?: return false
+                                    when (uri.scheme?.lowercase()) {
+                                        "https" -> return false
+                                        "http" -> {
+                                            // Cleartext is blocked app-wide; try the HTTPS version instead.
+                                            if (request.isForMainFrame) {
+                                                view?.loadUrl(uri.buildUpon().scheme("https").build().toString())
+                                            }
+                                            return true
                                         }
-                                        ctx.startActivity(intent)
-                                        true
-                                    } catch (_: Exception) {
-                                        true
+                                        // Only well-known, side-effect-free schemes may leave the WebView.
+                                        // intent:, file:, content:, javascript: and custom app schemes are blocked.
+                                        "tel", "mailto", "sms", "upi", "market" -> {
+                                            if (!request.hasGesture()) return true
+                                            try {
+                                                val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                                                    addCategory(Intent.CATEGORY_BROWSABLE)
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                }
+                                                ctx.startActivity(intent)
+                                            } catch (_: Exception) {
+                                            }
+                                            return true
+                                        }
+                                        else -> return true
                                     }
                                 }
 
@@ -514,15 +535,18 @@ fun InAppBrowserScreen(
                                     url?.let { currentUrl = it }
                                 }
 
-                                @SuppressLint("WebViewClientOnReceivedSslError")
                                 override fun onReceivedSslError(
                                     view: WebView?,
                                     handler: SslErrorHandler?,
                                     error: SslError?
                                 ) {
-                                    // Government portals (*.gov.in, *.nic.in) often use CCA India certificates
-                                    // that trigger standard SSL warnings. Proceed to avoid a blank black screen.
-                                    handler?.proceed()
+                                    // Never bypass certificate errors: a forged "official" page could steal
+                                    // applicant data. Show the error and let the user open the system browser.
+                                    handler?.cancel()
+                                    isLoading = false
+                                    hasError = true
+                                    errorDescription = "This site's security certificate is not trusted. " +
+                                        "Open it in your browser to review the warning."
                                 }
 
                                 override fun onReceivedError(
@@ -542,7 +566,14 @@ fun InAppBrowserScreen(
                                     view: WebView?,
                                     detail: RenderProcessGoneDetail?
                                 ): Boolean {
-                                    // Prevent whole app crash if Android WebView renderer memory limit is reached
+                                    // The renderer died (OOM or crash). This WebView instance can no longer be
+                                    // used: detach and destroy it, then close the browser screen.
+                                    view?.let { dead ->
+                                        (dead.parent as? android.view.ViewGroup)?.removeView(dead)
+                                        try { dead.destroy() } catch (_: Throwable) {}
+                                    }
+                                    webViewInstance = null
+                                    onClose()
                                     return true
                                 }
                             }

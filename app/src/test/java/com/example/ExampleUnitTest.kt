@@ -94,31 +94,6 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun testJobFirestoreDocumentMapping() {
-        val seedJob = com.example.data.sample.InitialDataSeed.initialJobs.first()
-        val doc = com.example.data.remote.firestore.JobFirestoreDocument.fromJobEntity(seedJob)
-
-        assertEquals(seedJob.id, doc.id)
-        assertEquals(seedJob.title, doc.title)
-        assertEquals(seedJob.organization, doc.organization)
-        assertEquals(seedJob.advtNumber, doc.advtNumber)
-        assertEquals(seedJob.totalVacancies, doc.totalVacancies)
-        assertEquals(seedJob.applicationClosingDate, doc.applicationClosingDate)
-
-        val restoredEntity = doc.toJobEntity()
-        assertEquals(seedJob.id, restoredEntity.id)
-        assertEquals(seedJob.title, restoredEntity.title)
-        assertEquals(seedJob.organization, restoredEntity.organization)
-        assertEquals(seedJob.totalVacancies, restoredEntity.totalVacancies)
-    }
-
-    @Test
-    fun testJobFirestoreServiceOfflineGracefulFallback() {
-        val service = com.example.data.remote.firestore.JobFirestoreService { null }
-        assertEquals(false, service.isAvailable())
-    }
-
-    @Test
     fun testFilterJobsByAdmitCardAndResultCategory() {
         val allJobs = com.example.data.sample.InitialDataSeed.initialJobs
 

@@ -1,0 +1,631 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "775ba23ad711c8eedd0e88ab01d670f3",
+    "entities": [
+      {
+        "tableName": "jobs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `slug` TEXT NOT NULL, `title` TEXT NOT NULL, `organization` TEXT NOT NULL, `department` TEXT NOT NULL, `advtNumber` TEXT NOT NULL, `stateOrAllIndia` TEXT NOT NULL, `category` TEXT NOT NULL, `totalVacancies` INTEGER NOT NULL, `qualification` TEXT NOT NULL, `minAge` INTEGER NOT NULL, `maxAge` INTEGER NOT NULL, `ageCutoffDate` TEXT NOT NULL, `salaryScale` TEXT NOT NULL, `feeGeneral` TEXT NOT NULL, `feeReserved` TEXT NOT NULL, `feeMode` TEXT NOT NULL, `selectionProcess` TEXT NOT NULL, `detailedEligibility` TEXT NOT NULL, `applicationStartDate` TEXT NOT NULL, `applicationClosingDate` TEXT NOT NULL, `examDate` TEXT NOT NULL, `admitCardDate` TEXT NOT NULL, `officialNotificationUrl` TEXT NOT NULL, `applyOnlineUrl` TEXT NOT NULL, `officialWebsiteUrl` TEXT NOT NULL, `verifiedSourceDomain` TEXT NOT NULL, `isVerified` INTEGER NOT NULL, `status` TEXT NOT NULL, `postWiseBreakdownJson` TEXT NOT NULL, `categoryAgeRelaxationJson` TEXT NOT NULL, `isBookmarked` INTEGER NOT NULL, `publishedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "slug",
+            "columnName": "slug",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "organization",
+            "columnName": "organization",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "department",
+            "columnName": "department",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "advtNumber",
+            "columnName": "advtNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stateOrAllIndia",
+            "columnName": "stateOrAllIndia",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalVacancies",
+            "columnName": "totalVacancies",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "qualification",
+            "columnName": "qualification",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "minAge",
+            "columnName": "minAge",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maxAge",
+            "columnName": "maxAge",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ageCutoffDate",
+            "columnName": "ageCutoffDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "salaryScale",
+            "columnName": "salaryScale",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "feeGeneral",
+            "columnName": "feeGeneral",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "feeReserved",
+            "columnName": "feeReserved",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "feeMode",
+            "columnName": "feeMode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "selectionProcess",
+            "columnName": "selectionProcess",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detailedEligibility",
+            "columnName": "detailedEligibility",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "applicationStartDate",
+            "columnName": "applicationStartDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "applicationClosingDate",
+            "columnName": "applicationClosingDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "examDate",
+            "columnName": "examDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "admitCardDate",
+            "columnName": "admitCardDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "officialNotificationUrl",
+            "columnName": "officialNotificationUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "applyOnlineUrl",
+            "columnName": "applyOnlineUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "officialWebsiteUrl",
+            "columnName": "officialWebsiteUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "verifiedSourceDomain",
+            "columnName": "verifiedSourceDomain",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isVerified",
+            "columnName": "isVerified",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "postWiseBreakdownJson",
+            "columnName": "postWiseBreakdownJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryAgeRelaxationJson",
+            "columnName": "categoryAgeRelaxationJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isBookmarked",
+            "columnName": "isBookmarked",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "publishedAt",
+            "columnName": "publishedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "results",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `examName` TEXT NOT NULL, `recruitingOrg` TEXT NOT NULL, `advtNumber` TEXT NOT NULL, `publicationDate` TEXT NOT NULL, `officialResultUrl` TEXT NOT NULL, `cutOffSummary` TEXT NOT NULL, `meritListAvailable` INTEGER NOT NULL, `verificationDomain` TEXT NOT NULL, `stage` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "examName",
+            "columnName": "examName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recruitingOrg",
+            "columnName": "recruitingOrg",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "advtNumber",
+            "columnName": "advtNumber",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "publicationDate",
+            "columnName": "publicationDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "officialResultUrl",
+            "columnName": "officialResultUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cutOffSummary",
+            "columnName": "cutOffSummary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "meritListAvailable",
+            "columnName": "meritListAvailable",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "verificationDomain",
+            "columnName": "verificationDomain",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stage",
+            "columnName": "stage",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "admit_cards",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `examName` TEXT NOT NULL, `recruitingOrg` TEXT NOT NULL, `releaseDate` TEXT NOT NULL, `examDate` TEXT NOT NULL, `officialDownloadUrl` TEXT NOT NULL, `instructions` TEXT NOT NULL, `citySlipReleased` INTEGER NOT NULL, `verificationDomain` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "examName",
+            "columnName": "examName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recruitingOrg",
+            "columnName": "recruitingOrg",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "releaseDate",
+            "columnName": "releaseDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "examDate",
+            "columnName": "examDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "officialDownloadUrl",
+            "columnName": "officialDownloadUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "instructions",
+            "columnName": "instructions",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "citySlipReleased",
+            "columnName": "citySlipReleased",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "verificationDomain",
+            "columnName": "verificationDomain",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "syllabuses",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `examName` TEXT NOT NULL, `recruitingOrg` TEXT NOT NULL, `examPattern` TEXT NOT NULL, `subjectsAndMarksJson` TEXT NOT NULL, `durationMinutes` INTEGER NOT NULL, `negativeMarkingRule` TEXT NOT NULL, `officialPdfUrl` TEXT NOT NULL, `verificationDomain` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "examName",
+            "columnName": "examName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recruitingOrg",
+            "columnName": "recruitingOrg",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "examPattern",
+            "columnName": "examPattern",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subjectsAndMarksJson",
+            "columnName": "subjectsAndMarksJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMinutes",
+            "columnName": "durationMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "negativeMarkingRule",
+            "columnName": "negativeMarkingRule",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "officialPdfUrl",
+            "columnName": "officialPdfUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "verificationDomain",
+            "columnName": "verificationDomain",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "answer_keys",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `examName` TEXT NOT NULL, `recruitingOrg` TEXT NOT NULL, `status` TEXT NOT NULL, `releaseDate` TEXT NOT NULL, `objectionDeadline` TEXT NOT NULL, `objectionFee` TEXT NOT NULL, `officialLink` TEXT NOT NULL, `verificationDomain` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "examName",
+            "columnName": "examName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recruitingOrg",
+            "columnName": "recruitingOrg",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "releaseDate",
+            "columnName": "releaseDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "objectionDeadline",
+            "columnName": "objectionDeadline",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "objectionFee",
+            "columnName": "objectionFee",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "officialLink",
+            "columnName": "officialLink",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "verificationDomain",
+            "columnName": "verificationDomain",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "admissions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `examOrCourseName` TEXT NOT NULL, `conductingAuthority` TEXT NOT NULL, `eligibilityCourse` TEXT NOT NULL, `applicationStartDate` TEXT NOT NULL, `applicationClosingDate` TEXT NOT NULL, `entranceExamDate` TEXT NOT NULL, `officialApplyUrl` TEXT NOT NULL, `officialInformationBulletinUrl` TEXT NOT NULL, `verificationDomain` TEXT NOT NULL, `status` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "examOrCourseName",
+            "columnName": "examOrCourseName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conductingAuthority",
+            "columnName": "conductingAuthority",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eligibilityCourse",
+            "columnName": "eligibilityCourse",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "applicationStartDate",
+            "columnName": "applicationStartDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "applicationClosingDate",
+            "columnName": "applicationClosingDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entranceExamDate",
+            "columnName": "entranceExamDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "officialApplyUrl",
+            "columnName": "officialApplyUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "officialInformationBulletinUrl",
+            "columnName": "officialInformationBulletinUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "verificationDomain",
+            "columnName": "verificationDomain",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "notifications",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `body` TEXT NOT NULL, `type` TEXT NOT NULL, `targetSlug` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `isRead` INTEGER NOT NULL, `priority` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "body",
+            "columnName": "body",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetSlug",
+            "columnName": "targetSlug",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isRead",
+            "columnName": "isRead",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "priority",
+            "columnName": "priority",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '775ba23ad711c8eedd0e88ab01d670f3')"
+    ]
+  }
+}

@@ -358,3 +358,31 @@ data class BackendSyncAllDataDto(
     @Json(name = "answer_keys") val answerKeys: List<AnswerKeyDto> = emptyList(),
     @Json(name = "notifications") val notifications: List<NotificationDto> = emptyList()
 )
+
+// ====================================================================
+// AI mentor proxy (POST /api/ai/generate)
+// ====================================================================
+
+@JsonClass(generateAdapter = true)
+data class AiGenerateRequest(
+    @Json(name = "task") val task: String,
+    @Json(name = "prompt") val prompt: String
+)
+
+@JsonClass(generateAdapter = true)
+data class AiGenerateResponse(
+    @Json(name = "success") val success: Boolean = false,
+    @Json(name = "text") val text: String? = null,
+    @Json(name = "message") val message: String? = null
+)
+
+// ====================================================================
+// Content reports (POST /api/reports)
+// ====================================================================
+
+@JsonClass(generateAdapter = true)
+data class ReportRequest(
+    @Json(name = "job_id") val jobId: String,
+    @Json(name = "reason") val reason: String,
+    @Json(name = "details") val details: String
+)

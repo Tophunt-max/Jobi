@@ -1,7 +1,16 @@
 package com.example
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
@@ -47,10 +56,39 @@ import com.example.ui.viewmodel.AiMentorViewModel
 import com.example.ui.viewmodel.JobViewModel
 import com.example.ui.viewmodel.MainTab
 import com.example.util.AppUtils
+import com.example.util.NotificationPermission
 
 class MainActivity : ComponentActivity() {
+    /** Job requested by a notification tap; consumed once by the UI. */
+    private val pendingJobId: MutableState<String?> = mutableStateOf(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val id = intent?.getStringExtra(EXTRA_OPEN_JOB_ID)
+        if (!id.isNullOrBlank() && id.length <= 200) pendingJobId.value = id
+    }
+
+    companion object {
+        const val EXTRA_OPEN_JOB_ID = "com.example.extra.OPEN_JOB_ID"
+
+        /** Intent that opens the app on a specific job. Data URI keeps PendingIntents distinct per job. */
+        fun openJobIntent(context: Context, jobId: String): Intent =
+            Intent(context, MainActivity::class.java).apply {
+                action = Intent.ACTION_VIEW
+                data = Uri.Builder().scheme("sarkari").authority("job").appendPath(jobId).build()
+                putExtra(EXTRA_OPEN_JOB_ID, jobId)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) handleIntent(intent)
         // Initialize Google Mobile Ads SDK with background preloads
         AdManager.initialize(this)
 
@@ -66,14 +104,20 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             MyApplicationTheme {
-                MainAppContent()
+                MainAppContent(
+                    pendingJobId = pendingJobId.value,
+                    onPendingJobConsumed = { pendingJobId.value = null }
+                )
             }
         }
     }
 }
 
 @Composable
-fun MainAppContent() {
+fun MainAppContent(
+    pendingJobId: String? = null,
+    onPendingJobConsumed: () -> Unit = {}
+) {
     val jobViewModel: JobViewModel = viewModel()
     val aiMentorViewModel: AiMentorViewModel = viewModel()
 
@@ -108,11 +152,49 @@ fun MainAppContent() {
         }
     }
 
-    // Connect AppUtils to In-App WebView Browser
-    LaunchedEffect(Unit) {
+    // Route links into the in-app browser while this screen is alive; clear on dispose
+    // so the global hook never outlives (and leaks) the ViewModel.
+    DisposableEffect(jobViewModel) {
         AppUtils.onOpenInAppBrowser = { url, title ->
             jobViewModel.openInAppBrowser(url, title)
         }
+        onDispose { AppUtils.onOpenInAppBrowser = null }
+    }
+
+    // Notification tap -> open that job.
+    LaunchedEffect(pendingJobId) {
+        if (pendingJobId != null) {
+            jobViewModel.openJobById(pendingJobId)
+            onPendingJobConsumed()
+        }
+    }
+
+    // Ask for notification permission once (Android 13+), so deadline reminders can be shown.
+    val permissionContext = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* Result is read on demand via NotificationPermission.isGranted */ }
+    LaunchedEffect(Unit) {
+        val prefs = permissionContext.getSharedPreferences("app_prompts", Context.MODE_PRIVATE)
+        if (NotificationPermission.needsRuntimeRequest(permissionContext) &&
+            !prefs.getBoolean("asked_post_notifications", false)
+        ) {
+            prefs.edit().putBoolean("asked_post_notifications", true).apply()
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    // System Back on a secondary tab returns to Home instead of exiting the app.
+    BackHandler(
+        enabled = uiState.currentTab != MainTab.HOME &&
+            uiState.selectedJob == null &&
+            uiState.inAppBrowserState == null &&
+            !uiState.showJobAlertsScreen
+    ) {
+        jobViewModel.setTab(MainTab.HOME)
+    }
+    BackHandler(enabled = uiState.showJobAlertsScreen && uiState.selectedJob == null && uiState.inAppBrowserState == null) {
+        jobViewModel.toggleJobAlertsScreen(false)
     }
 
     // Modal Sheets
@@ -333,12 +415,6 @@ fun MainAppContent() {
                         syllabiCount = syllabi.size,
                         admissionsCount = admissions.size
                     )
-                }
-
-                MainTab.ADMIN -> {
-                    LaunchedEffect(Unit) {
-                        jobViewModel.setTab(MainTab.PROFILE)
-                    }
                 }
             }
         }

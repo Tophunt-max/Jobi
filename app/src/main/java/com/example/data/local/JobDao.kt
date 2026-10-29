@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.example.model.JobEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -15,39 +16,63 @@ interface JobDao {
     @Query("SELECT * FROM jobs WHERE isBookmarked = 1 ORDER BY publishedAt DESC")
     fun getBookmarkedJobs(): Flow<List<JobEntity>>
 
+    @Query("SELECT * FROM jobs WHERE isBookmarked = 1")
+    suspend fun getBookmarkedJobsOnce(): List<JobEntity>
+
     @Query("SELECT * FROM jobs WHERE id = :id LIMIT 1")
     fun getJobById(id: String): Flow<JobEntity?>
 
-    @Query("SELECT * FROM jobs WHERE slug = :slug LIMIT 1")
-    fun getJobBySlug(slug: String): Flow<JobEntity?>
+    @Query("SELECT * FROM jobs WHERE id = :id OR slug = :id LIMIT 1")
+    suspend fun findByIdOrSlug(id: String): JobEntity?
 
-    @Query("SELECT * FROM jobs WHERE status = 'CLOSING_SOON' OR status = 'ACTIVE' ORDER BY applicationClosingDate ASC LIMIT 6")
+    @Query(
+        "SELECT * FROM jobs WHERE status IN ('CLOSING_SOON', 'ACTIVE') AND applicationClosingDate != '' " +
+            "ORDER BY applicationClosingDate ASC LIMIT 6"
+    )
     fun getClosingSoonJobs(): Flow<List<JobEntity>>
 
-    @Query("SELECT * FROM jobs WHERE title LIKE '%' || :query || '%' OR organization LIKE '%' || :query || '%' OR advtNumber LIKE '%' || :query || '%' OR department LIKE '%' || :query || '%'")
-    fun searchJobs(query: String): Flow<List<JobEntity>>
-
-    @Query("SELECT * FROM jobs WHERE stateOrAllIndia = :state OR stateOrAllIndia = 'All India' ORDER BY publishedAt DESC")
-    fun getJobsByState(state: String): Flow<List<JobEntity>>
-
-    @Query("SELECT * FROM jobs WHERE category = :category ORDER BY publishedAt DESC")
-    fun getJobsByCategory(category: String): Flow<List<JobEntity>>
+    @Query("SELECT id FROM jobs WHERE isBookmarked = 1")
+    suspend fun getBookmarkedIds(): List<String>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertJobs(jobs: List<JobEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertJob(job: JobEntity)
+    @Query("DELETE FROM jobs WHERE isBookmarked = 0 AND id NOT IN (:keepIds)")
+    suspend fun deleteUnbookmarkedExcept(keepIds: List<String>)
+
+    @Query("DELETE FROM jobs WHERE isBookmarked = 0")
+    suspend fun deleteAllUnbookmarked()
+
+    /**
+     * Replaces the server-owned job list while preserving local user state:
+     * - bookmark flags are carried over for jobs that still exist;
+     * - bookmarked jobs that disappeared from the server are kept so the user doesn't lose them;
+     * - other jobs no longer returned by the server (expired, rejected) are removed.
+     */
+    @Transaction
+    suspend fun replaceFromServer(serverJobs: List<JobEntity>) {
+        val bookmarked = getBookmarkedIds().toHashSet()
+        val merged = serverJobs.map { if (it.id in bookmarked) it.copy(isBookmarked = true) else it }
+        if (merged.isEmpty()) {
+            deleteAllUnbookmarked()
+        } else {
+            // SQLite limits bound variables; chunk the keep-list defensively.
+            if (merged.size <= 900) {
+                deleteUnbookmarkedExcept(merged.map { it.id })
+            } else {
+                val keep = merged.map { it.id }.toHashSet()
+                getAllIds().filter { it !in keep && it !in bookmarked }.chunked(900).forEach { deleteByIds(it) }
+            }
+            insertJobs(merged)
+        }
+    }
+
+    @Query("SELECT id FROM jobs")
+    suspend fun getAllIds(): List<String>
+
+    @Query("DELETE FROM jobs WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>)
 
     @Query("UPDATE jobs SET isBookmarked = :isBookmarked WHERE id = :id")
     suspend fun updateBookmark(id: String, isBookmarked: Boolean)
-
-    @Query("UPDATE jobs SET status = :status WHERE id = :id")
-    suspend fun updateJobStatus(id: String, status: String)
-
-    @Query("SELECT COUNT(*) FROM jobs WHERE status != 'EXPIRED'")
-    suspend fun getActiveJobsCount(): Int
-
-    @Query("DELETE FROM jobs WHERE id = :id")
-    suspend fun deleteJob(id: String)
 }

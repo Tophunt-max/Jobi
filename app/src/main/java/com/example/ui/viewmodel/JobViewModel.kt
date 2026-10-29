@@ -5,17 +5,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.repository.JobRepository
-import com.example.data.remote.firestore.JobFirestoreService
-import com.example.data.remote.firestore.JobSyncCoordinator
-import com.example.data.remote.firestore.SyncStatus
-import com.example.data.remote.cloudflare.CloudflareConfig
-import com.example.data.repository.CloudflareJobRepository
-import com.example.data.repository.CloudflareSyncState
+import com.example.data.local.UserDataStore
+import com.example.data.remote.cloudflare.CloudflareClient
+import com.example.data.remote.model.ReportRequest
 import com.example.model.AdmissionItem
 import com.example.model.AdmitCardItem
 import com.example.model.AnswerKeyItem
 import com.example.model.AppLanguage
-import com.example.model.ContentReport
 import com.example.model.JobEntity
 import android.content.Context
 import android.content.Intent
@@ -40,6 +36,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 enum class MainTab {
@@ -47,8 +45,7 @@ enum class MainTab {
     JOBS,
     RESULTS,
     AI_MENTOR,
-    PROFILE,
-    ADMIN
+    PROFILE
 }
 
 data class JobUiState(
@@ -73,60 +70,21 @@ data class JobUiState(
 class JobViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getDatabase(application)
-    val repository = JobRepository(db.jobDao(), db.resultDao(), db.notificationDao())
-    val firestoreService = JobFirestoreService(application)
-    val syncCoordinator = JobSyncCoordinator(firestoreService, db.jobDao())
-    val syncStatus: StateFlow<SyncStatus> = syncCoordinator.syncStatus
-
-    val cloudflareRepo = CloudflareJobRepository(db.jobDao())
-    val cloudflareSyncState: StateFlow<CloudflareSyncState> = cloudflareRepo.syncState
-    val cloudflareWorkerUrl: StateFlow<String> = CloudflareConfig.workerUrlFlow
-    val officialSources = cloudflareRepo.sources
-
-    val backendSyncManager = BackendDataSyncManager(application, db.jobDao(), db.resultDao(), db.notificationDao())
+    private val repository = JobRepository(db.jobDao(), db.resultDao(), db.notificationDao())
+    private val backendSyncManager = BackendDataSyncManager(db.jobDao(), db.resultDao(), db.notificationDao())
     val backendSyncState: StateFlow<BackendSyncState> = backendSyncManager.syncState
+    private val userDataStore = UserDataStore(application)
 
     private val _uiState = MutableStateFlow(JobUiState())
     val uiState: StateFlow<JobUiState> = _uiState.asStateFlow()
 
-    private val _userProfile = MutableStateFlow(UserEligibilityProfile())
+    private val _userProfile = MutableStateFlow(userDataStore.loadProfile())
     val userProfile: StateFlow<UserEligibilityProfile> = _userProfile.asStateFlow()
 
-    private val _documentLocker = MutableStateFlow(AspirantDocumentLocker())
+    private val _documentLocker = MutableStateFlow(userDataStore.loadLocker())
     val documentLocker: StateFlow<AspirantDocumentLocker> = _documentLocker.asStateFlow()
 
-    private val _appliedExams = MutableStateFlow(
-        listOf(
-            AppliedExamRecord(
-                id = "app-upsc-cse-2026",
-                jobTitle = "Civil Services Examination 2026 (IAS/IPS/IFS)",
-                organization = "Union Public Service Commission (UPSC)",
-                advtNumber = "05/2026-CSP",
-                applicationNo = "UPSC-2026-991823",
-                rollNo = "0819283",
-                examDate = "24 May 2026 (Prelims)",
-                examCenter = "Lucknow Center 04",
-                stage = ExamApplicationStage.SUBMITTED,
-                feeReceiptNo = "SBI-REC-994821",
-                appliedDate = "18 Oct 2026",
-                notes = "Admit card download expected 3 weeks prior to exam."
-            ),
-            AppliedExamRecord(
-                id = "app-ssc-cgl-2026",
-                jobTitle = "Combined Graduate Level (CGL Tier-I) 2026",
-                organization = "Staff Selection Commission (SSC)",
-                advtNumber = "SSC-CGL/2026/01",
-                applicationNo = "SSC-2026-449102",
-                rollNo = "30091827",
-                examDate = "12 Dec 2026",
-                examCenter = "Prayagraj / Delhi NCR",
-                stage = ExamApplicationStage.ADMIT_CARD_OUT,
-                feeReceiptNo = "UPI-REF-110293",
-                appliedDate = "02 Oct 2026",
-                notes = "Hall ticket downloaded. Shift 1 morning report at 08:30 AM."
-            )
-        )
-    )
+    private val _appliedExams = MutableStateFlow(userDataStore.loadAppliedExams())
     val appliedExams: StateFlow<List<AppliedExamRecord>> = _appliedExams.asStateFlow()
 
     val allJobs: StateFlow<List<JobEntity>> = repository.allJobs
@@ -216,25 +174,30 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        CloudflareConfig.init(application)
         viewModelScope.launch {
-            repository.initializeDatabaseIfEmpty()
-            // Comprehensive sync from Backend API with HTTP Disk & Room persistent caching
             backendSyncManager.syncAllData()
-            // Start real-time Firestore synchronization
-            syncCoordinator.startRealtimeSync(viewModelScope)
-            // Synchronize with Cloudflare D1 Edge database in background
-            cloudflareRepo.syncJobsFromCloudflare()
-            // Fetch verified official recruitment portals from Cloudflare
-            cloudflareRepo.fetchPublicSources()
-            // Sync deadline reminders for bookmarked jobs
-            repository.bookmarkedJobs.collect { bookmarks ->
-                if (bookmarks.isNotEmpty()) {
-                    DeadlineNotificationScheduler.syncDeadlinesForBookmarkedJobs(
-                        application,
-                        bookmarks
-                    )
+        }
+        // Keep deadline reminders in step with bookmarks (only when the set of bookmarked
+        // jobs or their deadlines actually change, not on every list emission).
+        viewModelScope.launch {
+            repository.bookmarkedJobs
+                .map { list -> list.map { it.id to it.applicationClosingDate } to list }
+                .distinctUntilChanged { old, new -> old.first == new.first }
+                .collect { (_, bookmarks) ->
+                    DeadlineNotificationScheduler.syncDeadlinesForBookmarkedJobs(application, bookmarks)
                 }
+        }
+    }
+
+    /** Opens a job from a notification tap or deep link. Falls back to fetching it from the server. */
+    fun openJobById(idOrSlug: String) {
+        viewModelScope.launch {
+            val local = repository.findJob(idOrSlug)
+            val job = local ?: runCatching {
+                CloudflareClient.getService().getJobById(idOrSlug).data?.toJobEntity()
+            }.getOrNull()
+            if (job != null) {
+                _uiState.value = _uiState.value.copy(selectedJob = job, showNotificationsSheet = false)
             }
         }
     }
@@ -313,13 +276,12 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleBookmark(job: JobEntity) {
         viewModelScope.launch {
             val willBeBookmarked = !job.isBookmarked
-            repository.toggleBookmark(job.id, job.isBookmarked)
+            repository.setBookmark(job.id, willBeBookmarked)
             
             // Automatic deadline notification scheduling on bookmark toggle
             val app = getApplication<Application>()
             if (willBeBookmarked) {
-                DeadlineNotificationScheduler.scheduleDeadlineReminder(app, job, daysBefore = 3)
-                DeadlineNotificationScheduler.scheduleDeadlineReminder(app, job, daysBefore = 1)
+                DeadlineNotificationScheduler.syncDeadlinesForBookmarkedJobs(app, listOf(job))
             } else {
                 DeadlineNotificationScheduler.cancelDeadlineReminder(app, job.id)
             }
@@ -362,25 +324,32 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateUserProfile(profile: UserEligibilityProfile) {
         _userProfile.value = profile
+        userDataStore.saveProfile(profile)
     }
 
     fun updateDocumentLocker(locker: AspirantDocumentLocker) {
         _documentLocker.value = locker
+        userDataStore.saveLocker(locker)
+    }
+
+    private fun setAppliedExams(list: List<AppliedExamRecord>) {
+        _appliedExams.value = list
+        userDataStore.saveAppliedExams(list)
     }
 
     fun addAppliedExam(record: AppliedExamRecord) {
-        _appliedExams.value = listOf(record) + _appliedExams.value.filter { it.id != record.id }
+        setAppliedExams(listOf(record) + _appliedExams.value.filter { it.id != record.id })
     }
 
     fun updateExamStage(id: String, stage: ExamApplicationStage, notes: String = "") {
-        _appliedExams.value = _appliedExams.value.map {
+        setAppliedExams(_appliedExams.value.map {
             if (it.id == id) it.copy(stage = stage, notes = if (notes.isNotBlank()) notes else it.notes)
             else it
-        }
+        })
     }
 
     fun deleteAppliedExam(id: String) {
-        _appliedExams.value = _appliedExams.value.filter { it.id != id }
+        setAppliedExams(_appliedExams.value.filter { it.id != id })
     }
 
     fun generateAspirantDossierText(): String {
@@ -443,11 +412,19 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
 
     fun submitReport(reason: String, details: String) {
         val job = _uiState.value.reportingJob ?: return
+        _uiState.value = _uiState.value.copy(reportingJob = null)
         viewModelScope.launch {
-            // Register report
+            val ok = runCatching {
+                CloudflareClient.getService().submitReport(
+                    ReportRequest(jobId = job.id, reason = reason.take(80), details = details.take(1000))
+                ).success
+            }.getOrDefault(false)
             _uiState.value = _uiState.value.copy(
-                reportingJob = null,
-                reportSubmittedMessage = "Thank you. Your report regarding '${job.advtNumber}' has been submitted for editorial audit."
+                reportSubmittedMessage = if (ok) {
+                    "Thank you. Your report has been sent to our editors."
+                } else {
+                    "Could not send the report. Please check your connection and try again."
+                }
             )
         }
     }
@@ -460,25 +437,6 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true)
             backendSyncManager.syncAllData()
-            syncCoordinator.syncNow()
-            cloudflareRepo.syncJobsFromCloudflare()
-            cloudflareRepo.fetchPublicSources()
-            _uiState.value = _uiState.value.copy(isRefreshing = false)
-        }
-    }
-
-    fun setCloudflareWorkerUrl(newUrl: String) {
-        val app = getApplication<Application>()
-        CloudflareConfig.setWorkerUrl(app, newUrl)
-        viewModelScope.launch {
-            cloudflareRepo.syncJobsFromCloudflare()
-        }
-    }
-
-    fun syncCloudflareNow() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isRefreshing = true)
-            cloudflareRepo.syncJobsFromCloudflare()
             _uiState.value = _uiState.value.copy(isRefreshing = false)
         }
     }

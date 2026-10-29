@@ -1,12 +1,10 @@
 package com.example.data.repository
 
-import com.example.BuildConfig
-import com.example.data.remote.GeminiApiClient
-import com.example.data.remote.GeminiContent
-import com.example.data.remote.GeminiGenerationConfig
-import com.example.data.remote.GeminiPart
-import com.example.data.remote.GeminiRequest
-import com.example.data.remote.GeminiThinkingConfig
+import android.util.Log
+import com.example.data.remote.cloudflare.CloudflareClient
+import com.example.data.remote.cloudflare.CloudflareConfig
+import com.example.data.remote.model.AiGenerateRequest
+import kotlinx.coroutines.CancellationException
 import com.example.model.JobEntity
 import com.example.model.UserEligibilityProfile
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +58,7 @@ class AiMentorRepository {
             appendLine("Format with clean headers and bullet points for mobile readability.")
         }
 
-        callGeminiWithHighThinking(prompt) ?: generateOfflineEligibilityAssessment(userProfile, targetJob)
+        callAiMentor("eligibility", prompt) ?: generateOfflineEligibilityAssessment(userProfile, targetJob)
     }
 
     suspend fun getExamStrategyAndSyllabusGuidance(
@@ -84,7 +82,7 @@ class AiMentorRepository {
             appendLine("Structure with clear, actionable advice.")
         }
 
-        callGeminiWithHighThinking(prompt) ?: generateOfflineStrategyGuidance(examName)
+        callAiMentor("strategy", prompt) ?: generateOfflineStrategyGuidance(examName)
     }
 
     suspend fun askCustomQuery(
@@ -100,45 +98,30 @@ class AiMentorRepository {
             appendLine("Provide a verified, factual, and encouraging response based on official Indian government recruitment rules (DoPT, UPSC, SSC, RRB, IBPS).")
         }
 
-        callGeminiWithHighThinking(prompt) ?: generateOfflineQueryResponse(query, userProfile)
+        callAiMentor("query", prompt) ?: generateOfflineQueryResponse(query, userProfile)
     }
 
-    private suspend fun callGeminiWithHighThinking(promptText: String): String? {
-        val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") {
-            return null
-        }
-
+    /**
+     * Calls the AI mentor through the backend Worker, which holds the Gemini API key.
+     * Returns null on any failure so callers fall back to the offline heuristics.
+     */
+    private suspend fun callAiMentor(task: String, promptText: String): String? {
+        if (!CloudflareConfig.isConfigured()) return null
         return try {
-            val request = GeminiRequest(
-                contents = listOf(
-                    GeminiContent(
-                        parts = listOf(GeminiPart(text = promptText)),
-                        role = "user"
-                    )
-                ),
-                generationConfig = GeminiGenerationConfig(
-                    thinkingConfig = GeminiThinkingConfig(thinkingLevel = "HIGH"),
-                    temperature = 0.4f
-                ),
-                systemInstruction = GeminiContent(
-                    parts = listOf(
-                        GeminiPart(
-                            text = "You are the AI Sarkari Job & Eligibility Mentor. You provide rigorous, accurate, and structured analysis of Indian government recruitments, reservation policies, age relaxations, and exam strategies. Always cite official gazette criteria and clarify that candidates should confirm with the original advertisement."
-                        )
-                    )
-                )
+            val response = CloudflareClient.getSlowService().aiGenerate(
+                AiGenerateRequest(task = task, prompt = promptText.take(MAX_PROMPT_CHARS))
             )
-
-            val response = GeminiApiClient.service.generateContent(
-                apiKey = apiKey,
-                request = request
-            )
-
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+            response.text?.takeIf { response.success && it.isNotBlank() }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
+            Log.w("AiMentorRepository", "AI request failed: ${e.javaClass.simpleName}")
             null
         }
+    }
+
+    private companion object {
+        const val MAX_PROMPT_CHARS = 8000
     }
 
     // High quality offline heuristic fallback
@@ -147,7 +130,7 @@ class AiMentorRepository {
         job: JobEntity
     ): String {
         val maxAgeWithRelaxation = job.maxAge + profile.category.standardRelaxationYears
-        val isAgeEligible = profile.age in job.minAge..maxAgeWithRelaxation
+        val isAgeEligible = job.maxAge > 0 && profile.age in job.minAge..maxAgeWithRelaxation
         val isFeeExempted = profile.category in listOf(
             com.example.model.CasteCategory.SC,
             com.example.model.CasteCategory.ST,

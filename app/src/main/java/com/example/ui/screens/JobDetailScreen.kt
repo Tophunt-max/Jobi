@@ -511,7 +511,7 @@ fun JobDetailScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = "Age Limit (UR)", fontSize = 11.sp, color = Slate500)
                             Text(
-                                text = "${job.minAge} to ${job.maxAge} Years",
+                                text = if (job.maxAge > 0) "${job.minAge} to ${job.maxAge} Years" else "Refer official notification",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Slate800
