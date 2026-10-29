@@ -56,7 +56,7 @@ export default function DashboardPage() {
 
   const handleQuickApprove = async (id: string) => {
     try {
-      await adminApi.approveJob(id, 'Admin Dashboard');
+      await adminApi.approveJob(id);
       setActionMessage('Job approved and published.');
       loadData();
       setTimeout(() => setActionMessage(null), 4000);

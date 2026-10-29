@@ -3,6 +3,7 @@
  */
 import { json, readJson, HttpError } from "../http.js";
 import { requireAdmin } from "../auth.js";
+import { handleAccount, handleLogin } from "./adminAuth.js";
 import {
     ADMIN_STATUSES, CATEGORIES, clampInt, optionalString, oneOf,
     shortId, slugify, validateAdConfig, validateManualJob
@@ -54,7 +55,15 @@ export async function handleAdmin(request, env, url, cors) {
     const path = url.pathname;
     const method = request.method;
 
-    await requireAdmin(request, env);
+    if (path === "/api/admin/auth/login" && method === "POST") {
+        return handleLogin(request, env, cors);
+    }
+
+    const principal = await requireAdmin(request, env);
+    const accountRes = await handleAccount(request, env, url, cors, principal);
+    if (accountRes) return accountRes;
+    // Audit trail always records who is signed in; clients cannot spoof it.
+    const actor = principal.email;
     const ok = (data, status = 200) => json({ success: true, ...data }, { status, headers: { ...cors, "Cache-Control": "no-store" } });
 
     // ---------- Sources ----------
@@ -147,7 +156,7 @@ export async function handleAdmin(request, env, url, cors) {
         const ids = Array.isArray(body.ids) ? [...new Set(body.ids.filter((x) => typeof x === "string" && x.length <= 120))] : [];
         if (ids.length === 0) throw new HttpError(400, "ids must be a non-empty array of job IDs");
         if (ids.length > MAX_BATCH) throw new HttpError(400, `At most ${MAX_BATCH} jobs can be approved at once`);
-        const approvedBy = optionalString(body.approved_by, "approved_by", { max: 80 }) || "admin";
+        const approvedBy = actor;
 
         const placeholders = ids.map(() => "?").join(",");
         const { results } = await env.DB.prepare(
@@ -164,7 +173,7 @@ export async function handleAdmin(request, env, url, cors) {
     if (path.startsWith("/api/admin/jobs/") && path.endsWith("/approve") && method === "POST") {
         const id = idFromPath(path, "/api/admin/jobs/", "/approve");
         const body = await readJson(request, { optional: true });
-        const approvedBy = optionalString(body.approved_by, "approved_by", { max: 80 }) || "admin";
+        const approvedBy = actor;
 
         const job = await env.DB.prepare("SELECT * FROM jobs WHERE id = ?").bind(id).first();
         if (!job) throw new HttpError(404, "Job not found");
@@ -177,7 +186,7 @@ export async function handleAdmin(request, env, url, cors) {
     if (path.startsWith("/api/admin/jobs/") && path.endsWith("/reject") && method === "POST") {
         const id = idFromPath(path, "/api/admin/jobs/", "/reject");
         const body = await readJson(request, { optional: true });
-        const reason = optionalString(body.reason, "reason", { max: 500 }) || "Rejected by administrator";
+        const reason = `${optionalString(body.reason, "reason", { max: 450 }) || "Rejected"} (by ${actor})`;
         const now = new Date().toISOString();
 
         const res = await env.DB.prepare(`
@@ -194,7 +203,7 @@ export async function handleAdmin(request, env, url, cors) {
 
     if (path === "/api/admin/jobs" && method === "POST") {
         const body = await readJson(request);
-        const j = validateManualJob(body);
+        const j = { ...validateManualJob(body), approved_by: actor };
         const now = new Date().toISOString();
         const id = `manual-${crypto.randomUUID()}`;
         const slug = `${slugify(j.title) || "notice"}-${shortId()}`;

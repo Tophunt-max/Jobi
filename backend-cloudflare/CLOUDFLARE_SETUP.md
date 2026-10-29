@@ -55,9 +55,12 @@ Back up first: `npx wrangler d1 export sarkari_jobs_db --remote --output backup.
 
 ## Security model
 
-- **Admin auth:** `Authorization: Bearer <ADMIN_API_KEY>` (or `X-Admin-Key`). Query-string keys are rejected. If the secret is missing, admin routes return 503. Comparison is constant-time.
+- **Admin auth:** two ways.
+  - People sign in with email and password (`POST /api/admin/auth/login`). This creates a session in D1 (`admin_sessions`, token stored only as SHA-256) and sets an `HttpOnly; Secure; SameSite=Strict` cookie. Writes made with the cookie must come from an allowed `Origin`.
+  - Automation uses `Authorization: Bearer <ADMIN_API_KEY>` (header only, constant-time compare). It acts as an owner, so use it to create the first account.
+  - Passwords are PBKDF2-SHA256 with 100k iterations. Accounts lock for 15 minutes after 5 failures. See `src/auth.js` and `src/routes/adminAuth.js`.
 - **CORS:** public routes allow any origin. Admin routes reflect only the origins in `ADMIN_ALLOWED_ORIGINS`.
-- **Rate limits** (per IP, per Cloudflare location): public 120/min, admin 120/min, AI 6/min, reports 20/day.
+- **Rate limits** (per IP, per Cloudflare location): public 120/min, admin 120/min, sign-in 10/min, AI 6/min, reports 20/day.
 - **Uploads:** admin-only, PDF magic bytes required, max 10 MB, keys generated server-side. Files are always served as `application/pdf` with a sandboxing CSP.
 - **Errors:** internal details are logged and never returned to clients; responses carry a `requestId`.
 

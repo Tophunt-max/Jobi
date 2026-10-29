@@ -58,7 +58,7 @@ export default function PendingReviewPage() {
   const handleApprove = async (job: JobItem) => {
     try {
       setProcessingId(job.id);
-      await adminApi.approveJob(job.id, 'Admin User');
+      await adminApi.approveJob(job.id);
       setBannerNotice(`Approved "${job.title}". Published to the app.`);
       setSelectedJob(null);
       loadPendingJobs();
@@ -149,7 +149,7 @@ export default function PendingReviewPage() {
 
     setIsBatchApproving(true);
     try {
-      const res = await adminApi.batchApproveJobs(idsToApprove, 'Admin Batch');
+      const res = await adminApi.batchApproveJobs(idsToApprove);
       const count = res.approvedCount;
       setBannerNotice(`Approved ${count} of ${idsToApprove.length} selected notices.`);
       setSelectedIds(new Set());

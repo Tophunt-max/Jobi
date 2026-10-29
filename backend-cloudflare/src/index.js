@@ -14,6 +14,7 @@ import { handlePublic } from "./routes/public.js";
 import { handleAdmin } from "./routes/admin.js";
 import { handleClient } from "./routes/client.js";
 import { executeJobImport, expireOldJobs } from "./importer/pipeline.js";
+import { purgeExpiredSessions } from "./auth.js";
 
 export default {
     async fetch(request, env, ctx) {
@@ -60,6 +61,7 @@ export default {
     async scheduled(event, env, ctx) {
         ctx.waitUntil((async () => {
             try {
+                await purgeExpiredSessions(env).catch((e) => console.warn("[CRON] session purge failed:", e.message));
                 const expired = await expireOldJobs(env);
                 if (expired) console.log(`[CRON] Marked ${expired} jobs as EXPIRED`);
                 const summary = await executeJobImport(env, { triggeredBy: "CRON_TRIGGER" });

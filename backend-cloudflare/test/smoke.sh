@@ -81,5 +81,35 @@ check "resolve report"            200 "$(code -X POST -H "X-Admin-Key: $KEY" -d 
 check "resolve twice"             404 "$(code -X POST -H "X-Admin-Key: $KEY" "$BASE/api/admin/reports/$REP_ID/resolve")"
 check "ai bad task"               400 "$(code -X POST -d '{"task":"hack","prompt":"x"}' "$BASE/api/ai/generate")"
 
+# ---------- Email/password accounts ----------
+JAR=/tmp/smoke_cookies; rm -f $JAR
+EMAIL="owner$RANDOM@example.com"; PW='Correct-Horse-Battery-9'
+ORIGIN_HDR="Origin: $BASE"
+check "create user weak pw"       400 "$(code -X POST -H "X-Admin-Key: $KEY" -d "{\"email\":\"$EMAIL\",\"password\":\"short\",\"role\":\"owner\"}" "$BASE/api/admin/users")"
+check "bootstrap owner (api key)" 201 "$(code -X POST -H "X-Admin-Key: $KEY" -d "{\"email\":\"$EMAIL\",\"password\":\"$PW\",\"role\":\"owner\"}" "$BASE/api/admin/users")"
+check "duplicate user"            409 "$(code -X POST -H "X-Admin-Key: $KEY" -d "{\"email\":\"$EMAIL\",\"password\":\"$PW\"}" "$BASE/api/admin/users")"
+check "login wrong password"      401 "$(code -X POST -d "{\"email\":\"$EMAIL\",\"password\":\"wrong-password-123\"}" "$BASE/api/admin/auth/login")"
+check "login unknown email"       401 "$(code -X POST -d '{"email":"nobody@example.com","password":"whatever-123456"}' "$BASE/api/admin/auth/login")"
+check "login ok"                  200 "$(code -c $JAR -X POST -d "{\"email\":\"$EMAIL\",\"password\":\"$PW\"}" "$BASE/api/admin/auth/login")"
+grep -q "__Host-sjp_admin" $JAR && { PASS=$((PASS+1)); echo "ok   session cookie set"; } || { FAIL=$((FAIL+1)); echo "FAIL no session cookie"; }
+check "me via cookie"             200 "$(code -b $JAR "$BASE/api/admin/auth/me")"
+grep -q "\"email\":\"$EMAIL\"" /tmp/smoke_body && { PASS=$((PASS+1)); echo "ok   me returns email"; } || { FAIL=$((FAIL+1)); echo "FAIL me email"; }
+check "cookie GET admin data"     200 "$(code -b $JAR "$BASE/api/admin/jobs/pending?limit=1")"
+check "cookie POST no Origin"     403 "$(code -b $JAR -X POST -d '{}' "$BASE/api/admin/job-import/run")"
+check "cookie POST evil Origin"   403 "$(code -b $JAR -H 'Origin: https://evil.example' -X POST -d '{"ids":["x"]}' "$BASE/api/admin/jobs/batch-approve")"
+check "cookie POST same Origin"   200 "$(code -b $JAR -H "$ORIGIN_HDR" -X POST -d '{"ids":["x"]}' "$BASE/api/admin/jobs/batch-approve")"
+check "list users (owner)"        200 "$(code -b $JAR "$BASE/api/admin/users")"
+NEWPW='Another-Strong-Pass-42'
+check "change pw wrong current"   400 "$(code -b $JAR -H "$ORIGIN_HDR" -X POST -d "{\"current_password\":\"nope-nope-nope\",\"new_password\":\"$NEWPW\"}" "$BASE/api/admin/auth/change-password")"
+check "change pw ok"              200 "$(code -b $JAR -H "$ORIGIN_HDR" -X POST -d "{\"current_password\":\"$PW\",\"new_password\":\"$NEWPW\"}" "$BASE/api/admin/auth/change-password")"
+check "logout"                    200 "$(code -b $JAR -c $JAR -H "$ORIGIN_HDR" -X POST "$BASE/api/admin/auth/logout")"
+check "me after logout"           401 "$(code -b $JAR "$BASE/api/admin/auth/me")"
+check "old password rejected"     401 "$(code -X POST -d "{\"email\":\"$EMAIL\",\"password\":\"$PW\"}" "$BASE/api/admin/auth/login")"
+check "forged cookie"             401 "$(code -H 'Cookie: __Host-sjp_admin=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' "$BASE/api/admin/auth/me")"
+# Lockout: the successful password change reset the counter; "old password rejected" was
+# failure 1, four more make 5 -> account locked even for the correct password.
+for _ in 1 2 3 4; do code -X POST -d "{\"email\":\"$EMAIL\",\"password\":\"bad-password-xyz\"}" "$BASE/api/admin/auth/login" >/dev/null; done
+check "locked after 5 failures"   423 "$(code -X POST -d "{\"email\":\"$EMAIL\",\"password\":\"$NEWPW\"}" "$BASE/api/admin/auth/login")"
+
 echo; echo "passed=$PASS failed=$FAIL"
 [ "$FAIL" -eq 0 ]

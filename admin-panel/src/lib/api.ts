@@ -1,18 +1,20 @@
-import { AdConfig, DashboardStats, ImportRun, ImportSummary, JobItem, JobReport, JobSource, ManualJobInput, SourceTestResult } from './types';
+import {
+  AdConfig, AdminUser, DashboardStats, ImportRun, ImportSummary, JobItem, JobReport, JobSource,
+  ManualJobInput, SessionUser, SourceTestResult,
+} from './types';
 
 /**
  * Admin API client.
  *
- * Security model:
- * - The admin key is NEVER bundled into the JavaScript (no NEXT_PUBLIC_* key, no default).
- * - The admin types it on the login screen; it is kept in sessionStorage only, so it
- *   disappears when the browser tab is closed.
- * - Only the Worker URL may come from build-time config (NEXT_PUBLIC_API_URL) since it is public.
- * - Protect the deployed panel itself with Cloudflare Access (see README).
+ * Auth: email + password sign-in creates a server-side session. The browser keeps only an
+ * HttpOnly, Secure, SameSite=Strict cookie that JavaScript cannot read. No keys or tokens
+ * are stored in the bundle, localStorage or sessionStorage.
+ *
+ * In production the panel calls its own origin (/api/* is proxied to the backend Worker).
+ * For local development, NEXT_PUBLIC_API_URL can point at `wrangler dev`.
  */
 
-const URL_STORAGE_KEY = 'sarkari_admin_api_url';
-const KEY_STORAGE_KEY = 'sarkari_admin_session_key';
+const BASE = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {
@@ -20,59 +22,24 @@ export class ApiError extends Error {
   }
 }
 
-function defaultBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
+export const SESSION_EVENT = 'admin-session-changed';
+
+function notifySignedOut() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(SESSION_EVENT));
 }
 
-export function getBaseUrl(): string {
-  if (typeof window === 'undefined') return defaultBaseUrl();
-  return (localStorage.getItem(URL_STORAGE_KEY) || defaultBaseUrl()).replace(/\/+$/, '');
-}
+async function request<T>(endpoint: string, init: RequestInit & { quiet401?: boolean } = {}): Promise<T> {
+  const { quiet401, ...options } = init;
+  const headers = new Headers(options.headers || {});
+  if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
-export function setBaseUrl(url: string) {
-  const clean = url.trim().replace(/\/+$/, '');
-  const parsed = new URL(clean);
-  const isLocal = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
-  if (parsed.protocol !== 'https:' && !isLocal) {
-    throw new Error('Worker URL must use https://');
-  }
-  localStorage.setItem(URL_STORAGE_KEY, clean);
-}
-
-export function getSessionKey(): string | null {
-  if (typeof window === 'undefined') return null;
-  return sessionStorage.getItem(KEY_STORAGE_KEY);
-}
-
-export function setSessionKey(key: string) {
-  sessionStorage.setItem(KEY_STORAGE_KEY, key.trim());
-}
-
-export function clearSession() {
-  if (typeof window === 'undefined') return;
-  sessionStorage.removeItem(KEY_STORAGE_KEY);
-  window.dispatchEvent(new Event('admin-session-changed'));
-}
-
-async function request<T>(endpoint: string, options: RequestInit & { auth?: boolean } = {}): Promise<T> {
-  const baseUrl = getBaseUrl();
-  if (!baseUrl) throw new ApiError(0, 'Worker URL is not configured. Set it on the login screen.');
-
-  const { auth = true, ...init } = options;
-  const headers = new Headers(init.headers || {});
-  if (init.body && !(init.body instanceof Blob) && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-  if (auth) {
-    const key = getSessionKey();
-    if (!key) {
-      clearSession();
-      throw new ApiError(401, 'Not signed in');
-    }
-    headers.set('Authorization', `Bearer ${key}`);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${endpoint}`, { ...options, headers, credentials: 'include', cache: 'no-store' });
+  } catch {
+    throw new ApiError(0, 'Network error. Check your connection.');
   }
 
-  const res = await fetch(`${baseUrl}${endpoint}`, { ...init, headers, cache: 'no-store' });
   const text = await res.text();
   let body: any = null;
   try {
@@ -82,66 +49,93 @@ async function request<T>(endpoint: string, options: RequestInit & { auth?: bool
   }
 
   if (!res.ok || (body && body.success === false)) {
-    if (res.status === 401 && auth) clearSession();
-    const message = body?.message || `Request failed (HTTP ${res.status})`;
-    throw new ApiError(res.status, message, body?.error);
+    if (res.status === 401 && !quiet401) notifySignedOut();
+    throw new ApiError(res.status, body?.message || `Request failed (HTTP ${res.status})`, body?.error);
   }
   return body as T;
 }
 
 const enc = encodeURIComponent;
+const post = (body?: unknown): RequestInit => ({ method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });
 
-export const adminApi = {
-  /** Verifies a key without storing it. */
-  async verifyKey(baseUrl: string, key: string): Promise<void> {
-    const res = await fetch(`${baseUrl.replace(/\/+$/, '')}/api/admin/jobs/pending?limit=1`, {
-      headers: { Authorization: `Bearer ${key.trim()}` },
-      cache: 'no-store',
-    });
-    if (res.status === 401) throw new ApiError(401, 'Invalid admin key');
-    if (res.status === 503) throw new ApiError(503, 'Admin API is not configured on the Worker (ADMIN_API_KEY secret missing)');
-    if (!res.ok) throw new ApiError(res.status, `Worker responded with HTTP ${res.status}`);
+export const authApi = {
+  async me(): Promise<SessionUser | null> {
+    try {
+      const res = await request<{ user: SessionUser }>('/api/admin/auth/me', { quiet401: true });
+      return res.user;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return null;
+      throw err;
+    }
   },
 
+  async login(email: string, password: string): Promise<SessionUser> {
+    const res = await request<{ user: SessionUser }>('/api/admin/auth/login', { ...post({ email, password }), quiet401: true });
+    return res.user;
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await request('/api/admin/auth/logout', post());
+    } finally {
+      notifySignedOut();
+    }
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    return request('/api/admin/auth/change-password', post({ current_password: currentPassword, new_password: newPassword }));
+  },
+
+  async listUsers(): Promise<AdminUser[]> {
+    const res = await request<{ users: AdminUser[] }>('/api/admin/users');
+    return res.users || [];
+  },
+
+  async createUser(email: string, password: string, role: 'owner' | 'editor'): Promise<AdminUser> {
+    const res = await request<{ user: AdminUser }>('/api/admin/users', post({ email, password, role }));
+    return res.user;
+  },
+
+  async setUserDisabled(id: string, disabled: boolean): Promise<{ message: string }> {
+    return request(`/api/admin/users/${enc(id)}/${disabled ? 'disable' : 'enable'}`, post());
+  },
+
+  async resetUserPassword(id: string, newPassword: string): Promise<{ message: string }> {
+    return request(`/api/admin/users/${enc(id)}/reset-password`, post({ new_password: newPassword }));
+  },
+};
+
+export const adminApi = {
   async getStats(): Promise<DashboardStats> {
-    const res = await request<{ data: DashboardStats }>('/api/stats', { auth: false });
+    const res = await request<{ data: DashboardStats }>('/api/stats');
     return res.data;
   },
 
   async getHealth(): Promise<{ status: string; database: string; storage: string; timestamp: string }> {
-    return request('/api/health', { auth: false });
+    return request('/api/health');
   },
 
-  async getPendingJobs(limit = 100): Promise<JobItem[]> {
+  async getPendingJobs(limit = 200): Promise<JobItem[]> {
     const res = await request<{ data: JobItem[] }>(`/api/admin/jobs/pending?limit=${limit}`);
     return res.data || [];
   },
 
-  async approveJob(id: string, approvedBy = 'admin-panel'): Promise<{ message: string }> {
-    return request(`/api/admin/jobs/${enc(id)}/approve`, {
-      method: 'POST',
-      body: JSON.stringify({ approved_by: approvedBy }),
-    });
+  async approveJob(id: string): Promise<{ message: string }> {
+    return request(`/api/admin/jobs/${enc(id)}/approve`, post({}));
   },
 
   /** Approves up to 100 jobs per call; larger selections are chunked. */
-  async batchApproveJobs(ids: string[], approvedBy = 'admin-panel'): Promise<{ approvedCount: number }> {
+  async batchApproveJobs(ids: string[]): Promise<{ approvedCount: number }> {
     let approvedCount = 0;
     for (let i = 0; i < ids.length; i += 100) {
-      const res = await request<{ approvedCount: number }>('/api/admin/jobs/batch-approve', {
-        method: 'POST',
-        body: JSON.stringify({ ids: ids.slice(i, i + 100), approved_by: approvedBy }),
-      });
+      const res = await request<{ approvedCount: number }>('/api/admin/jobs/batch-approve', post({ ids: ids.slice(i, i + 100) }));
       approvedCount += res.approvedCount || 0;
     }
     return { approvedCount };
   },
 
   async rejectJob(id: string, reason: string): Promise<{ message: string }> {
-    return request(`/api/admin/jobs/${enc(id)}/reject`, {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    });
+    return request(`/api/admin/jobs/${enc(id)}/reject`, post({ reason }));
   },
 
   async getSources(): Promise<JobSource[]> {
@@ -150,21 +144,15 @@ export const adminApi = {
   },
 
   async updateSource(id: string, enabled: boolean, intervalHours?: number): Promise<{ message: string }> {
-    return request('/api/admin/job-import/sources', {
-      method: 'POST',
-      body: JSON.stringify({ id, enabled, polling_interval_hours: intervalHours ?? null }),
-    });
+    return request('/api/admin/job-import/sources', post({ id, enabled, polling_interval_hours: intervalHours ?? null }));
   },
 
   async runImport(sourceId?: string): Promise<{ summary: ImportSummary }> {
-    return request('/api/admin/job-import/run', {
-      method: 'POST',
-      body: JSON.stringify(sourceId ? { source_id: sourceId } : {}),
-    });
+    return request('/api/admin/job-import/run', post(sourceId ? { source_id: sourceId } : {}));
   },
 
   async testSource(sourceId: string): Promise<SourceTestResult> {
-    return request(`/api/admin/job-import/sources/${enc(sourceId)}/test`, { method: 'POST' });
+    return request(`/api/admin/job-import/sources/${enc(sourceId)}/test`, post());
   },
 
   async getImportRuns(limit = 50): Promise<ImportRun[]> {
@@ -173,7 +161,7 @@ export const adminApi = {
   },
 
   async createJob(job: ManualJobInput): Promise<{ message: string; jobId: string; slug: string }> {
-    return request('/api/admin/jobs', { method: 'POST', body: JSON.stringify(job) });
+    return request('/api/admin/jobs', post(job));
   },
 
   async getAllJobs(params?: { status?: string; category?: string; limit?: number }): Promise<JobItem[]> {
@@ -191,10 +179,7 @@ export const adminApi = {
   },
 
   async resolveReport(id: string, status: 'RESOLVED' | 'DISMISSED', note?: string): Promise<{ message: string }> {
-    return request(`/api/admin/reports/${enc(id)}/resolve`, {
-      method: 'POST',
-      body: JSON.stringify({ status, note }),
-    });
+    return request(`/api/admin/reports/${enc(id)}/resolve`, post({ status, note }));
   },
 
   async getAdConfig(): Promise<AdConfig> {
@@ -204,6 +189,6 @@ export const adminApi = {
 
   async saveAdConfig(config: AdConfig): Promise<{ message: string; data: AdConfig }> {
     const { updatedAt, ...payload } = config;
-    return request('/api/admin/ads', { method: 'POST', body: JSON.stringify(payload) });
+    return request('/api/admin/ads', post(payload));
   },
 };

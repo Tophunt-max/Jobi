@@ -164,3 +164,21 @@ export interface JobReport {
   job_organization?: string | null;
   job_url?: string | null;
 }
+
+export type AdminRole = 'owner' | 'editor';
+
+export interface SessionUser {
+  email: string;
+  role: AdminRole;
+  kind?: 'session' | 'api_key';
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: AdminRole;
+  disabled: boolean;
+  locked: boolean;
+  last_login_at: string | null;
+  created_at: string;
+}

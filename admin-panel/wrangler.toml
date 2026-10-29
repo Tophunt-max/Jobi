@@ -1,12 +1,19 @@
-# Admin panel served as static files by a Cloudflare Worker (Workers Static Assets).
-# Build first:  NEXT_PUBLIC_API_URL=https://<worker-url> npm run build
-# Deploy:       npx wrangler deploy
-# public/_headers (copied into out/) sets the security headers.
-# The admin key is entered on the sign-in screen and is never part of the build.
+# Admin panel: static Next.js export served by Workers Static Assets, plus a tiny
+# worker (worker/index.js) that forwards /api/* to the backend over a service binding.
+#
+# Build:   npm run build          (no API URL needed; the panel calls its own origin)
+# Deploy:  npx wrangler deploy
 name = "sarkari-jobs-admin"
+main = "worker/index.js"
 compatibility_date = "2025-09-01"
 workers_dev = true
 
 [assets]
 directory = "./out"
+binding = "ASSETS"
 not_found_handling = "404-page"
+run_worker_first = ["/api/*"]
+
+[[services]]
+binding = "BACKEND"
+service = "sarkari-jobs-worker"

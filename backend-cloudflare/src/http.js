@@ -50,7 +50,8 @@ export function corsHeaders(request, env, { admin = false } = {}) {
 
     const allowed = parseList(env.ADMIN_ALLOWED_ORIGINS);
     if (origin && allowed.includes(origin)) {
-        return { ...base, "Access-Control-Allow-Origin": origin };
+        // Credentials allowed so the panel can use its session cookie when served from another origin.
+        return { ...base, "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials": "true" };
     }
     // No Allow-Origin header: browsers on other origins are blocked.
     return base;
