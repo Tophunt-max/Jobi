@@ -1,108 +1,80 @@
-# Automated Government Job Importer: Cloudflare Workers + D1 + R2 + Android
+# Cloudflare Worker backend
 
-यह गाइड आपके **Indian Government Job Portal (Kotlin Android)** और **Cloudflare Workers Backend** के सम्पूर्ण ऑटोमेशन को सेट अप व डिप्लॉय करने के लिए तैयार की गई है।
+The Worker (`src/index.js`) serves the Android app's read API, the admin API used by
+`admin-panel/`, an AI-mentor proxy, and a cron job that scrapes official recruitment
+portals into a review queue.
 
----
+## Layout
 
-## 🌟 आर्किटेक्चर: सारा काम बैकएंड में, मोबाइल ऐप केवल डेटा प्रदर्शन के लिए (Backend Driven Architecture)
+| Path | Purpose |
+|---|---|
+| `src/index.js` | Router, rate limiting, R2 file serving, cron handler |
+| `src/routes/public.js` | `GET /api/*` for the app (only `ACTIVE`/`EXPIRED` notices) |
+| `src/routes/client.js` | `POST /api/reports`, `POST /api/ai/generate` |
+| `src/routes/admin.js` | `/api/admin/*` (moderation, importer, ads, reports, PDF upload) |
+| `src/importer/` | Scraper (HTMLRewriter) and import pipeline |
+| `migrations/` | D1 schema, applied with `wrangler d1 migrations apply` |
+| `seed/dev_sample_jobs.sql` | Sample rows for **local development only** |
+| `test/smoke.sh` | End-to-end API checks against `wrangler dev` |
 
-```
-[30+ Official Sources Registry]
-  ├── All India (20): SSC, UPSC, RRB, IBPS, SBI, RBI, NABARD, KVS, NVS, India Post GDS,
-  │                  DRDO, ISRO, LIC, DSSSB, IAF, Army, Navy, CAPF, FCI, NTA
-  └── Odisha (10):   OPSC, OSSC, OSSSC, Odisha Police, OJEE, CHSE, BSE, OPTCL, NHM, OHPC
-           │
-           ▼ (Scheduled Cron Trigger: Every 6 Hours / Admin Manual Poll)
-[Cloudflare Worker Backend Engine]
-  ├── Source Adapters & Crawler Pipeline (Timeout Isolation & Zero CAPTCHA Bypass)
-  ├── Concurrency-Safe Deduplication (Canonical URL + Advt No + SHA-256 Hash)
-  ├── Date Parser & Validation (DD/MM/YYYY, YYYY-MM-DD, Normalization)
-  └── Multi-Category Tagging (Latest Job, Admit Card, Result, Answer Key, Syllabus, Admission)
-           │
-           ▼
-[Cloudflare D1 Database (SQLite)]
-  ├── jobs (Active & pending_review notices)
-  ├── job_sources (Registry of 30+ official portals with status & health)
-  ├── job_import_runs (Audit log of every crawler run)
-  └── job_notifications (FCM push notification dispatch queue)
-           │
-           ▼ (Zero Egress R2 Storage for PDFs)
-[Cloudflare R2 Object Storage] (Zero bandwidth fees for PDF downloads)
-           │
-           ▼ (REST APIs: /api/jobs, /api/sources, /api/stats)
-[Native Android Mobile App (Kotlin + Jetpack Compose)]
-  ├── Pure Data Display & Search UI (No heavy scraping in mobile)
-  ├── Instant Offline Caching with Room SQLite
-  ├── Official Sources Directory (Verify authenticity & open official sites)
-  └── Admin Review & One-Tap Publish Queue
-```
+## First-time setup
 
----
-
-## 🚀 5-Minute Setup & Deployment Guide
-
-### चरण 1: Cloudflare CLI (Wrangler) इंस्टॉल व लॉगिन करें
-अपने टर्मिनल में चलाएँ:
-```bash
-npm install -g wrangler
-wrangler login
-```
-
-### चरण 2: Cloudflare D1 Database बनाएँ
-```bash
-wrangler d1 create sarkari_jobs_db
-```
-कमांड चलने के बाद आपको एक `database_id` मिलेगा। उसे `backend-cloudflare/wrangler.toml` में पेस्ट करें:
-```toml
-[[d1_databases]]
-binding = "DB"
-database_name = "sarkari_jobs_db"
-database_id = "your-actual-database-id-here"
-```
-
-### चरण 3: Database Schema & 30+ Official Sources Seed चलाएँ
 ```bash
 cd backend-cloudflare
-wrangler d1 execute sarkari_jobs_db --file=./schema.sql --remote
-```
-यह कमांड आपके D1 में `jobs`, `job_sources` (All India व Odisha के 30+ आधिकारिक पोर्टल्स), `job_import_runs`, और `job_notifications` टेबल्स तैयार कर देगा।
+npm ci
 
-### चरण 4: Cloudflare R2 Bucket (PDF Storage - Zero Egress Fees)
+npx wrangler login
+npx wrangler d1 create sarkari_jobs_db      # copy the database_id into wrangler.toml
+npx wrangler r2 bucket create sarkari-job-docs
+
+# Secrets (never put these in wrangler.toml)
+openssl rand -base64 48 | npx wrangler secret put ADMIN_API_KEY   # required, >= 32 chars
+npx wrangler secret put GEMINI_API_KEY                             # AI mentor
+openssl rand -hex 16 | npx wrangler secret put REPORT_SALT         # optional
+
+npm run db:migrate:remote
+npm run deploy
+```
+
+Then set `ADMIN_ALLOWED_ORIGINS` in `wrangler.toml` to your admin panel's URL and redeploy.
+
+### Upgrading a database created with the old `schema.sql`
+
+Migrations are idempotent on such a database: `0001` creates nothing that already exists, and
+`0002` adds columns and unique indexes. `0002` also:
+
+- deletes `job-imp-*` rows still in `pending_review` (they came from the old placeholder importer, not from real portals);
+- moves the 16 sample jobs that the old `schema.sql` seeded as `ACTIVE` back to `pending_review`, so an admin verifies them before they are public.
+
+Back up first: `npx wrangler d1 export sarkari_jobs_db --remote --output backup.sql`.
+
+## Security model
+
+- **Admin auth:** `Authorization: Bearer <ADMIN_API_KEY>` (or `X-Admin-Key`). Query-string keys are rejected. If the secret is missing, admin routes return 503. Comparison is constant-time.
+- **CORS:** public routes allow any origin. Admin routes reflect only the origins in `ADMIN_ALLOWED_ORIGINS`.
+- **Rate limits** (per IP, per Cloudflare location): public 120/min, admin 30/min, AI 6/min, reports 20/day.
+- **Uploads:** admin-only, PDF magic bytes required, max 10 MB, keys generated server-side. Files are always served as `application/pdf` with a sandboxing CSP.
+- **Errors:** internal details are logged and never returned to clients; responses carry a `requestId`.
+
+## Importer
+
+The cron runs every 3 hours; each source is fetched only when its `polling_interval_hours` has passed. For each enabled source the scraper:
+
+1. fetches `listing_url` (15 s timeout, 3 MB cap, HTML only);
+2. extracts links whose text looks like a notice (recruitment, admit card, result, answer key, syllabus, admission) and drops navigation, tender and RTI links;
+3. keeps only links on the source's own domain or on `.gov.in` / `.nic.in`;
+4. inserts them as `pending_review` with `verified = 0`. Unique indexes on the notice URL and content hash make duplicates impossible, even with concurrent runs.
+
+Nothing is published until an admin approves it. Some portals block automated requests (for example HTTP 403). These failures appear per source in `last_error` and in the Runs page; add those notices manually from the admin panel.
+
+## Local development
+
 ```bash
-wrangler r2 bucket create sarkari-job-docs
+echo 'ADMIN_API_KEY="local_dev_key_at_least_32_characters_long"' > .dev.vars
+npm run db:migrate:local
+npm run db:seed:local       # optional sample data
+npm run dev                 # http://localhost:8787
+./test/run-local.sh         # starts wrangler dev, runs test/smoke.sh, stops it
 ```
 
-### चरण 5: Worker डिप्लॉय करें
-```bash
-wrangler deploy
-```
-डिप्लॉय होते ही आपको अपना लाइव Worker URL मिल जाएगा, उदाहरण:
-`https://sarkari-jobs-worker.<your-account>.workers.dev`
-
----
-
-## ⚙️ Cron Triggers (Scheduled Auto-Import)
-`wrangler.toml` में हर 6 घंटे पर चलने वाला क्रॉन ट्रिगर पहले से कॉन्फ़िगर है:
-```toml
-[triggers]
-crons = ["0 */6 * * *"]
-```
-जब भी क्रॉन ट्रिगर चलता है, `scheduled(event, env, ctx)` हैंडलर:
-1. सभी एक्टिव 30+ ऑल इंडिया व ओडिशा पोर्टल्स को चेक करता है।
-2. नए रिक्रूटमेंट नोटिसेस फ़ेच करता है।
-3. डुप्लिकेट्स को हटाकर नए नोटिसेस को `status = 'pending_review'` के रूप में D1 में सेव करता है।
-4. पूरे रन के आँकड़े `job_import_runs` टेबल में सुरक्षित रखता है।
-
----
-
-## 📱 Android App में Worker URL सेट करना
-App खोलें ➔ **Profile / Settings** ➔ **Cloudflare Worker URL** में अपना लाइव Worker URL डालें या डिफ़ॉल्ट URL का उपयोग करें।
-
-Mobile App विशेषताएँ:
-* **Home Screen**: "Official Sources Directory" बैनर पर क्लिक करके 30+ सत्यापित सरकारी वेबसाइट्स को सीधे देख व सत्यापित कर सकते हैं।
-* **Categories**: Latest Job, Admit Card, Result, Answer Key, Syllabus, Admission आदि को बैकएंड API से फ़िल्टर करें।
-* **Admin Screen**:
-  * **Dashboard Tab**: "Run Importer Now" बटन पर क्लिक करके किसी भी समय तत्काल आयात चला सकते हैं।
-  * **Review Queue Tab**: नए आयातित नोटिसेस को एक क्लिक में "Approve & Publish" या "Reject" कर सकते हैं।
-  * **Sources Tab**: SSC, UPSC, RRB, IBPS, SBI, KVS, NVS, India Post, OPSC, OSSC, OSSSC आदि 30 पोर्टल्स की स्थिति देख सकते हैं।
-  * **Import History Tab**: प्रत्येक क्रॉन व मैन्युअल रन का विस्तृत लॉग (Fetched, Inserted, Duplicates, Errors) देख सकते हैं।
+`RUN_IMPORT=1 IMPORT_SOURCE=src-lic ./test/run-local.sh` also runs a real scrape of one source.
