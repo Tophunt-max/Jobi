@@ -37,7 +37,17 @@ object AdManager {
         val appContext = context.applicationContext
         AdSettingsRepository.initialize(appContext)
 
-        if (isInitialized) return
+        if (isInitialized || initStarted) return
+        initStarted = true
+        // Google recommends initializing the Mobile Ads SDK off the main thread; doing it on
+        // the main thread during app start is a common cause of "App isn't responding".
+        Thread({ initializeSdk(appContext) }, "admob-init").start()
+    }
+
+    @Volatile
+    private var initStarted = false
+
+    private fun initializeSdk(appContext: Context) {
         try {
             MobileAds.initialize(appContext) { initializationStatus ->
                 Log.d(TAG, "AdMob initialized: ${initializationStatus.adapterStatusMap.keys}")

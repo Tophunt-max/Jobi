@@ -215,12 +215,7 @@ fun HomeScreen(
             }
         }
         if (list.isEmpty()) {
-            list.add("🔥 SSC CGL 2026 Tier-1 Online Application Open - Apply Now")
-            list.add("⚠️ UPSC CSE 2026 Prelims Registration Closing Soon")
-            list.add("🚆 RRB Railway Non-Technical Vacancies Active - 11,558 Posts")
-            list.add("🏆 IBPS PO & Clerk Scorecards & Cut-off Released")
-            list.add("🎓 NTA CUET & NEET 2026 Registration Portal Live")
-            list.add("🛡️ State Police & Defence Recruitment Notification Available")
+            list.add("📢 Verified notices from official portals will appear here. Pull to refresh.")
         }
         list
     }
