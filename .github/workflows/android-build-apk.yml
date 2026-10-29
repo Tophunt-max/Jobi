@@ -165,6 +165,18 @@ jobs:
           KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
         run: ./gradlew :app:bundleRelease :app:assembleRelease --no-daemon --stacktrace
 
+      - name: Verify release APK configuration
+        run: |
+          AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          APK=app/build/outputs/apk/release/app-release.apk
+          APP_ID=$("$AAPT2" dump xmltree --file AndroidManifest.xml "$APK" \
+            | grep -A2 'gms.ads.APPLICATION_ID' | sed -n 's/.*android:value([^)]*)="\([^"]*\)".*/\1/p')
+          echo "AdMob APPLICATION_ID: $APP_ID"
+          if ! echo "$APP_ID" | grep -Eq '^ca-app-pub-[0-9]{16}~[0-9]{10}$'; then
+            echo "::error::Release APK has an invalid AdMob APPLICATION_ID ('$APP_ID'); the app would crash on launch."
+            exit 1
+          fi
+
       - name: Remove keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/upload.jks"

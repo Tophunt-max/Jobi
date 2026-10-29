@@ -20,11 +20,15 @@ val envFile = Properties().apply {
   }
 }
 
+// Blank values count as "not set". GitHub Actions passes unset repository variables as
+// empty strings, which previously produced an empty AdMob APPLICATION_ID and crashed
+// release builds on launch.
 fun config(name: String, default: String = ""): String =
-  (project.findProperty(name) as String?)
-    ?: System.getenv(name)
-    ?: envFile.getProperty(name)
-    ?: default
+  listOf(
+    project.findProperty(name) as String?,
+    System.getenv(name),
+    envFile.getProperty(name),
+  ).firstOrNull { !it.isNullOrBlank() }?.trim() ?: default
 
 // Google's public AdMob sample IDs. Used for all debug builds, and for release builds
 // until real IDs are configured.
@@ -81,12 +85,19 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
       val appId = config("ADMOB_APP_ID", admobTestAppId)
+      if (!Regex("^ca-app-pub-\\d{16}~\\d{10}$").matches(appId)) {
+        throw GradleException("ADMOB_APP_ID '$appId' is not a valid AdMob app ID (ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX)")
+      }
       if (appId == admobTestAppId) {
         logger.warn("w: ADMOB_APP_ID not set. Release build will serve Google TEST ads (no revenue).")
       }
       manifestPlaceholders["admobAppId"] = appId
       admobTestUnits.forEach { (name, testId) ->
-        buildConfigField("String", "ADMOB_${name}_ID", config("ADMOB_${name}_ID", testId).asBuildConfigString())
+        val unit = config("ADMOB_${name}_ID", testId)
+        if (!Regex("^ca-app-pub-\\d{16}/\\d{10}$").matches(unit)) {
+          throw GradleException("ADMOB_${name}_ID '$unit' is not a valid AdMob ad unit ID")
+        }
+        buildConfigField("String", "ADMOB_${name}_ID", unit.asBuildConfigString())
       }
       buildConfigField("boolean", "ALLOW_REMOTE_AD_UNITS", "true")
 

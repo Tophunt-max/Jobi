@@ -125,7 +125,8 @@ object AdManager {
         val timeSinceLastAd = currentTime - lastInterstitialShownTime
         val minIntervalMs = settings.cooldownSeconds * 1000L
 
-        val shouldShow = (jobClicksCounter % settings.clicksBetweenInterstitials == 0) &&
+        val interval = settings.clicksBetweenInterstitials.coerceAtLeast(1)
+        val shouldShow = (jobClicksCounter % interval == 0) &&
                 (timeSinceLastAd >= minIntervalMs)
 
         val currentAd = interstitialAd
