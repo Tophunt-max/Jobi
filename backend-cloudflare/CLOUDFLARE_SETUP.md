@@ -57,7 +57,7 @@ Back up first: `npx wrangler d1 export sarkari_jobs_db --remote --output backup.
 
 - **Admin auth:** `Authorization: Bearer <ADMIN_API_KEY>` (or `X-Admin-Key`). Query-string keys are rejected. If the secret is missing, admin routes return 503. Comparison is constant-time.
 - **CORS:** public routes allow any origin. Admin routes reflect only the origins in `ADMIN_ALLOWED_ORIGINS`.
-- **Rate limits** (per IP, per Cloudflare location): public 120/min, admin 30/min, AI 6/min, reports 20/day.
+- **Rate limits** (per IP, per Cloudflare location): public 120/min, admin 120/min, AI 6/min, reports 20/day.
 - **Uploads:** admin-only, PDF magic bytes required, max 10 MB, keys generated server-side. Files are always served as `application/pdf` with a sandboxing CSP.
 - **Errors:** internal details are logged and never returned to clients; responses carry a `requestId`.
 

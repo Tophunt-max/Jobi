@@ -56,13 +56,18 @@ check "ads http sponsor url"      400 "$(code -X POST -H "X-Admin-Key: $KEY" -d 
 check "ads ok"                    200 "$(code -X POST -H "X-Admin-Key: $KEY" -d '{"interstitialClickInterval":4,"evilKey":1}' "$BASE/api/admin/ads")"
 grep -q evilKey /tmp/smoke_body && { FAIL=$((FAIL+1)); echo "FAIL unknown ad key stored"; } || { PASS=$((PASS+1)); echo "ok   unknown ad keys dropped"; }
 
-# Upload: only PDF, admin only
+# Upload: only PDF, admin only (skipped when no R2 bucket is bound)
 check "upload no key"             401 "$(code -X POST --data-binary 'x' "$BASE/api/admin/upload")"
+if curl -s "$BASE/api/health" | grep -q '"storage":"connected"'; then
 check "upload non-pdf"            415 "$(code -X POST -H "X-Admin-Key: $KEY" --data-binary '<html>' "$BASE/api/admin/upload")"
 check "upload pdf"                201 "$(code -X POST -H "X-Admin-Key: $KEY" --data-binary $'%PDF-1.4\n%%EOF' "$BASE/api/admin/upload")"
 R2KEY=$(sed -n 's/.*"r2Key":"\([^"]*\)".*/\1/p' /tmp/smoke_body)
 check "download pdf"              200 "$(code "$BASE/api/files/$R2KEY")"
 check "download traversal"        404 "$(code "$BASE/api/files/..%2Fsecret")"
+else
+  echo "skip upload/download checks (R2 not bound)"
+  check "upload without R2 -> 503"  503 "$(code -X POST -H "X-Admin-Key: $KEY" --data-binary $'%PDF-1.4' "$BASE/api/admin/upload")"
+fi
 
 # Reports + AI proxy
 ACTIVE_ID=$(curl -s "$BASE/api/jobs?limit=1" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)
