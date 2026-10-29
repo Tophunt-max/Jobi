@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Header } from '../../components/Header';
-import { getApiConfig, saveApiConfig, adminApi } from '../../lib/api';
+import { adminApi, clearSession, getBaseUrl, setBaseUrl } from '../../lib/api';
 import { 
   Settings, 
   Save, 
@@ -18,20 +18,24 @@ import {
 
 export default function SettingsPage() {
   const [url, setUrl] = useState('');
-  const [key, setKey] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<any | null>(null);
   const [testing, setTesting] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
   const [copiedCmd, setCopiedCmd] = useState<string | null>(null);
 
   useEffect(() => {
-    const config = getApiConfig();
-    setUrl(config.baseUrl);
-    setKey(config.adminKey);
+    setUrl(getBaseUrl());
   }, []);
 
   const handleSave = () => {
-    saveApiConfig(url, key);
+    setSaveError(null);
+    try {
+      setBaseUrl(url);
+    } catch (err: any) {
+      setSaveError(err?.message || 'Invalid URL');
+      return;
+    }
     setSavedMessage(true);
     setTimeout(() => setSavedMessage(false), 3000);
   };
@@ -40,7 +44,7 @@ export default function SettingsPage() {
     setTesting(true);
     setTestResult(null);
     try {
-      saveApiConfig(url, key);
+      setBaseUrl(url);
       const res = await adminApi.getHealth();
       setTestResult({
         success: true,
@@ -93,7 +97,7 @@ export default function SettingsPage() {
                   type="text"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://sarkari-jobs-worker.your-subdomain.workers.dev"
+                  placeholder="https://sarkari-jobs-worker.<account>.workers.dev"
                   className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono"
                 />
               </div>
@@ -102,23 +106,18 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">
-                Admin Secret Key (X-Admin-Key):
-              </label>
-              <div className="relative">
-                <Key className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  value={key}
-                  onChange={(e) => setKey(e.target.value)}
-                  placeholder="sarkari_admin_secret_key_change_me"
-                  className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-mono"
-                />
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">
-                Must match the `ADMIN_API_KEY` defined in `backend-cloudflare/wrangler.toml`.
-              </p>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2">
+                <Key className="w-4 h-4 text-slate-400" />
+                The admin key is held only for this browser tab. Rotate it on the Worker with
+                <code className="bg-white px-1 rounded border">wrangler secret put ADMIN_API_KEY</code>.
+              </span>
+              <button
+                onClick={clearSession}
+                className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-800 font-semibold hover:bg-slate-100"
+              >
+                Sign out
+              </button>
             </div>
 
             <div className="flex items-center gap-3 pt-2">
@@ -138,10 +137,11 @@ export default function SettingsPage() {
                 {testing ? 'Testing...' : 'Test Connection'}
               </button>
 
+              {saveError && <span className="text-xs text-rose-600 font-bold">{saveError}</span>}
               {savedMessage && (
                 <span className="text-xs text-emerald-600 font-bold flex items-center gap-1">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Saved to browser memory!</span>
+                  <span>Saved</span>
                 </span>
               )}
             </div>
@@ -208,6 +208,8 @@ export default function SettingsPage() {
                 <li>Connect your GitHub/GitLab repository.</li>
                 <li>Set <strong>Root directory</strong>: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">admin-panel</code></li>
                 <li>Set <strong>Framework preset</strong>: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">Next.js (Static HTML Export)</code></li>
+                <li>Add env var <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">NEXT_PUBLIC_API_URL</code> = your Worker URL (never put the admin key in env vars).</li>
+                <li>Protect the Pages project with <strong>Cloudflare Access</strong> (Zero Trust &gt; Access &gt; Applications).</li>
                 <li>Set <strong>Build command</strong>: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">npm run build</code></li>
                 <li>Set <strong>Build output directory</strong>: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">out</code></li>
                 <li>Click <strong>Save and Deploy</strong>!</li>

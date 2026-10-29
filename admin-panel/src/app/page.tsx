@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const handleQuickApprove = async (id: string) => {
     try {
       await adminApi.approveJob(id, 'Admin Dashboard');
-      setActionMessage('Job approved and published to mobile app! Notification queued.');
+      setActionMessage('Job approved and published.');
       loadData();
       setTimeout(() => setActionMessage(null), 4000);
     } catch (err: any) {
@@ -241,11 +241,11 @@ export default function DashboardPage() {
                         {job.state}
                       </td>
                       <td className="py-3.5 px-4 text-slate-600">
-                        <div>{job.total_posts || 'Check Notice'}</div>
-                        <div className="text-[10px] text-slate-400">{job.salary || '7th CPC Scale'}</div>
+                        <div>{job.total_posts || '—'}</div>
+                        <div className="text-[10px] text-slate-400">{job.salary_scale || ''}</div>
                       </td>
                       <td className="py-3.5 px-4 text-slate-700 font-mono">
-                        {job.last_date || 'N/A'}
+                        {job.last_date || '—'}
                       </td>
                       <td className="py-3.5 px-4 text-right space-x-2">
                         {job.official_notification_url && (

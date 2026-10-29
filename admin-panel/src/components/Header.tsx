@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { adminApi, getApiConfig } from '../lib/api';
+import { adminApi } from '../lib/api';
 import { RefreshCw, CheckCircle2, AlertTriangle, Play, Sparkles } from 'lucide-react';
 
 interface HeaderProps {
@@ -25,9 +25,10 @@ export function Header({ title, subtitle, onRefresh, isRefreshing }: HeaderProps
   const handleRunAllImports = async () => {
     try {
       setIsRunningImport(true);
-      setImportNotice('Running automated crawler on 30+ official sources...');
+      setImportNotice('Crawling enabled official sources...');
       const res = await adminApi.runImport();
-      setImportNotice(`Import complete: ${res.summary?.inserted_count || 0} inserted, ${res.summary?.duplicate_count || 0} duplicate skipped`);
+      const sm = res.summary;
+      setImportNotice(`Import ${sm.status}: ${sm.totalInserted} new, ${sm.totalDuplicates} known, ${sm.totalErrors} source errors`);
       if (onRefresh) onRefresh();
     } catch (err: any) {
       setImportNotice(`Import failed: ${err.message}`);

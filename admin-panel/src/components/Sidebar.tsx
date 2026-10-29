@@ -12,14 +12,16 @@ import {
   ExternalLink,
   ShieldCheck,
   Server,
-  Megaphone
+  Megaphone,
+  Flag
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Pending Review', href: '/pending', icon: Clock, badge: 'Review' },
-  { name: 'Official Sources (30+)', href: '/sources', icon: Globe2 },
+  { name: 'Official Sources', href: '/sources', icon: Globe2 },
   { name: 'Active Notices & Jobs', href: '/jobs', icon: Briefcase },
+  { name: 'User Reports', href: '/reports', icon: Flag },
   { name: 'Ads & Monetization', href: '/ads', icon: Megaphone, badge: 'Revenue' },
   { name: 'Import Runs & Logs', href: '/runs', icon: History },
   { name: 'Settings & Cloudflare', href: '/settings', icon: Settings },
@@ -92,7 +94,7 @@ export function Sidebar() {
       <div className="p-4 border-t border-slate-800/80 text-xs text-slate-400">
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-slate-500">Cron Schedule</span>
-          <span className="text-[11px] text-emerald-400 font-mono font-medium">Every 6 Hours</span>
+          <span className="text-[11px] text-emerald-400 font-mono font-medium">Every 3 Hours</span>
         </div>
         <p className="text-[10px] text-slate-500 mt-1">
           SSC • UPSC • RRB • OPSC • OSSC

@@ -1,7 +1,7 @@
 name = "sarkari-jobs-admin"
-compatibility_date = "2024-04-01"
+compatibility_date = "2025-09-01"
 pages_build_output_dir = "out"
 
-[vars]
-NEXT_PUBLIC_DEFAULT_API_URL = "https://sarkari-jobs-worker.your-subdomain.workers.dev"
-NEXT_PUBLIC_DEFAULT_ADMIN_KEY = "sarkari_admin_secret_key_change_me"
+# Only the public Worker URL is configured at build time. The admin key is entered
+# on the sign-in screen and is never part of the build.
+# Set NEXT_PUBLIC_API_URL in the Pages project's build environment variables.
