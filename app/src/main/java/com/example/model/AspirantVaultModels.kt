@@ -1,5 +1,8 @@
 package com.example.model
 
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
 data class AspirantDocumentLocker(
     val candidateName: String = "",
     val fatherName: String = "",
@@ -51,6 +54,7 @@ enum class ExamApplicationStage(val displayName: String, val badgeColorHex: Long
     REJECTED("Not Qualified", 0xFFE11D48)
 }
 
+@JsonClass(generateAdapter = true)
 data class AppliedExamRecord(
     val id: String,
     val jobTitle: String,

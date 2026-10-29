@@ -1,5 +1,8 @@
 package com.example.model
 
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
 data class UserEligibilityProfile(
     val candidateName: String = "Sarkari Aspirant",
     val age: Int = 23,

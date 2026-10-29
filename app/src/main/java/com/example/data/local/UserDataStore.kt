@@ -17,11 +17,14 @@ class UserDataStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val moshi = CloudflareClient.moshi
 
-    private val profileAdapter = moshi.adapter(UserEligibilityProfile::class.java)
-    private val lockerAdapter = moshi.adapter(AspirantDocumentLocker::class.java)
-    private val examsAdapter = moshi.adapter<List<AppliedExamRecord>>(
-        Types.newParameterizedType(List::class.java, AppliedExamRecord::class.java)
-    )
+    // Generated (@JsonClass) adapters; created lazily so construction is cheap on any thread.
+    private val profileAdapter by lazy { moshi.adapter(UserEligibilityProfile::class.java) }
+    private val lockerAdapter by lazy { moshi.adapter(AspirantDocumentLocker::class.java) }
+    private val examsAdapter by lazy {
+        moshi.adapter<List<AppliedExamRecord>>(
+            Types.newParameterizedType(List::class.java, AppliedExamRecord::class.java)
+        )
+    }
 
     fun loadProfile(): UserEligibilityProfile = read(KEY_PROFILE) { profileAdapter.fromJson(it) } ?: UserEligibilityProfile()
     fun saveProfile(value: UserEligibilityProfile) = write(KEY_PROFILE, profileAdapter.toJson(value))

@@ -38,7 +38,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class MainTab {
     HOME,
@@ -78,13 +80,15 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(JobUiState())
     val uiState: StateFlow<JobUiState> = _uiState.asStateFlow()
 
-    private val _userProfile = MutableStateFlow(userDataStore.loadProfile())
+    // Loaded from disk off the main thread in init; defaults until then.
+    private val _userProfile = MutableStateFlow(UserEligibilityProfile())
     val userProfile: StateFlow<UserEligibilityProfile> = _userProfile.asStateFlow()
 
-    private val _documentLocker = MutableStateFlow(userDataStore.loadLocker())
+    private val _documentLocker = MutableStateFlow(AspirantDocumentLocker())
     val documentLocker: StateFlow<AspirantDocumentLocker> = _documentLocker.asStateFlow()
 
-    private val _appliedExams = MutableStateFlow(userDataStore.loadAppliedExams())
+    private val _appliedExams = MutableStateFlow<List<AppliedExamRecord>>(emptyList())
+    @Volatile private var userEditedBeforeLoad = false
     val appliedExams: StateFlow<List<AppliedExamRecord>> = _appliedExams.asStateFlow()
 
     val allJobs: StateFlow<List<JobEntity>> = repository.allJobs
@@ -174,6 +178,16 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
+        viewModelScope.launch {
+            val (profile, locker, exams) = withContext(Dispatchers.IO) {
+                Triple(userDataStore.loadProfile(), userDataStore.loadLocker(), userDataStore.loadAppliedExams())
+            }
+            if (!userEditedBeforeLoad) {
+                _userProfile.value = profile
+                _documentLocker.value = locker
+                _appliedExams.value = exams
+            }
+        }
         viewModelScope.launch {
             backendSyncManager.syncAllData()
         }
@@ -323,16 +337,19 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateUserProfile(profile: UserEligibilityProfile) {
+        userEditedBeforeLoad = true
         _userProfile.value = profile
         userDataStore.saveProfile(profile)
     }
 
     fun updateDocumentLocker(locker: AspirantDocumentLocker) {
+        userEditedBeforeLoad = true
         _documentLocker.value = locker
         userDataStore.saveLocker(locker)
     }
 
     private fun setAppliedExams(list: List<AppliedExamRecord>) {
+        userEditedBeforeLoad = true
         _appliedExams.value = list
         userDataStore.saveAppliedExams(list)
     }
