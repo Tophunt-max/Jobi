@@ -1,21 +1,27 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { CheckCircle2, ExternalLink, Flag, XCircle } from 'lucide-react';
-import { Header } from '../../components/Header';
+import React, { useCallback, useEffect, useState } from 'react';
+import { CheckCircle2, ExternalLink, Flag, RefreshCw, XCircle } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { JobReport } from '../../lib/types';
+import { timeAgo } from '../../lib/cn';
+import { Alert, Button, Card, Dialog, EmptyState, Field, PageHeader, Segmented, Skeleton, Textarea } from '../../components/ui';
+import { StatusBadge } from '../../components/StatusBadge';
+import { useToast } from '../../components/Toast';
 
 type Filter = 'OPEN' | 'RESOLVED' | 'DISMISSED' | 'ALL';
 
 export default function ReportsPage() {
+  const toast = useToast();
   const [reports, setReports] = useState<JobReport[]>([]);
   const [filter, setFilter] = useState<Filter>('OPEN');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [resolving, setResolving] = useState<JobReport | null>(null);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -25,116 +31,109 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [load]);
 
-  const resolve = async (report: JobReport, status: 'RESOLVED' | 'DISMISSED') => {
-    const note = status === 'RESOLVED' ? window.prompt('What was fixed? (optional)') ?? undefined : undefined;
-    setBusyId(report.id);
+  const act = async (r: JobReport, status: 'RESOLVED' | 'DISMISSED', n?: string) => {
+    setBusy(true);
     try {
-      await adminApi.resolveReport(report.id, status, note || undefined);
-      await load();
+      await adminApi.resolveReport(r.id, status, n || undefined);
+      toast.success(status === 'RESOLVED' ? 'Marked as resolved' : 'Report dismissed');
+      setResolving(null);
+      setNote('');
+      setReports((xs) => (filter === 'OPEN' ? xs.filter((x) => x.id !== r.id) : xs));
+      if (filter !== 'OPEN') load();
     } catch (err: any) {
-      setError(err?.message || 'Update failed');
+      toast.error('Update failed', err?.message);
     } finally {
-      setBusyId(null);
+      setBusy(false);
     }
   };
 
   return (
-    <>
-      <Header
-        title="User Reports"
-        subtitle="Wrong or outdated information reported from the Android app"
-        onRefresh={load}
-        isRefreshing={loading}
+    <div className="space-y-6">
+      <PageHeader
+        title="User reports"
+        description="Wrong or outdated information reported by app users."
+        actions={<Button variant="outline" icon={<RefreshCw className="h-4 w-4" />} onClick={load} loading={loading}>Refresh</Button>}
       />
-      <main className="p-8 space-y-4 flex-1">
-        <div className="flex items-center gap-2">
-          {(['OPEN', 'RESOLVED', 'DISMISSED', 'ALL'] as Filter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
-                filter === f ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              {f}
-            </button>
+
+      <Segmented
+        value={filter}
+        onChange={(v) => setFilter(v)}
+        options={[
+          { value: 'OPEN', label: 'Open' },
+          { value: 'RESOLVED', label: 'Resolved' },
+          { value: 'DISMISSED', label: 'Dismissed' },
+          { value: 'ALL', label: 'All' },
+        ]}
+      />
+
+      {error && <Alert tone="danger">{error}</Alert>}
+
+      {loading && reports.length === 0 ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl" />)}
+        </div>
+      ) : reports.length === 0 ? (
+        <Card>
+          <EmptyState icon={<Flag className="h-5 w-5" />} title={filter === 'OPEN' ? 'No open reports' : 'Nothing here'} description="Reports sent from the app's “Report issue” button show up here." />
+        </Card>
+      ) : (
+        <div className="grid gap-3">
+          {reports.map((r) => (
+            <Card key={r.id} className="p-5">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge status={r.status} />
+                    <span className="text-xs text-muted-foreground">{timeAgo(r.created_at)}</span>
+                  </div>
+                  <p className="font-medium">{r.reason}</p>
+                  {r.details && <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{r.details}</p>}
+                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{r.job_title || r.job_id}</span>
+                    {r.job_organization && <span>· {r.job_organization}</span>}
+                    {r.job_url && (
+                      <a href={r.job_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-primary">
+                        · Official notice <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                  {r.resolution_note && <p className="text-xs text-success">Note: {r.resolution_note}</p>}
+                </div>
+                {r.status === 'OPEN' && (
+                  <div className="flex shrink-0 gap-2">
+                    <Button size="sm" variant="outline" icon={<XCircle className="h-3.5 w-3.5" />} onClick={() => act(r, 'DISMISSED')}>Dismiss</Button>
+                    <Button size="sm" variant="success" icon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => setResolving(r)}>Resolve</Button>
+                  </div>
+                )}
+              </div>
+            </Card>
           ))}
         </div>
+      )}
 
-        {error && <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">{error}</div>}
-
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="p-16 text-center text-slate-400 text-sm">Loading reports…</div>
-          ) : reports.length === 0 ? (
-            <div className="p-16 text-center text-slate-500 text-sm flex flex-col items-center gap-2">
-              <Flag className="w-6 h-6 text-slate-300" />
-              No {filter === 'ALL' ? '' : filter.toLowerCase()} reports.
-            </div>
-          ) : (
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-5">Notice</th>
-                  <th className="py-3 px-4">Reason</th>
-                  <th className="py-3 px-4">Reported</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {reports.map((r) => (
-                  <tr key={r.id} className="align-top">
-                    <td className="py-3.5 px-5 max-w-sm">
-                      <div className="font-bold text-slate-900">{r.job_title || r.job_id}</div>
-                      <div className="text-slate-500 text-[11px]">{r.job_organization || ''}</div>
-                      {r.job_url && (
-                        <a href={r.job_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline mt-1">
-                          Official notice <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 max-w-xs">
-                      <div className="font-semibold text-slate-800">{r.reason}</div>
-                      {r.details && <div className="text-slate-600 mt-0.5 whitespace-pre-wrap break-words">{r.details}</div>}
-                      {r.resolution_note && <div className="text-emerald-700 mt-1">Note: {r.resolution_note}</div>}
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">{r.created_at.replace('T', ' ').slice(0, 16)}</td>
-                    <td className="py-3.5 px-4 font-bold text-[11px]">{r.status}</td>
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
-                      {r.status === 'OPEN' && (
-                        <>
-                          <button
-                            disabled={busyId === r.id}
-                            onClick={() => resolve(r, 'RESOLVED')}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[11px] disabled:opacity-50"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Resolve
-                          </button>
-                          <button
-                            disabled={busyId === r.id}
-                            onClick={() => resolve(r, 'DISMISSED')}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded font-bold text-[11px] disabled:opacity-50"
-                          >
-                            <XCircle className="w-3.5 h-3.5" /> Dismiss
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </main>
-    </>
+      <Dialog
+        open={!!resolving}
+        onClose={() => setResolving(null)}
+        size="sm"
+        title="Resolve report"
+        description="Describe what was fixed. This stays in the audit trail."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setResolving(null)}>Cancel</Button>
+            <Button variant="success" loading={busy} onClick={() => resolving && act(resolving, 'RESOLVED', note)}>Mark resolved</Button>
+          </>
+        }
+      >
+        <Field label="What was fixed?" hint="Optional">
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="e.g. Corrected the last date" />
+        </Field>
+      </Dialog>
+    </div>
   );
 }

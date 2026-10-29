@@ -1,138 +1,111 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Header } from '../../components/Header';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ChevronDown, History, RefreshCw } from 'lucide-react';
 import { adminApi } from '../../lib/api';
 import { ImportRun } from '../../lib/types';
-import { 
-  History, 
-  CheckCircle, 
-  AlertCircle, 
-  Clock, 
-  RefreshCw,
-  FileText
-} from 'lucide-react';
+import { cn, formatDateTime } from '../../lib/cn';
+import { Alert, Badge, Button, Card, EmptyState, PageHeader, Table, TableSkeleton, Td, Th } from '../../components/ui';
+import { StatusBadge } from '../../components/StatusBadge';
+import { useShell } from '../../components/AppShell';
+
+function duration(run: ImportRun) {
+  if (!run.finished_at) return '—';
+  const ms = new Date(run.finished_at).getTime() - new Date(run.started_at).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return '—';
+  return ms < 1000 ? `${ms} ms` : ms < 60000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms / 60000)} min`;
+}
 
 export default function RunsPage() {
+  const { importVersion } = useShell();
   const [runs, setRuns] = useState<ImportRun[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
 
-  const loadRuns = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await adminApi.getImportRuns();
-      setRuns(data);
+      setRuns(await adminApi.getImportRuns(100));
     } catch (err: any) {
       setError(err?.message || 'Failed to load import runs');
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadRuns();
   }, []);
 
+  useEffect(() => {
+    load();
+  }, [load, importVersion]);
+
   return (
-    <>
-      <Header 
-        title="Crawler Runs & Ingestion Audit Log" 
-        subtitle="Historical records of Cloudflare Workers scheduled cron triggers and manual imports"
-        onRefresh={loadRuns}
-        isRefreshing={loading}
+    <div className="space-y-6">
+      <PageHeader
+        title="Import runs"
+        description="History of scheduled and manual imports, with per-source errors."
+        actions={<Button variant="outline" icon={<RefreshCw className="h-4 w-4" />} onClick={load} loading={loading}>Refresh</Button>}
       />
 
-      <main className="p-8 space-y-6 flex-1">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-            <span className="text-xs font-bold text-slate-700">
-              Showing recent execution runs ({runs.length})
-            </span>
-          </div>
+      {error && <Alert tone="danger">{error}</Alert>}
 
-          {error && (
-            <div className="p-4 text-xs text-rose-700 bg-rose-50 border-b border-rose-200">{error}</div>
-          )}
-          {loading ? (
-            <div className="p-16 text-center text-slate-400 text-sm">Loading execution logs...</div>
-          ) : runs.length === 0 ? (
-            <div className="p-16 text-center text-slate-500 text-sm">
-              No import runs logged yet. Click "Run Automated Import" in the header to trigger one.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-5">Execution Time</th>
-                    <th className="py-3 px-4">Trigger Mode</th>
-                    <th className="py-3 px-4">Target Source</th>
-                    <th className="py-3 px-4">Notices Fetched</th>
-                    <th className="py-3 px-4">New Inserted</th>
-                    <th className="py-3 px-4">Duplicates Skipped</th>
-                    <th className="py-3 px-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
-                  {runs.map((run) => (
-                    <tr key={run.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-5 font-semibold text-slate-900">
-                        {run.started_at ? run.started_at.replace('T', ' ').slice(0, 19) : run.id}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
-                          (run.triggered_by || '').includes('CRON')
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {run.triggered_by || 'UNKNOWN'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-sans text-slate-700 font-medium">
-                        {!run.source_id || run.source_id === 'ALL_ENABLED' ? 'All enabled sources' : run.source_id}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-700">
-                        {run.fetched_count}
-                      </td>
-                      <td className="py-3.5 px-4 text-emerald-600 font-bold">
-                        +{run.inserted_count}
-                      </td>
-                      <td className="py-3.5 px-4 text-amber-600">
-                        {run.duplicate_count} skipped
-                      </td>
-                      <td className="py-3.5 px-4 font-sans">
-                        {run.status === 'SUCCESS' ? (
-                          <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[10px]">
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            <span>SUCCESS</span>
-                          </span>
-                        ) : run.status === 'RUNNING' ? (
-                          <span className="inline-flex items-center gap-1 text-blue-700 font-bold text-[10px]">
-                            <Clock className="w-3.5 h-3.5 animate-spin" />
-                            <span>RUNNING</span>
-                          </span>
-                        ) : (
-                          <span
-                            title={run.error_summary || ''}
-                            className={`inline-flex items-center gap-1 font-bold text-[10px] ${run.status === 'PARTIAL' ? 'text-amber-700' : 'text-rose-700'}`}
-                          >
-                            <AlertCircle className="w-3.5 h-3.5" />
-                            <span>{run.status}</span>
-                            {run.error_count > 0 && <span className="font-normal">({run.error_count} errors)</span>}
-                          </span>
-                        )}
-                      </td>
+      <Card>
+        {loading && runs.length === 0 ? (
+          <TableSkeleton />
+        ) : runs.length === 0 ? (
+          <EmptyState icon={<History className="h-5 w-5" />} title="No runs yet" description="Use “Run import” in the top bar, or wait for the next scheduled run." />
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Started</Th>
+                <Th className="hidden sm:table-cell">Trigger</Th>
+                <Th className="hidden md:table-cell">Scope</Th>
+                <Th className="text-right">Found</Th>
+                <Th className="text-right">New</Th>
+                <Th className="hidden md:table-cell text-right">Errors</Th>
+                <Th className="hidden lg:table-cell">Duration</Th>
+                <Th>Status</Th>
+                <Th className="w-8" />
+              </tr>
+            </thead>
+            <tbody>
+              {runs.map((r) => {
+                const expandable = !!r.error_summary;
+                const isOpen = open === r.id;
+                return (
+                  <React.Fragment key={r.id}>
+                    <tr className={cn('hover:bg-muted/40', expandable && 'cursor-pointer')} onClick={() => expandable && setOpen(isOpen ? null : r.id)}>
+                      <Td className="whitespace-nowrap text-xs">{formatDateTime(r.started_at)}</Td>
+                      <Td className="hidden sm:table-cell">
+                        <Badge tone={(r.triggered_by || '').includes('CRON') ? 'info' : 'primary'}>{(r.triggered_by || '').includes('CRON') ? 'Scheduled' : 'Manual'}</Badge>
+                      </Td>
+                      <Td className="hidden md:table-cell text-xs text-muted-foreground">{!r.source_id || r.source_id === 'ALL_ENABLED' ? 'All sources' : r.source_id.replace(/^src-/, '')}</Td>
+                      <Td className="text-right tabular-nums">{r.fetched_count}</Td>
+                      <Td className="text-right tabular-nums font-medium text-success">+{r.inserted_count}</Td>
+                      <Td className={cn('hidden md:table-cell text-right tabular-nums', r.error_count ? 'text-danger' : 'text-muted-foreground')}>{r.error_count}</Td>
+                      <Td className="hidden lg:table-cell text-xs text-muted-foreground">{duration(r)}</Td>
+                      <Td><StatusBadge status={r.status} /></Td>
+                      <Td>{expandable && <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />}</Td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </main>
-    </>
+                    {isOpen && (
+                      <tr>
+                        <td colSpan={9} className="border-b bg-muted/30 px-5 py-4">
+                          <ul className="space-y-1 font-mono text-xs">
+                            {(r.error_summary || '').split('; ').map((e, i) => (
+                              <li key={i} className="text-danger">{e}</li>
+                            ))}
+                          </ul>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </Table>
+        )}
+      </Card>
+    </div>
   );
 }

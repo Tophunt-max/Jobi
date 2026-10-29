@@ -1,316 +1,196 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Header } from '../components/Header';
-import { StatsCard } from '../components/StatsCard';
-import { StatusBadge } from '../components/StatusBadge';
+import { AlertTriangle, ArrowRight, Briefcase, CheckCircle2, Clock, Globe2, GraduationCap, Inbox, Trophy } from 'lucide-react';
 import { adminApi } from '../lib/api';
-import { DashboardStats, JobItem, JobSource } from '../lib/types';
-import { 
-  Briefcase, 
-  Clock, 
-  FileText, 
-  Award, 
-  Globe2, 
-  CheckCircle, 
-  ExternalLink, 
-  Play, 
-  ShieldCheck, 
-  ArrowRight,
-  Database,
-  Cloud,
-  Layers,
-  Calendar
-} from 'lucide-react';
+import { DashboardStats, ImportRun, JobItem, JobSource } from '../lib/types';
+import { hostOf, timeAgo } from '../lib/cn';
+import { Badge, Button, Card, CardHeader, EmptyState, PageHeader, Skeleton, StatCard } from '../components/ui';
+import { CategoryBadge, StatusBadge } from '../components/StatusBadge';
+import { useSession } from '../components/AuthGate';
+import { useShell } from '../components/AppShell';
+import { useToast } from '../components/Toast';
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
 
 export default function DashboardPage() {
+  const { user } = useSession();
+  const { refreshCounts, importVersion } = useShell();
+  const toast = useToast();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [pendingJobs, setPendingJobs] = useState<JobItem[]>([]);
+  const [pending, setPending] = useState<JobItem[]>([]);
   const [sources, setSources] = useState<JobSource[]>([]);
+  const [lastRun, setLastRun] = useState<ImportRun | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [approving, setApproving] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    try {
-      const [sData, pData, srcData] = await Promise.allSettled([
-        adminApi.getStats(),
-        adminApi.getPendingJobs(),
-        adminApi.getSources(),
-      ]);
-
-      if (sData.status === 'fulfilled') setStats(sData.value);
-      if (pData.status === 'fulfilled') setPendingJobs(pData.value);
-      if (srcData.status === 'fulfilled') setSources(srcData.value);
-    } catch (err: any) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
+    const [s, p, src, runs] = await Promise.allSettled([
+      adminApi.getStats(),
+      adminApi.getPendingJobs(6),
+      adminApi.getSources(),
+      adminApi.getImportRuns(1),
+    ]);
+    if (s.status === 'fulfilled') setStats(s.value);
+    if (p.status === 'fulfilled') setPending(p.value);
+    if (src.status === 'fulfilled') setSources(src.value);
+    if (runs.status === 'fulfilled') setLastRun(runs.value[0] || null);
+    setLoading(false);
   }, []);
 
-  const handleQuickApprove = async (id: string) => {
+  useEffect(() => {
+    load();
+  }, [load, importVersion]);
+
+  const approve = async (job: JobItem) => {
+    setApproving(job.id);
     try {
-      await adminApi.approveJob(id);
-      setActionMessage('Job approved and published.');
-      loadData();
-      setTimeout(() => setActionMessage(null), 4000);
+      await adminApi.approveJob(job.id);
+      toast.success('Published', job.title);
+      setPending((xs) => xs.filter((j) => j.id !== job.id));
+      refreshCounts();
+      adminApi.getStats().then(setStats).catch(() => undefined);
     } catch (err: any) {
-      alert(`Approval error: ${err.message}`);
+      toast.error('Could not approve', err?.message);
+    } finally {
+      setApproving(null);
     }
   };
 
+  const failing = sources.filter((s) => s.enabled && s.last_error);
+  const healthy = sources.filter((s) => s.enabled && !s.last_error && s.last_successful_fetch_at).length;
+  const enabled = sources.filter((s) => s.enabled).length;
+
   return (
-    <>
-      <Header 
-        title="Automated Importer Dashboard" 
-        subtitle="Cloudflare Workers + D1 + R2 Pipeline • All India & Odisha Official Recruitment"
-        onRefresh={loadData}
-        isRefreshing={loading}
+    <div className="space-y-8">
+      <PageHeader
+        title={`${greeting()}, ${user.email.split('@')[0]}`}
+        description="Here's what needs your attention today."
+        actions={
+          <Link href="/pending/">
+            <Button icon={<Clock className="h-4 w-4" />}>Open review queue</Button>
+          </Link>
+        }
       />
 
-      <main className="p-8 space-y-8 flex-1">
-        {/* Banner Alert if any */}
-        {actionMessage && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
-              <span className="text-sm font-semibold">{actionMessage}</span>
-            </div>
-          </div>
-        )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Waiting for review" value={stats?.pendingReview ?? 0} icon={<Inbox className="h-4 w-4" />} tone="warning" loading={loading && !stats} hint="Scraped notices not yet public" />
+        <StatCard label="Published notices" value={stats?.totalJobs ?? 0} icon={<CheckCircle2 className="h-4 w-4" />} tone="success" loading={loading && !stats} hint="Visible in the app" />
+        <StatCard label="Latest jobs" value={stats?.latestJobs ?? 0} icon={<Briefcase className="h-4 w-4" />} tone="primary" loading={loading && !stats} hint={`${stats?.admitCards ?? 0} admit cards`} />
+        <StatCard label="Results" value={stats?.results ?? 0} icon={<Trophy className="h-4 w-4" />} tone="info" loading={loading && !stats} hint={`${stats?.activeSources ?? 0} official sources`} />
+      </div>
 
-        {/* 1. Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          <StatsCard 
-            title="Pending Review Queue" 
-            value={stats?.pendingReview ?? pendingJobs.length} 
-            subtitle="Scraped notices awaiting admin approval"
-            icon={Clock}
-            colorScheme="amber"
-            trend={stats?.pendingReview ? `${stats.pendingReview} Pending` : 'All Clear'}
-          />
-          <StatsCard 
-            title="Active Published Jobs" 
-            value={stats?.latestJobs ?? '...'} 
-            subtitle="Visible on Android mobile application"
-            icon={Briefcase}
-            colorScheme="blue"
-          />
-          <StatsCard 
-            title="Admit Cards & Results" 
-            value={(stats?.admitCards ?? 0) + (stats?.results ?? 0)} 
-            subtitle={`${stats?.admitCards ?? 0} Cards • ${stats?.results ?? 0} Exam Results`}
-            icon={Award}
-            colorScheme="emerald"
-          />
-          <StatsCard 
-            title="Official Sources" 
-            value={stats?.activeSources ?? sources.length ?? '30+'} 
-            subtitle="All India & Odisha verified portals"
-            icon={Globe2}
-            colorScheme="indigo"
-            trend="100% Gov"
-          />
-        </div>
-
-        {/* 2. Cloudflare Zero-Cost Architecture Highlights */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-slate-800">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[11px] font-bold uppercase tracking-wider">
-                  Cloudflare Edge Serverless
-                </span>
-                <span className="text-slate-400 text-xs">Target Budget: ₹0 / month</span>
-              </div>
-              <h3 className="text-xl font-bold mt-2 text-white">Automated Government Job Ingestion Engine</h3>
-              <p className="text-slate-300 text-xs mt-1 max-w-2xl leading-relaxed">
-                Runs on Cloudflare Workers with automated Cron Triggers (every 6h), querying official RSS feeds and HTML notices directly. Clean SQLite schema inside Cloudflare D1 with deduplication hashing and zero egress PDF storage in Cloudflare R2.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <Link 
-                href="/pending"
-                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all"
-              >
-                <span>Review Pending Queue</span>
-                <ArrowRight className="w-4 h-4" />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        {/* Review queue preview */}
+        <Card className="xl:col-span-2">
+          <CardHeader
+            title="Latest in the review queue"
+            description="Approve a notice only after checking its official link."
+            icon={<Clock className="h-4 w-4" />}
+            actions={
+              <Link href="/pending/" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                View all <ArrowRight className="h-3.5 w-3.5" />
               </Link>
-              <Link 
-                href="/sources"
-                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition-all"
-              >
-                Manage 30+ Sources
-              </Link>
+            }
+          />
+          {loading && pending.length === 0 ? (
+            <div className="space-y-3 px-5 pb-5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-14 w-full" />
+              ))}
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-800/80">
-            <div className="flex items-center gap-3">
-              <Cloud className="w-5 h-5 text-blue-400" />
-              <div>
-                <p className="text-[11px] text-slate-400">Execution</p>
-                <p className="text-xs font-bold text-slate-200">Worker Cron (6h)</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Database className="w-5 h-5 text-emerald-400" />
-              <div>
-                <p className="text-[11px] text-slate-400">Database</p>
-                <p className="text-xs font-bold text-slate-200">Cloudflare D1 (SQL)</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Layers className="w-5 h-5 text-indigo-400" />
-              <div>
-                <p className="text-[11px] text-slate-400">Object Storage</p>
-                <p className="text-xs font-bold text-slate-200">Cloudflare R2 (PDFs)</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="w-5 h-5 text-amber-400" />
-              <div>
-                <p className="text-[11px] text-slate-400">Publish Flow</p>
-                <p className="text-xs font-bold text-slate-200">Admin Approved Only</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Pending Review Queue Preview */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h4 className="text-base font-bold text-slate-900">Recent Notices Pending Review</h4>
-              <p className="text-xs text-slate-500">Newly fetched notices awaiting verification before mobile publishing</p>
-            </div>
-            <Link 
-              href="/pending"
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-            >
-              <span>View All ({pendingJobs.length})</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="p-12 text-center text-slate-400 text-sm">Loading pending notices...</div>
-          ) : pendingJobs.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <CheckCircle className="w-6 h-6" />
-              </div>
-              <p className="text-sm font-bold text-slate-800">Pending Queue is Empty</p>
-              <p className="text-xs text-slate-500 mt-1">All scraped government notices have been reviewed and published.</p>
-            </div>
+          ) : pending.length === 0 ? (
+            <EmptyState icon={<GraduationCap className="h-5 w-5" />} title="Queue is clear" description="New notices appear here after the next import run." />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-5">Organization & Post</th>
-                    <th className="py-3 px-4">Category</th>
-                    <th className="py-3 px-4">State</th>
-                    <th className="py-3 px-4">Posts / Salary</th>
-                    <th className="py-3 px-4">Deadline</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {pendingJobs.slice(0, 5).map((job) => (
-                    <tr key={job.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-5">
-                        <div className="font-bold text-slate-900 line-clamp-1">{job.title}</div>
-                        <div className="text-slate-500 text-[11px] mt-0.5">
-                          {job.organization} {job.advertisement_number ? `• Advt: ${job.advertisement_number}` : ''}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-blue-100 text-blue-800">
-                          {job.category}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-700">
-                        {job.state}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">
-                        <div>{job.total_posts || '—'}</div>
-                        <div className="text-[10px] text-slate-400">{job.salary_scale || ''}</div>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-700 font-mono">
-                        {job.last_date || '—'}
-                      </td>
-                      <td className="py-3.5 px-4 text-right space-x-2">
-                        {job.official_notification_url && (
-                          <a
-                            href={job.official_notification_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded inline-block"
-                            title="Open Official Notice"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-                        <button
-                          onClick={() => handleQuickApprove(job.id)}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[11px] cursor-pointer shadow-sm"
-                        >
-                          Approve
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className="divide-y border-t">
+              {pending.map((job) => (
+                <li key={job.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/40">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{job.title}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <CategoryBadge category={job.category} />
+                      <span className="truncate">{job.organization}</span>
+                      <span>·</span>
+                      <span>{timeAgo(job.created_at)}</span>
+                    </div>
+                  </div>
+                  {job.official_notification_url && (
+                    <a href={job.official_notification_url} target="_blank" rel="noopener noreferrer" className="hidden text-xs text-muted-foreground hover:text-foreground md:block">
+                      {hostOf(job.official_notification_url)}
+                    </a>
+                  )}
+                  <Button size="sm" variant="outline" loading={approving === job.id} onClick={() => approve(job)}>
+                    Approve
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
+        </Card>
 
-        {/* 4. Official Sources Directory Overview */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h4 className="text-base font-bold text-slate-900">Configured Recruitment Portals</h4>
-              <p className="text-xs text-slate-500">Auto-crawled every 6 hours via Cloudflare Workers Cron Triggers</p>
-            </div>
-            <Link 
-              href="/sources"
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-            >
-              <span>Manage All Sources</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[
-              { name: 'Staff Selection Commission', tag: 'SSC', domain: 'ssc.gov.in' },
-              { name: 'Union Public Service Comm.', tag: 'UPSC', domain: 'upsc.gov.in' },
-              { name: 'Railway Recruitment Control', tag: 'RRB', domain: 'rrbapply.gov.in' },
-              { name: 'Odisha Public Service Comm.', tag: 'OPSC', domain: 'opsc.gov.in' },
-              { name: 'Odisha Staff Selection', tag: 'OSSC', domain: 'ossc.gov.in' },
-              { name: 'Odisha Sub-ordinate Selection', tag: 'OSSSC', domain: 'osssc.gov.in' },
-            ].map((s) => (
-              <div key={s.tag} className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-xs text-blue-700">{s.tag}</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+        {/* Pipeline health */}
+        <Card>
+          <CardHeader title="Import pipeline" description="Official sources health" icon={<Globe2 className="h-4 w-4" />} />
+          <div className="space-y-5 px-5 pb-5">
+            {loading && sources.length === 0 ? (
+              <Skeleton className="h-24 w-full" />
+            ) : (
+              <>
+                <div>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-2xl font-semibold tabular-nums">
+                      {healthy}
+                      <span className="text-base text-muted-foreground">/{enabled}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">sources healthy</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-success transition-all" style={{ width: `${enabled ? (healthy / enabled) * 100 : 0}%` }} />
+                  </div>
                 </div>
-                <p className="text-[11px] font-bold text-slate-800 line-clamp-1 mt-1">{s.name}</p>
-                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{s.domain}</p>
-              </div>
-            ))}
+
+                {lastRun && (
+                  <div className="flex items-center justify-between rounded-lg bg-muted/60 px-3 py-2.5 text-xs">
+                    <div>
+                      <p className="font-medium">Last run</p>
+                      <p className="text-muted-foreground">
+                        {timeAgo(lastRun.started_at)} · +{lastRun.inserted_count} new
+                      </p>
+                    </div>
+                    <StatusBadge status={lastRun.status} />
+                  </div>
+                )}
+
+                {failing.length > 0 && (
+                  <div>
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-warning">
+                      <AlertTriangle className="h-3.5 w-3.5" /> {failing.length} sources need attention
+                    </p>
+                    <ul className="space-y-1.5">
+                      {failing.slice(0, 5).map((s) => (
+                        <li key={s.id} className="flex items-center justify-between gap-2 text-xs">
+                          <span className="truncate">{s.name.replace(/\s*\(.*\)$/, '')}</span>
+                          <Badge tone="danger" className="shrink-0 max-w-[45%] truncate">
+                            {(s.last_error || '').replace(/^HTTP /, '')}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                    <Link href="/sources/" className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                      Manage sources <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        </div>
-      </main>
-    </>
+        </Card>
+      </div>
+    </div>
   );
 }

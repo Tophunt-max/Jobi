@@ -1,7 +1,8 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Eye, EyeOff, Loader2, Lock, ShieldCheck } from 'lucide-react';
+import { Alert, Button, Field, Input } from './ui';
 import { authApi, SESSION_EVENT } from '../lib/api';
 import { SessionUser } from '../lib/types';
 
@@ -63,14 +64,18 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (state === 'loading') {
-    return <div className="min-h-screen flex items-center justify-center text-sm text-slate-400">Loading…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   if (state === 'error') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-sm text-slate-600">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
         <p>Could not reach the server.</p>
-        <button onClick={refresh} className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold">Retry</button>
+        <Button onClick={refresh}>Retry</Button>
       </div>
     );
   }
@@ -105,72 +110,78 @@ function LoginForm({ onSignedIn }: { onSignedIn: (u: SessionUser) => void }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm bg-white rounded-2xl shadow-lg border border-slate-200 p-8 space-y-5">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center">
-            <ShieldCheck className="w-6 h-6" />
+    <div className="grid min-h-screen lg:grid-cols-2">
+      {/* Brand panel */}
+      <div className="relative hidden overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-fuchsia-400/20 blur-3xl" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <span className="text-lg font-semibold">Sarkari Jobs</span>
+        </div>
+        <div className="relative max-w-md">
+          <h2 className="text-3xl font-semibold leading-tight">Verified government notices, published with care.</h2>
+          <p className="mt-4 text-white/80">
+            Review what the importer finds on official portals, approve what is real, and keep millions of aspirants informed.
+          </p>
+        </div>
+        <ul className="relative space-y-2 text-sm text-white/85">
+          {['Every notice reviewed before it reaches the app', 'Sessions secured with HttpOnly cookies', 'Full audit trail of who approved what'].map((t) => (
+            <li key={t} className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" /> {t}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Form */}
+      <div className="flex items-center justify-center bg-background p-6 sm:p-12">
+        <form onSubmit={onSubmit} className="w-full max-w-sm space-y-6 animate-slide-up">
+          <div className="lg:hidden flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-violet-500 text-white">
+            <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-slate-900">Sarkari Portal Admin</h1>
-            <p className="text-xs text-slate-500">Sign in to continue</p>
+            <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Sign in to the admin console</p>
           </div>
-        </div>
 
-        <label className="block text-sm">
-          <span className="font-medium text-slate-700">Email</span>
-          <input
-            type="email"
-            required
-            autoComplete="username"
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </label>
-
-        <label className="block text-sm">
-          <span className="font-medium text-slate-700">Password</span>
-          <div className="relative mt-1">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+          <div className="space-y-4">
+            <Field label="Email">
+              <Input type="email" required autoComplete="username" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="h-10" />
+            </Field>
+            <Field label="Password">
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-10 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </Field>
           </div>
-        </label>
 
-        {error && (
-          <p role="alert" className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
-            {error}
-          </p>
-        )}
+          {error && <Alert tone="danger">{error}</Alert>}
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 text-white text-sm font-semibold py-2.5 hover:bg-blue-700 disabled:opacity-50"
-        >
-          <Lock className="w-4 h-4" />
-          {busy ? 'Signing in…' : 'Sign in'}
-        </button>
+          <Button type="submit" size="lg" className="w-full" loading={busy} icon={!busy ? <Lock className="h-4 w-4" /> : undefined}>
+            {busy ? 'Signing in…' : 'Sign in'}
+          </Button>
 
-        <p className="text-[11px] text-slate-500">
-          Forgot your password? Ask an owner to reset it from Settings &gt; Team.
-        </p>
-      </form>
+          <p className="text-center text-xs text-muted-foreground">Forgot your password? Ask an owner to reset it from Settings › Team.</p>
+        </form>
+      </div>
     </div>
   );
 }

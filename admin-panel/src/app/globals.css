@@ -2,13 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 15, 23, 42;
-  --background-rgb: 248, 250, 252;
+@layer base {
+  :root {
+    --background: 220 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 238 100% 97%;
+    --accent-foreground: 239 84% 47%;
+    --border: 220 13% 91%;
+    --input: 220 13% 87%;
+    --ring: 239 84% 60%;
+    --primary: 239 84% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-muted: 220 9% 46%;
+    --sidebar-border: 220 13% 91%;
+
+    --success: 152 69% 31%;
+    --success-soft: 149 80% 95%;
+    --warning: 32 95% 40%;
+    --warning-soft: 48 100% 95%;
+    --danger: 0 72% 51%;
+    --danger-soft: 0 86% 97%;
+    --info: 217 91% 50%;
+    --info-soft: 214 100% 97%;
+  }
+
+  .dark {
+    --background: 224 30% 6%;
+    --foreground: 220 14% 96%;
+    --card: 224 25% 9%;
+    --card-foreground: 220 14% 96%;
+    --muted: 223 20% 14%;
+    --muted-foreground: 220 9% 64%;
+    --accent: 239 40% 18%;
+    --accent-foreground: 234 89% 80%;
+    --border: 223 18% 17%;
+    --input: 223 16% 22%;
+    --ring: 239 84% 67%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --sidebar: 224 28% 8%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-muted: 220 9% 60%;
+    --sidebar-border: 223 18% 15%;
+
+    --success: 152 60% 52%;
+    --success-soft: 152 50% 12%;
+    --warning: 38 92% 60%;
+    --warning-soft: 35 60% 12%;
+    --danger: 0 84% 66%;
+    --danger-soft: 0 50% 14%;
+    --info: 213 94% 68%;
+    --info-soft: 215 50% 14%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  ::selection {
+    @apply bg-primary/20;
+  }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+@layer components {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
 }
