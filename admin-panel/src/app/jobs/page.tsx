@@ -1,424 +1,248 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Header } from '../../components/Header';
-import { StatusBadge } from '../../components/StatusBadge';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Briefcase, ExternalLink, Plus, RefreshCw, Search } from 'lucide-react';
 import { adminApi } from '../../lib/api';
-import { JobCategory, JobItem, JOB_CATEGORIES } from '../../lib/types';
-import { 
-  Briefcase, 
-  Search, 
-  ExternalLink, 
-  FileText, 
-  Calendar, 
-  Building2,
-  CheckCircle2,
-  Filter,
-  Plus,
-  X
-} from 'lucide-react';
+import { JOB_CATEGORIES, JobCategory, JobItem, ManualJobInput } from '../../lib/types';
+import { formatDateTime, hostOf } from '../../lib/cn';
+import {
+  Alert, Button, Card, Dialog, EmptyState, Field, Input, PageHeader, Segmented, Select, Table, TableSkeleton, Td, Th,
+} from '../../components/ui';
+import { CategoryBadge, StatusBadge } from '../../components/StatusBadge';
+import { useShell } from '../../components/AppShell';
+import { useToast } from '../../components/Toast';
 
-export default function AllJobsPage() {
+type StatusFilter = 'ACTIVE' | 'pending_review' | 'REJECTED' | 'EXPIRED' | 'ALL';
+
+const EMPTY_FORM = {
+  title: '', organization: '', category: 'Latest Job' as JobCategory, state: 'All India', advertisement_number: '',
+  total_posts: '', qualification: '', salary_scale: '', application_start_date: '', last_date: '',
+  official_notification_url: '', official_apply_url: '',
+};
+
+function PublishDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+  const toast = useToast();
+  const [f, setF] = useState(EMPTY_FORM);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const set = (k: keyof typeof EMPTY_FORM) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!f.official_notification_url.startsWith('https://')) return setError('The official notice link must start with https://');
+    setBusy(true);
+    const payload: ManualJobInput = {
+      title: f.title.trim(),
+      organization: f.organization.trim(),
+      category: f.category,
+      state: f.state.trim() || 'All India',
+      advertisement_number: f.advertisement_number.trim() || undefined,
+      total_posts: f.total_posts ? Number(f.total_posts) : undefined,
+      qualification: f.qualification.trim() || undefined,
+      salary_scale: f.salary_scale.trim() || undefined,
+      application_start_date: f.application_start_date || undefined,
+      last_date: f.last_date || undefined,
+      official_notification_url: f.official_notification_url.trim(),
+      official_apply_url: f.official_apply_url.trim() || undefined,
+    };
+    try {
+      await adminApi.createJob(payload);
+      toast.success('Notice published', payload.title);
+      setF(EMPTY_FORM);
+      onCreated();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || 'Could not publish');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      size="lg"
+      title="Publish a notice"
+      description="Use this for notices the importer can't reach. It goes live in the app immediately."
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="submit" form="publish-form" loading={busy}>Publish</Button>
+        </>
+      }
+    >
+      <form id="publish-form" onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Title *" className="sm:col-span-2">
+          <Input required value={f.title} onChange={set('title')} placeholder="e.g. SSC Combined Graduate Level Examination 2026" />
+        </Field>
+        <Field label="Organization *">
+          <Input required value={f.organization} onChange={set('organization')} placeholder="Staff Selection Commission" />
+        </Field>
+        <Field label="Advt. number">
+          <Input value={f.advertisement_number} onChange={set('advertisement_number')} placeholder="F.No. HQ-PPII03/1/2026" />
+        </Field>
+        <Field label="Category">
+          <Select value={f.category} onChange={set('category')}>
+            {JOB_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+          </Select>
+        </Field>
+        <Field label="State">
+          <Input value={f.state} onChange={set('state')} />
+        </Field>
+        <Field label="Total posts">
+          <Input type="number" min={0} value={f.total_posts} onChange={set('total_posts')} />
+        </Field>
+        <Field label="Salary / pay level">
+          <Input value={f.salary_scale} onChange={set('salary_scale')} placeholder="Pay Level 7" />
+        </Field>
+        <Field label="Qualification" className="sm:col-span-2">
+          <Input value={f.qualification} onChange={set('qualification')} placeholder="Bachelor's degree from a recognised university" />
+        </Field>
+        <Field label="Applications open">
+          <Input type="date" value={f.application_start_date} onChange={set('application_start_date')} />
+        </Field>
+        <Field label="Last date">
+          <Input type="date" value={f.last_date} onChange={set('last_date')} />
+        </Field>
+        <Field label="Official notice link *" hint="PDF or page on the official site (https)" className="sm:col-span-2">
+          <Input required type="url" value={f.official_notification_url} onChange={set('official_notification_url')} placeholder="https://ssc.gov.in/…" />
+        </Field>
+        <Field label="Apply online link" className="sm:col-span-2">
+          <Input type="url" value={f.official_apply_url} onChange={set('official_apply_url')} placeholder="https://…" />
+        </Field>
+        {error && <Alert tone="danger" className="sm:col-span-2">{error}</Alert>}
+      </form>
+    </Dialog>
+  );
+}
+
+export default function JobsPage() {
+  const { importVersion } = useShell();
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<StatusFilter>('ACTIVE');
+  const [category, setCategory] = useState('ALL');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [alertMsg, setAlertMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
-  // Form State
-  const [formTitle, setFormTitle] = useState('');
-  const [formOrg, setFormOrg] = useState('');
-  const [formAdvtNo, setFormAdvtNo] = useState('');
-  const [formCategory, setFormCategory] = useState<JobCategory>('Latest Job');
-  const [formState, setFormState] = useState('All India');
-  const [formVacancies, setFormVacancies] = useState('');
-  const [formQual, setFormQual] = useState('');
-  const [formSalary, setFormSalary] = useState('');
-  const [formClosingDate, setFormClosingDate] = useState('');
-  const [formPdfUrl, setFormPdfUrl] = useState('');
-  const [formApplyUrl, setFormApplyUrl] = useState('');
-
-  const resetForm = () => {
-    setFormTitle(''); setFormOrg(''); setFormAdvtNo(''); setFormCategory('Latest Job'); setFormState('All India');
-    setFormVacancies(''); setFormQual(''); setFormSalary(''); setFormClosingDate(''); setFormPdfUrl(''); setFormApplyUrl('');
-  };
-
-  const handleCreateJobSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formTitle.trim() || !formOrg.trim() || !formPdfUrl.trim()) {
-      setAlertMsg({ type: 'error', text: 'Title, organization and official notice URL are required.' });
-      return;
-    }
-    setIsSubmitting(true);
-    setAlertMsg(null);
-    try {
-      const res = await adminApi.createJob({
-        title: formTitle.trim(),
-        organization: formOrg.trim(),
-        advertisement_number: formAdvtNo.trim() || undefined,
-        category: formCategory,
-        state: formState.trim() || 'All India',
-        total_posts: formVacancies ? parseInt(formVacancies, 10) : undefined,
-        qualification: formQual.trim() || undefined,
-        salary_scale: formSalary.trim() || undefined,
-        last_date: formClosingDate || undefined,
-        official_notification_url: formPdfUrl.trim(),
-        official_apply_url: formApplyUrl.trim() || undefined,
-      });
-      setAlertMsg({ type: 'success', text: res.message || 'Job published successfully!' });
-      setShowCreateModal(false);
-      resetForm();
-      loadJobs();
-    } catch (err: any) {
-      setAlertMsg({ type: 'error', text: err.message || 'Failed to publish job' });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const loadJobs = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const data = await adminApi.getAllJobs({
-        status: statusFilter,
-        category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
-        limit: 200,
-      });
-      setJobs(data);
+      setJobs(await adminApi.getAllJobs({ status, category: category === 'ALL' ? undefined : category, limit: 200 }));
     } catch (err: any) {
-      setAlertMsg({ type: 'error', text: err?.message || 'Failed to load jobs' });
+      setError(err?.message || 'Failed to load notices');
     } finally {
       setLoading(false);
     }
-  };
+  }, [status, category]);
 
   useEffect(() => {
-    loadJobs();
-  }, [statusFilter, categoryFilter]);
+    load();
+  }, [load, importVersion]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-  };
-
-  const term = search.trim().toLowerCase();
-  const visibleJobs = term
-    ? jobs.filter((j) =>
-        [j.title, j.organization, j.advertisement_number, j.post_name]
-          .some((v) => (v || '').toLowerCase().includes(term)))
-    : jobs;
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return jobs;
+    return jobs.filter((j) => [j.title, j.organization, j.advertisement_number, j.post_name].some((v) => (v || '').toLowerCase().includes(q)));
+  }, [jobs, search]);
 
   return (
-    <>
-      <Header 
-        title="Active Recruitment Notices & Database" 
-        subtitle="All live jobs, admit cards, syllabus, and results stored in Cloudflare D1"
-        onRefresh={loadJobs}
-        isRefreshing={loading}
+    <div className="space-y-6">
+      <PageHeader
+        title="Notices"
+        description="Everything in the database: published, in review, rejected and expired."
+        actions={
+          <>
+            <Button variant="outline" icon={<RefreshCw className="h-4 w-4" />} onClick={load} loading={loading}>Refresh</Button>
+            <Button icon={<Plus className="h-4 w-4" />} onClick={() => setPublishing(true)}>Publish notice</Button>
+          </>
+        }
       />
 
-      <main className="p-8 space-y-6 flex-1">
-        {/* Filters */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
-          <form onSubmit={handleSearchSubmit} className="relative w-full md:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Filter by title, organization, advt..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-            />
-          </form>
+      {error && <Alert tone="danger">{error}</Alert>}
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Publish Job Notice</span>
-            </button>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="ACTIVE">ACTIVE (Published)</option>
-              <option value="pending_review">Pending Review</option>
-              <option value="REJECTED">REJECTED</option>
-              <option value="EXPIRED">EXPIRED</option>
-            </select>
-
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-              <option value="ALL">All Categories</option>
-              {JOB_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+      <Card>
+        <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
+          <Segmented
+            value={status}
+            onChange={(v) => setStatus(v)}
+            options={[
+              { value: 'ACTIVE', label: 'Published' },
+              { value: 'pending_review', label: 'In review' },
+              { value: 'REJECTED', label: 'Rejected' },
+              { value: 'EXPIRED', label: 'Expired' },
+              { value: 'ALL', label: 'All' },
+            ]}
+            className="overflow-x-auto"
+          />
+          <div className="flex flex-1 gap-2">
+            <div className="flex-1">
+              <Input leftIcon={<Search className="h-4 w-4" />} placeholder="Search notices" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <Select value={category} onChange={(e) => setCategory(e.target.value)} className="w-40" aria-label="Category">
+              <option value="ALL">All categories</option>
+              {JOB_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+            </Select>
           </div>
         </div>
 
-        {/* Database Table */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-            <span className="text-xs font-bold text-slate-700">
-              Showing {visibleJobs.length} of {jobs.length} records
-            </span>
-          </div>
-
-          {loading ? (
-            <div className="p-16 text-center text-slate-400 text-sm">Querying Cloudflare D1 database...</div>
-          ) : visibleJobs.length === 0 ? (
-            <div className="p-16 text-center text-slate-500 text-sm">No records match the current filters.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-5">Title & Organization</th>
-                    <th className="py-3 px-4">Category</th>
-                    <th className="py-3 px-4">State</th>
-                    <th className="py-3 px-4">Posts / Qual.</th>
-                    <th className="py-3 px-4">Application Window</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Links</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {visibleJobs.map((job) => (
-                    <tr key={job.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-5 max-w-sm">
-                        <div className="font-bold text-slate-900 line-clamp-1">{job.title}</div>
-                        <div className="text-slate-500 text-[11px] mt-0.5">
-                          {job.organization} {job.advertisement_number ? `• Advt: ${job.advertisement_number}` : ''}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-blue-100 text-blue-800">
-                          {job.category}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-700">
-                        {job.state}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">
-                        <div className="font-medium text-slate-800">{job.total_posts || '—'}</div>
-                        <div className="text-[10px] text-slate-400 line-clamp-1">{job.qualification || '—'}</div>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-700 text-[11px]">
-                        <div>Start: {job.application_start_date || '—'}</div>
-                        <div className="text-slate-500">Last: {job.last_date || '—'}</div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <StatusBadge status={job.status} />
-                      </td>
-                      <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
-                        {job.official_notification_url && (
-                          <a
-                            href={job.official_notification_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded inline-block"
-                            title="Official PDF Notice"
-                          >
-                            <FileText className="w-4 h-4" />
-                          </a>
-                        )}
-                        {job.official_apply_url && (
-                          <a
-                            href={job.official_apply_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded inline-block"
-                            title="Apply Portal"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        {alertMsg && (
-          <div className={`p-4 rounded-xl text-xs font-semibold ${alertMsg.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
-            {alertMsg.text}
-          </div>
+        {loading && jobs.length === 0 ? (
+          <TableSkeleton />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={<Briefcase className="h-5 w-5" />}
+            title="No notices here"
+            description={status === 'ACTIVE' ? 'Approve notices from the review queue or publish one manually.' : 'Nothing matches these filters.'}
+            action={status === 'ACTIVE' ? <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setPublishing(true)}>Publish notice</Button> : undefined}
+          />
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Notice</Th>
+                <Th className="hidden md:table-cell">Category</Th>
+                <Th className="hidden lg:table-cell">Last date</Th>
+                <Th>Status</Th>
+                <Th className="hidden xl:table-cell">Reviewed</Th>
+                <Th className="text-right">Link</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((j) => (
+                <tr key={j.id} className="hover:bg-muted/40">
+                  <Td className="max-w-md">
+                    <p className="line-clamp-2 font-medium">{j.title}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {j.organization} · {j.state}
+                      {j.total_posts ? ` · ${j.total_posts} posts` : ''}
+                    </p>
+                  </Td>
+                  <Td className="hidden md:table-cell"><CategoryBadge category={j.category} /></Td>
+                  <Td className="hidden whitespace-nowrap text-xs lg:table-cell">{j.last_date || '—'}</Td>
+                  <Td><StatusBadge status={j.status} /></Td>
+                  <Td className="hidden text-xs text-muted-foreground xl:table-cell">
+                    {j.approved_by ? <span title={formatDateTime(j.approved_at)}>{j.approved_by}</span> : j.rejection_reason ? <span className="line-clamp-1" title={j.rejection_reason}>{j.rejection_reason}</span> : '—'}
+                  </Td>
+                  <Td className="text-right">
+                    {j.official_notification_url && (
+                      <a href={j.official_notification_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
+                        <span className="hidden sm:inline">{hostOf(j.official_notification_url)}</span> <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
         )}
+        {filtered.length > 0 && <p className="px-5 py-3 text-xs text-muted-foreground">Showing {filtered.length} of {jobs.length}</p>}
+      </Card>
 
-        {/* Modal for Manual Job Publishing */}
-        {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                    <Briefcase className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Publish New Recruitment Notice</h3>
-                    <p className="text-xs text-slate-500">Notice will be saved directly into Cloudflare D1 database</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateJobSubmit} className="space-y-3 text-xs">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Recruitment Title *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g., SSC CGL Examination 2026"
-                    value={formTitle}
-                    onChange={(e) => setFormTitle(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Organization / Department *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g., Staff Selection Commission"
-                      value={formOrg}
-                      onChange={(e) => setFormOrg(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Advt / Notice Number</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., F.No. HQ-C1201/2026"
-                      value={formAdvtNo}
-                      onChange={(e) => setFormAdvtNo(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Category</label>
-                    <select
-                      value={formCategory}
-                      onChange={(e) => setFormCategory(e.target.value as JobCategory)}
-                      className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    >
-                      {JOB_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">State / Scope</label>
-                    <input
-                      type="text"
-                      value={formState}
-                      onChange={(e) => setFormState(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Total Vacancies</label>
-                    <input
-                      type="number"
-                      value={formVacancies}
-                      onChange={(e) => setFormVacancies(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Qualification</label>
-                    <input
-                      type="text"
-                      value={formQual}
-                      onChange={(e) => setFormQual(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Salary / Pay Level</label>
-                    <input
-                      type="text"
-                      value={formSalary}
-                      onChange={(e) => setFormSalary(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Closing Date</label>
-                    <input
-                      type="date"
-                      value={formClosingDate}
-                      onChange={(e) => setFormClosingDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Official Notice URL (https) *</label>
-                    <input
-                      type="url"
-                      required
-                      placeholder="https://…gov.in/notice.pdf"
-                      value={formPdfUrl}
-                      onChange={(e) => setFormPdfUrl(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Apply Online URL</label>
-                    <input
-                      type="url"
-                      value={formApplyUrl}
-                      onChange={(e) => setFormApplyUrl(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 font-semibold shadow-sm flex items-center gap-1.5"
-                  >
-                    {isSubmitting ? "Publishing..." : "Publish"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </main>
-    </>
+      <PublishDialog open={publishing} onClose={() => setPublishing(false)} onCreated={() => (status === 'ACTIVE' ? load() : setStatus('ACTIVE'))} />
+    </div>
   );
 }

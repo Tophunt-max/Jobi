@@ -1,280 +1,226 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Header } from '../../components/Header';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ExternalLink, FlaskConical, Globe2, Play, RefreshCw, Search } from 'lucide-react';
 import { adminApi } from '../../lib/api';
-import { JobSource } from '../../lib/types';
-import { 
-  Globe2, 
-  ExternalLink, 
-  Play, 
-  CheckCircle, 
-  XCircle, 
-  RefreshCw, 
-  Search, 
-  Sliders, 
-  Terminal,
-  Clock,
-  ShieldCheck,
-  Check
-} from 'lucide-react';
+import { JobSource, SourceTestResult } from '../../lib/types';
+import { timeAgo } from '../../lib/cn';
+import {
+  Alert, Badge, Button, Card, EmptyState, Input, PageHeader, Segmented, Sheet, Switch, Table, TableSkeleton, Td, Th,
+} from '../../components/ui';
+import { CategoryBadge } from '../../components/StatusBadge';
+import { useShell } from '../../components/AppShell';
+import { useToast } from '../../components/Toast';
+
+type Filter = 'ALL' | 'HEALTHY' | 'FAILING' | 'DISABLED';
+
+function health(s: JobSource): { tone: 'success' | 'danger' | 'neutral' | 'warning'; label: string } {
+  if (!s.enabled) return { tone: 'neutral', label: 'Disabled' };
+  if (s.last_error) return { tone: 'danger', label: 'Failing' };
+  if (s.last_successful_fetch_at) return { tone: 'success', label: 'Healthy' };
+  return { tone: 'warning', label: 'Not run yet' };
+}
 
 export default function SourcesPage() {
+  const toast = useToast();
+  const { refreshCounts, importVersion } = useShell();
   const [sources, setSources] = useState<JobSource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [stateFilter, setStateFilter] = useState('ALL');
-  const [testingSourceId, setTestingSourceId] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<any | null>(null);
-  const [runningSourceId, setRunningSourceId] = useState<string | null>(null);
-  const [bannerMessage, setBannerMessage] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>('ALL');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [test, setTest] = useState<{ source: JobSource; result?: SourceTestResult; error?: string } | null>(null);
 
-  const loadSources = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const data = await adminApi.getSources();
-      setSources(data);
+      setSources(await adminApi.getSources());
     } catch (err: any) {
-      setBannerMessage(`Failed to load sources: ${err?.message || err}`);
+      setError(err?.message || 'Failed to load sources');
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadSources();
   }, []);
 
-  const handleToggleSource = async (source: JobSource) => {
-    const newStatus = source.enabled === 1 ? 0 : 1;
+  useEffect(() => {
+    load();
+  }, [load, importVersion]);
+
+  const counts = useMemo(
+    () => ({
+      ALL: sources.length,
+      HEALTHY: sources.filter((s) => health(s).label === 'Healthy').length,
+      FAILING: sources.filter((s) => health(s).label === 'Failing').length,
+      DISABLED: sources.filter((s) => !s.enabled).length,
+    }),
+    [sources]
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return sources.filter((s) => {
+      const h = health(s).label;
+      if (filter === 'HEALTHY' && h !== 'Healthy') return false;
+      if (filter === 'FAILING' && h !== 'Failing') return false;
+      if (filter === 'DISABLED' && s.enabled) return false;
+      return !q || [s.name, s.official_domain, s.id, s.state].some((v) => v.toLowerCase().includes(q));
+    });
+  }, [sources, search, filter]);
+
+  const toggle = async (s: JobSource, enabled: boolean) => {
+    setSources((xs) => xs.map((x) => (x.id === s.id ? { ...x, enabled: enabled ? 1 : 0 } : x)));
     try {
-      await adminApi.updateSource(source.id, newStatus === 1);
-      setSources((prev) =>
-        prev.map((s) => (s.id === source.id ? { ...s, enabled: newStatus } : s))
-      );
-      setBannerMessage(`Updated ${source.name} status to ${newStatus === 1 ? 'ENABLED' : 'DISABLED'}`);
-      setTimeout(() => setBannerMessage(null), 4000);
+      await adminApi.updateSource(s.id, enabled);
+      toast.success(`${enabled ? 'Enabled' : 'Disabled'} ${s.name.replace(/\s*\(.*\)$/, '')}`);
     } catch (err: any) {
-      alert(`Update failed: ${err.message}`);
+      setSources((xs) => xs.map((x) => (x.id === s.id ? { ...x, enabled: enabled ? 0 : 1 } : x)));
+      toast.error('Update failed', err?.message);
     }
   };
 
-  const handleTestSource = async (sourceId: string) => {
+  const runTest = async (s: JobSource) => {
+    setTest({ source: s });
     try {
-      setTestingSourceId(sourceId);
-      setTestResult(null);
-      const res = await adminApi.testSource(sourceId);
-      setTestResult({
-        sourceId,
-        ...res,
-      });
+      const result = await adminApi.testSource(s.id);
+      setTest({ source: s, result });
     } catch (err: any) {
-      setTestResult({
-        sourceId,
-        success: false,
-        error: err.message,
-      });
+      setTest({ source: s, error: err?.message || 'Test failed' });
+    }
+  };
+
+  const crawl = async (s: JobSource) => {
+    setBusy(s.id);
+    try {
+      const { summary } = await adminApi.runImport(s.id);
+      if (summary.totalErrors) toast.error(`Crawl failed`, summary.errors.join('; '));
+      else toast.success(`Crawled ${s.name.replace(/\s*\(.*\)$/, '')}`, `${summary.totalFetched} found · ${summary.totalInserted} new for review`);
+      refreshCounts();
+      load();
+    } catch (err: any) {
+      toast.error('Crawl failed', err?.message);
     } finally {
-      setTestingSourceId(null);
+      setBusy(null);
     }
   };
-
-  const handleRunSingleImport = async (sourceId: string, name: string) => {
-    try {
-      setRunningSourceId(sourceId);
-      const res = await adminApi.runImport(sourceId);
-      const sm = res.summary;
-      setBannerMessage(sm.totalErrors > 0
-        ? `Crawl of ${name} failed: ${sm.errors.join('; ')}`
-        : `Crawled ${name}: ${sm.totalFetched} found, ${sm.totalInserted} new (queued for review), ${sm.totalDuplicates} already known.`);
-      loadSources();
-      setTimeout(() => setBannerMessage(null), 5000);
-    } catch (err: any) {
-      alert(`Import error: ${err.message}`);
-    } finally {
-      setRunningSourceId(null);
-    }
-  };
-
-  const filteredSources = sources.filter((s) => {
-    const matchesSearch = 
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.official_domain.toLowerCase().includes(search.toLowerCase()) ||
-      s.id.toLowerCase().includes(search.toLowerCase());
-    const matchesState = stateFilter === 'ALL' || s.state === stateFilter || (stateFilter === 'Odisha' && s.state.includes('Odisha'));
-    return matchesSearch && matchesState;
-  });
 
   return (
-    <>
-      <Header 
-        title="Official Government Job Sources (30+)" 
-        subtitle="Configure, enable, test, and manually invoke recruitment source adapters"
-        onRefresh={loadSources}
-        isRefreshing={loading}
+    <div className="space-y-6">
+      <PageHeader
+        title="Official sources"
+        description="Government portals the importer checks. Each is fetched on its own polling interval."
+        actions={<Button variant="outline" icon={<RefreshCw className="h-4 w-4" />} onClick={load} loading={loading}>Refresh</Button>}
       />
 
-      <main className="p-8 space-y-6 flex-1">
-        {bannerMessage && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-semibold shadow-sm animate-fade-in">
-            <CheckCircle className="w-5 h-5 text-emerald-600" />
-            <span>{bannerMessage}</span>
-          </div>
-        )}
+      {error && <Alert tone="danger">{error}</Alert>}
 
-        {/* Filter and Stats Bar */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
-          <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search by source name, domain..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>{sources.filter(s => s.enabled === 1).length} of {sources.length} Enabled</span>
-            </div>
-
-            <select
-              value={stateFilter}
-              onChange={(e) => setStateFilter(e.target.value)}
-              className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-              <option value="ALL">All Jurisdictions</option>
-              <option value="All India">All India Portals</option>
-              <option value="Odisha">Odisha State Portals</option>
-            </select>
+      <Card>
+        <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
+          <Segmented
+            value={filter}
+            onChange={(v) => setFilter(v)}
+            options={[
+              { value: 'ALL', label: 'All', count: counts.ALL },
+              { value: 'HEALTHY', label: 'Healthy', count: counts.HEALTHY },
+              { value: 'FAILING', label: 'Failing', count: counts.FAILING },
+              { value: 'DISABLED', label: 'Disabled', count: counts.DISABLED },
+            ]}
+            className="overflow-x-auto"
+          />
+          <div className="flex-1">
+            <Input leftIcon={<Search className="h-4 w-4" />} placeholder="Search by name, domain or state" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
 
-        {/* Sources Table */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="p-16 text-center text-slate-400 text-sm">Loading official sources registry...</div>
-          ) : filteredSources.length === 0 ? (
-            <div className="p-16 text-center text-slate-500 text-sm">No sources found matching current criteria.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-5">Official Portal & Domain</th>
-                    <th className="py-3 px-4">Jurisdiction</th>
-                    <th className="py-3 px-4">Parser Engine</th>
-                    <th className="py-3 px-4">Last Scraped</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+        {loading && sources.length === 0 ? (
+          <TableSkeleton rows={8} />
+        ) : filtered.length === 0 ? (
+          <EmptyState icon={<Globe2 className="h-5 w-5" />} title="No sources match" />
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <Th className="w-12">On</Th>
+                <Th>Source</Th>
+                <Th className="hidden md:table-cell">State</Th>
+                <Th>Health</Th>
+                <Th className="hidden lg:table-cell">Last success</Th>
+                <Th className="text-right">Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((s) => {
+                const h = health(s);
+                return (
+                  <tr key={s.id} className="hover:bg-muted/40">
+                    <Td><Switch checked={!!s.enabled} onChange={(v) => toggle(s, v)} label={`Enable ${s.name}`} /></Td>
+                    <Td className="max-w-sm">
+                      <p className="truncate font-medium">{s.name}</p>
+                      <a href={s.listing_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
+                        {s.official_domain} <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Td>
+                    <Td className="hidden md:table-cell text-xs">{s.state}</Td>
+                    <Td>
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge tone={h.tone} dot>{h.label}</Badge>
+                        {s.last_error && <span className="max-w-[220px] truncate text-[11px] text-danger" title={s.last_error}>{s.last_error}</span>}
+                      </div>
+                    </Td>
+                    <Td className="hidden whitespace-nowrap text-xs text-muted-foreground lg:table-cell">{timeAgo(s.last_successful_fetch_at)}</Td>
+                    <Td className="whitespace-nowrap text-right">
+                      <div className="inline-flex gap-1.5">
+                        <Button size="sm" variant="ghost" onClick={() => runTest(s)} icon={<FlaskConical className="h-3.5 w-3.5" />}>
+                          <span className="hidden sm:inline">Test</span>
+                        </Button>
+                        <Button size="sm" variant="outline" loading={busy === s.id} disabled={!s.enabled} onClick={() => crawl(s)} icon={<Play className="h-3.5 w-3.5" />}>
+                          <span className="hidden sm:inline">Crawl</span>
+                        </Button>
+                      </div>
+                    </Td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredSources.map((source) => (
-                    <tr key={source.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-5">
-                        <div className="font-bold text-slate-900">{source.name}</div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <a
-                            href={source.listing_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[11px] text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-mono"
-                          >
-                            <span>{source.official_domain}</span>
-                            <ExternalLink className="w-2.5 h-2.5" />
-                          </a>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-700">
-                        {source.state}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                          {source.parser_type}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">
-                        {source.last_fetched_at ? source.last_fetched_at.slice(0, 16) : 'Scheduled in Cron'}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <button
-                          onClick={() => handleToggleSource(source)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] border transition-colors cursor-pointer ${
-                            source.enabled === 1
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                          }`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${source.enabled === 1 ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                          <span>{source.enabled === 1 ? 'Enabled' : 'Disabled'}</span>
-                        </button>
-                      </td>
-                      <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
-                        <button
-                          onClick={() => handleTestSource(source.id)}
-                          disabled={testingSourceId === source.id}
-                          className="px-2.5 py-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded border border-slate-200 font-semibold text-[11px] cursor-pointer disabled:opacity-50"
-                        >
-                          {testingSourceId === source.id ? 'Testing...' : 'Test Adapter'}
-                        </button>
-                        <button
-                          onClick={() => handleRunSingleImport(source.id, source.name)}
-                          disabled={runningSourceId === source.id || source.enabled === 0}
-                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-[11px] cursor-pointer shadow-sm disabled:opacity-50 inline-flex items-center gap-1"
-                        >
-                          <Play className={`w-3 h-3 ${runningSourceId === source.id ? 'animate-spin' : ''}`} />
-                          <span>{runningSourceId === source.id ? 'Crawling...' : 'Crawl Now'}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                );
+              })}
+            </tbody>
+          </Table>
+        )}
+      </Card>
 
-        {/* Live Scraper Test Result Modal */}
-        {testResult && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col overflow-hidden">
-              <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                <div className="flex items-center gap-2">
-                  <Terminal className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-base font-bold text-slate-900">
-                    Live Adapter Output ({testResult.sourceId})
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setTestResult(null)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 cursor-pointer"
-                >
-                  <XCircle className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="p-6 overflow-y-auto space-y-4">
-                <div className="bg-slate-900 text-emerald-400 p-4 rounded-xl font-mono text-xs overflow-x-auto">
-                  <pre>{JSON.stringify(testResult, null, 2)}</pre>
-                </div>
-              </div>
-
-              <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
-                <button
-                  onClick={() => setTestResult(null)}
-                  className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-700"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
+      <Sheet
+        open={!!test}
+        onClose={() => setTest(null)}
+        title={test ? `Test: ${test.source.name}` : ''}
+        description="Dry run. Shows what the scraper would find right now; nothing is saved."
+      >
+        {test && !test.result && !test.error && (
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <RefreshCw className="h-4 w-4 animate-spin" /> Fetching {test.source.official_domain}…
           </div>
         )}
-      </main>
-    </>
+        {test?.error && <Alert tone="danger" title="Fetch failed">{test.error}</Alert>}
+        {test?.result && (
+          <div className="space-y-4">
+            <Alert tone={test.result.count ? 'success' : 'warning'}>
+              Found {test.result.count} notice{test.result.count === 1 ? '' : 's'}
+              {test.result.count > test.result.sample.length ? ` (showing ${test.result.sample.length})` : ''}.
+            </Alert>
+            <ul className="space-y-2">
+              {test.result.sample.map((n) => (
+                <li key={n.official_notification_url} className="rounded-lg border p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-medium">{n.title}</p>
+                    <CategoryBadge category={n.category} />
+                  </div>
+                  <a href={n.official_notification_url} target="_blank" rel="noopener noreferrer" className="mt-1 block truncate text-xs text-muted-foreground hover:text-primary">
+                    {n.official_notification_url}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </Sheet>
+    </div>
   );
 }
