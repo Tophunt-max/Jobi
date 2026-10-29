@@ -8,7 +8,7 @@
     "start": "npx serve out",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "deploy:cloudflare": "npm run build && npx wrangler pages deploy out --project-name=sarkari-jobs-admin"
+    "deploy:cloudflare": "npm run build && npx wrangler deploy"
   },
   "dependencies": {
     "clsx": "^2.1.1",

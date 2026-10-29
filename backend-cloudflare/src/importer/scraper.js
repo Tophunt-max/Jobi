@@ -16,7 +16,7 @@ const MAX_HTML_BYTES = 3 * 1024 * 1024;
 const MAX_NOTICES_PER_SOURCE = 25;
 
 const INCLUDE_PATTERN = /(recruit|vacanc|advertis|advt|notification|notice|employment|engagement|walk[-\s]?in|admit\s*card|hall\s*ticket|e-?admit|call\s*letter|result|merit\s*list|select(ed|ion)\s*list|answer\s*key|syllabus|exam(ination)?\s*(pattern|scheme|schedule|date)|admission|apply\s*online|online\s*application|bharti|bharati)/i;
-const EXCLUDE_PATTERN = /(tender|auction|rti\b|right to information|citizen charter|contact us|sitemap|privacy|disclaimer|copyright|feedback|grievance|login|sign\s*in|home\s*page|screen\s*reader|skip to|annual report|budget|gazette of tender|corrigendum to tender|e-?procurement)/i;
+const EXCLUDE_PATTERN = /(tender|auction|rti\b|right to information|citizen charter|contact us|sitemap|privacy|disclaimer|copyright|feedback|grievance|login|sign\s*in|home\s*page|screen\s*reader|skip to|annual report|budget|gazette of tender|corrigendum to tender|e-?procurement|quotation|citizen engagement)/i;
 
 export async function scrapeSource(source) {
     const listingUrl = new URL(source.listing_url);
@@ -119,6 +119,7 @@ function toNotices(links, source, baseUrl) {
         const text = cleanText(link.text || link.title);
         if (text.length < 12 || text.length > 300) continue;
         if (!INCLUDE_PATTERN.test(text) || EXCLUDE_PATTERN.test(text)) continue;
+        if (isGenericMenuLabel(text)) continue;
 
         const href = (link.href || "").trim();
         if (!href || href.startsWith("#") || /^(javascript|mailto|tel|data):/i.test(href)) continue;
@@ -151,11 +152,21 @@ function toNotices(links, source, baseUrl) {
     return notices;
 }
 
+/**
+ * Navigation/menu links ("Notifications", "Apply Online", "Examination Schedule") point to
+ * listing pages, not to a specific notice. Real notices are longer or carry a number/year.
+ */
+export function isGenericMenuLabel(text) {
+    const words = text.split(/\s+/).filter(Boolean);
+    return words.length < 4 && !/\d/.test(text);
+}
+
 function cleanText(s) {
     return String(s || "")
         .replace(/&nbsp;/gi, " ")
         .replace(/&amp;/gi, "&")
         .replace(/\s+/g, " ")
+        .replace(/^[»›•\-\s]+/, "")
         .replace(/\b(new|NEW)\b\s*$/g, "")
         .trim();
 }

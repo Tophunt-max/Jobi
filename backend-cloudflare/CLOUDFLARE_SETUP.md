@@ -1,5 +1,10 @@
 # Cloudflare Worker backend
 
+Production: https://sarkari-jobs-worker.bubunmohanta14.workers.dev (D1 `sarkari_jobs_db`).
+R2 is not enabled on the account yet, so PDF upload returns 503 until you enable R2 in the
+dashboard, run `npx wrangler r2 bucket create sarkari-job-docs`, and uncomment
+`[[r2_buckets]]` in `wrangler.toml`.
+
 The Worker (`src/index.js`) serves the Android app's read API, the admin API used by
 `admin-panel/`, an AI-mentor proxy, and a cron job that scrapes official recruitment
 portals into a review queue.

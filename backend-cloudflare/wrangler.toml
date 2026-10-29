@@ -12,7 +12,7 @@ workers_dev = true
 [vars]
 ENVIRONMENT = "production"
 # Comma-separated list of browser origins allowed to call /api/admin/* (your admin panel URL).
-ADMIN_ALLOWED_ORIGINS = "https://sarkari-jobs-admin.pages.dev"
+ADMIN_ALLOWED_ORIGINS = "https://sarkari-jobs-admin.bubunmohanta14.workers.dev"
 # Gemini model used by the AI mentor proxy (POST /api/ai/generate).
 GEMINI_MODEL = "gemini-2.5-flash"
 
@@ -25,13 +25,15 @@ enabled = true
 [[d1_databases]]
 binding = "DB"
 database_name = "sarkari_jobs_db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "5a700429-01e4-4fb9-941f-c2aeabc2d1e9"
 migrations_dir = "migrations"
 
-# Cloudflare R2 bucket for uploaded notice PDFs.
-[[r2_buckets]]
-binding = "FILES_BUCKET"
-bucket_name = "sarkari-job-docs"
+# Cloudflare R2 bucket for uploaded notice PDFs. Disabled until R2 is enabled on the
+# account (Dashboard > R2). Without it, PDF upload returns 503; everything else works.
+# After enabling: npx wrangler r2 bucket create sarkari-job-docs, then uncomment.
+# [[r2_buckets]]
+# binding = "FILES_BUCKET"
+# bucket_name = "sarkari-job-docs"
 
 # Workers Rate Limiting (per Cloudflare location, per client IP).
 [[ratelimits]]
