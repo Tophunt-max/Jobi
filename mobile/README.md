@@ -10,7 +10,7 @@ mobile/
 ├── app.config.ts            Build-time config (env vars, plugins, identifiers)
 ├── plugins/                 Config plugins (Android release signing)
 ├── scripts/ci-version.sh    Version name/code from the release tag
-├── public/_headers          Security headers for the web build (Cloudflare Pages)
+├── public/_headers          Security headers for the web build
 └── src/
     ├── app/                 Routes only (Expo Router). Every file is a screen.
     │   ├── (tabs)/          Home, Jobs, Results, AI Mentor, Profile
@@ -65,7 +65,7 @@ GitHub repository variables and secrets (see below).
 | Name | Needed | Notes |
 |---|---|---|
 | `APP_VARIANT` | yes | `development`, `preview` or `production` (CI uses `production`) |
-| `EXPO_PUBLIC_API_BASE_URL` | yes | Worker URL, must be `https://` for production |
+| `EXPO_PUBLIC_API_BASE_URL` | no | Worker URL. Defaults to `https://rozgarone-worker.bubunmohanta14.workers.dev` |
 | `ADMOB_ANDROID_APP_ID`, `ADMOB_IOS_APP_ID` | production | Non-production builds always use Google test IDs |
 | `ADMOB_{BANNER,INTERSTITIAL,REWARDED}_{ANDROID,IOS}` | production | Empty falls back to test units |
 | `VERSION_NAME`, `VERSION_CODE` | CI | Set from the release tag by `scripts/ci-version.sh` |
@@ -81,7 +81,7 @@ Production config fails fast on a missing/non-https API URL or a malformed AdMob
 | Trigger | What happens |
 |---|---|
 | PR or push touching `mobile/` | Typecheck, lint, `expo-doctor`, JS bundles, Android release APK (debug-signed, for verification) |
-| Push to `main` | Same, plus web export and deploy to Cloudflare Pages |
+| Push to `main` | Same, plus web export and deploy to the `rozgarone-web` Cloudflare Worker |
 | Tag `vX.Y.Z` | Signed AAB + APK attached to a GitHub Release, AAB uploaded to Google Play internal track (draft), iOS archive uploaded to App Store Connect / TestFlight, web deploy |
 | Manual run | Same as a push, plus the iOS job (simulator build unless Apple secrets are set) |
 
@@ -102,11 +102,11 @@ can require approval before a release runs.
 |---|---|---|
 | Variable | `API_BASE_URL` | Worker URL (required for tags) |
 | Variable | `ADMOB_ANDROID_APP_ID` (or old `ADMOB_APP_ID`), `ADMOB_BANNER_ANDROID` (or `ADMOB_BANNER_ID`), `ADMOB_INTERSTITIAL_ANDROID`, `ADMOB_REWARDED_ANDROID`, `ADMOB_*_IOS` | Real ads |
-| Variable | `CF_PAGES_PROJECT` (default `rozgarone-web`), `VERSION_CODE_OFFSET` | Optional |
+| Variable | `VERSION_CODE_OFFSET` | Optional |
 | Secret | `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_STORE_PASSWORD`, `UPLOAD_KEY_PASSWORD`, `UPLOAD_KEY_ALIAS` (default `upload`) | Android signing (upload key for `com.rozgarone.app`) |
 | Secret | `PLAY_SERVICE_ACCOUNT_JSON` | Optional Google Play upload |
 | Secret | `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_BASE64` | Optional iOS signing and TestFlight upload (App Store Connect API key, App Manager role) |
-| Secret | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Optional web deploy (token with Pages edit permission) |
+| Secret | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Optional web deploy (token with Workers Scripts edit permission) |
 
 Optional steps are skipped with a warning when their secrets are missing.
 

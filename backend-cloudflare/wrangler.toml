@@ -25,7 +25,7 @@ enabled = true
 [[d1_databases]]
 binding = "DB"
 database_name = "rozgarone_db"
-database_id = "5a700429-01e4-4fb9-941f-c2aeabc2d1e9"
+database_id = "75a98c64-2d6b-45f5-aa19-2ab310cc41a8"
 migrations_dir = "migrations"
 
 # Cloudflare R2 bucket for uploaded notice PDFs. Disabled until R2 is enabled on the
