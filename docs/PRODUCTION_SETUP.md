@@ -26,7 +26,7 @@ Never put secrets in `wrangler.toml` or in chat. Enter them only in the dashboar
 
 | Name | Type | Required | What it does |
 |---|---|---|---|
-| `ADMIN_API_KEY` | Secret | Yes | Master key for the admin API, at least 32 characters. Use it only for automation and to create the first admin user. Day-to-day admins log in with username and password. |
+| `ADMIN_API_KEY` | Secret | Yes | Master key for the admin API, at least 32 characters. Use it only for automation and to create the first admin user. Day-to-day admins log in with email and password. |
 | `REPORT_SALT` | Secret | Recommended | Salt for hashing IP addresses in reports and login logs. Set it once and do not change it, or old hashes will no longer match new ones. |
 | `GEMINI_API_KEY` | Secret | For AI Mentor | Google Gemini key. Without it, `POST /api/ai/generate` returns 503 "AI mentor is not configured". |
 | `ENVIRONMENT` | Variable (`wrangler.toml`) | Yes | `production` |
