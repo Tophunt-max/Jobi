@@ -61,7 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "sarkari_job_portal.db"
+                    "rozgarone.db"
                 )
                     .addMigrations(MIGRATION_2_3)
                     // v1 only existed in pre-release builds and has no migration path.

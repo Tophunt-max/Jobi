@@ -120,7 +120,7 @@ import com.example.util.JobBrandHelper
 import kotlinx.coroutines.launch
 
 /**
- * Modern, responsive Latest Jobs screen for Sarkari Job Alert candidates.
+ * Modern, responsive Latest Jobs screen for RozgarOne candidates.
  * Features:
  * - Compact, slim search capsule that doesn't consume screen space
  * - Natural scroll-away behavior: When scrolling through jobs, the header and search box

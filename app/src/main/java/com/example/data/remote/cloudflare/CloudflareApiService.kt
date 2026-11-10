@@ -72,7 +72,7 @@ object CloudflareClient {
             .addInterceptor { chain ->
                 chain.proceed(
                     chain.request().newBuilder()
-                        .header("User-Agent", "SarkariJobs-Android/${BuildConfig.VERSION_NAME}")
+                        .header("User-Agent", "RozgarOne-Android/${BuildConfig.VERSION_NAME}")
                         .header("Accept", "application/json")
                         .build()
                 )

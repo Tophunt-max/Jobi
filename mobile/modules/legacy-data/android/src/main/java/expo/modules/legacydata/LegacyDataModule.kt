@@ -18,7 +18,7 @@ import org.json.JSONObject
  * Sources (see the Kotlin app):
  *  - SharedPreferences "user_private_data": eligibility_profile_v1, document_locker_v1, applied_exams_v1 (Moshi JSON)
  *  - SharedPreferences "targeted_job_alert_prefs": pref_* keys
- *  - Room database "sarkari_job_portal.db": jobs.isBookmarked = 1, notifications.isRead = 1
+ *  - Room database "rozgarone.db": jobs.isBookmarked = 1, notifications.isRead = 1
  */
 class LegacyDataModule : Module() {
   private val context: Context
@@ -121,7 +121,7 @@ class LegacyDataModule : Module() {
     const val USER_PREFS = "user_private_data"
     const val ALERT_PREFS = "targeted_job_alert_prefs"
     const val LEGACY_SCHEDULER_PREFS = "deadline_scheduler_prefs"
-    const val DB_NAME = "sarkari_job_portal.db"
+    const val DB_NAME = "rozgarone.db"
     val USER_KEYS = listOf("eligibility_profile_v1", "document_locker_v1", "applied_exams_v1")
   }
 }

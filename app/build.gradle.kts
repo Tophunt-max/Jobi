@@ -47,7 +47,7 @@ android {
   compileSdk { version = release(36) }
 
   defaultConfig {
-    applicationId = "com.aistudio.sarkarijobportal.kxrtzp"
+    applicationId = "com.rozgarone.app"
     minSdk = 24
     targetSdk = 36
     versionCode = config("VERSION_CODE", "2").toInt()

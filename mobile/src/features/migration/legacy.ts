@@ -45,8 +45,8 @@ function mapProfile(o: Obj | null): EligibilityProfile | undefined {
     : DEFAULT_PROFILE.qualification;
   const name = s(o.candidateName);
   return {
-    // "Sarkari Aspirant" was the old placeholder, not a real name.
-    candidateName: name === 'Sarkari Aspirant' ? '' : name,
+    // "RozgarOne Aspirant" was the old placeholder, not a real name.
+    candidateName: name === 'RozgarOne Aspirant' ? '' : name,
     age: Math.round(n(o.age, DEFAULT_PROFILE.age)),
     gender: o.gender === 'FEMALE' || b(o.isWomenCandidate) ? 'FEMALE' : 'MALE',
     category,

@@ -155,7 +155,7 @@ fun AiMentorScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "AI Sarkari Career & Legal Eligibility Mentor",
+                    text = "RozgarOne AI Career & Legal Eligibility Mentor",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = PureWhite,

@@ -96,7 +96,7 @@ import com.example.ui.theme.StatusUrgent
 import java.net.URLEncoder
 
 /**
- * High-performance In-App WebView Browser for Sarkari Job Alert candidates.
+ * High-performance In-App WebView Browser for RozgarOne candidates.
  * Replaces direct external browser redirection to keep candidates inside the app
  * while reviewing official recruitment portals, notifications, admit cards, and results.
  */
@@ -790,7 +790,7 @@ private fun shareUrl(context: Context, url: String, title: String) {
     try {
         val sendIntent = Intent().apply {
             action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, "$title\n$url\n\nShared via Sarkari Job Alert")
+            putExtra(Intent.EXTRA_TEXT, "$title\n$url\n\nShared via RozgarOne")
             type = "text/plain"
         }
         val shareIntent = Intent.createChooser(sendIntent, "Share Official Link")

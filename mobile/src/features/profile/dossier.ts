@@ -9,7 +9,7 @@ function row(label: string, value: string | number | undefined): string | null {
 /** Plain-text summary the user can share or print. Built only when they tap Share. */
 export function buildDossier(p: EligibilityProfile, d: DocumentLocker, exams: AppliedExam[]): string {
   const lines: (string | null)[] = [
-    'SARKARI ASPIRANT PROFILE',
+    'ROZGARONE ASPIRANT PROFILE',
     '========================',
     row('Name', p.candidateName),
     row("Father's name", d.fatherName),

@@ -4,7 +4,7 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class UserEligibilityProfile(
-    val candidateName: String = "Sarkari Aspirant",
+    val candidateName: String = "RozgarOne Aspirant",
     val age: Int = 23,
     val gender: String = "MALE", // "MALE", "FEMALE"
     val category: CasteCategory = CasteCategory.OBC_NCL,

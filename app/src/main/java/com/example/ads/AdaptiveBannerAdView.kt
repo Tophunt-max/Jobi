@@ -146,7 +146,7 @@ fun AdaptiveBannerAdView(
                 val bannerTitle = if (adSettings.customSponsorActive) {
                     adSettings.sponsorHeadline
                 } else {
-                    "🎯 Free Sarkari 2026 Test Series & PDF"
+                    "🎯 Free RozgarOne 2026 Test Series & PDF"
                 }
 
                 val bannerSubtitle = if (adSettings.customSponsorActive) {
@@ -164,7 +164,7 @@ fun AdaptiveBannerAdView(
                 val targetUrl = if (adSettings.customSponsorActive) {
                     adSettings.sponsorTargetUrl
                 } else {
-                    "https://play.google.com/store/search?q=sarkari+test+series&c=apps"
+                    "https://play.google.com/store/search?q=govt+exam+test+series&c=apps"
                 }
 
                 Row(
