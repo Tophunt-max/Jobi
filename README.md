@@ -23,6 +23,4 @@ The original Android app (Kotlin, Jetpack Compose, Room) was removed from this r
 ## CI
 
 - `.github/workflows/ci.yml`: Worker migrations and API smoke test; admin panel typecheck and static build.
-- `.github/workflows/mobile.yml`: Expo typecheck, lint, `expo-doctor`, and Android/iOS/web bundles, on changes under `mobile/`.
-
-App store builds run on EAS (`npx eas-cli@latest build`); see the mobile README.
+- `.github/workflows/mobile.yml`: Expo checks and native builds on every change under `mobile/`; web deploy on `main`; signed Android/iOS release builds, GitHub Release, Google Play and TestFlight upload on `vX.Y.Z` tags. Everything runs on GitHub Actions, no EAS. See [mobile/README.md](mobile/README.md#cicd-github-actions-no-eas).

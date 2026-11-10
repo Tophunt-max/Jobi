@@ -2,7 +2,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 /**
  * Build-time configuration. Values come from environment variables
- * (EAS environment variables, a local .env file, or the shell).
+ * (GitHub Actions variables/secrets in CI, a local .env file, or the shell).
  *
  * APP_VARIANT: development | preview | production
  */
@@ -36,6 +36,15 @@ function admobAppId(platform: 'android' | 'ios'): string {
   return value;
 }
 
+/** VERSION_CODE is set by CI from the release tag (see .github/workflows/mobile.yml). */
+function versionCode(): number {
+  const raw = env('VERSION_CODE');
+  if (!raw) return 1;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 2_100_000_000) throw new Error(`Invalid VERSION_CODE "${raw}"`);
+  return n;
+}
+
 function admobUnit(name: string): string {
   const value = env(name);
   if (!value) return '';
@@ -57,15 +66,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: appName,
     slug: 'sarkari-jobs',
-    owner: env('EXPO_OWNER') || undefined,
-    version: '2.0.0',
+    version: env('VERSION_NAME') || '2.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     scheme: 'sarkari',
     userInterfaceStyle: 'automatic',
-    runtimeVersion: { policy: 'appVersion' },
     ios: {
       bundleIdentifier: IOS_BUNDLE_ID,
+      buildNumber: String(versionCode()),
+      // Lets xcodebuild sign automatically with the App Store Connect API key in CI.
+      appleTeamId: env('APPLE_TEAM_ID') || undefined,
       supportsTablet: true,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
@@ -73,6 +83,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: ANDROID_PACKAGE,
+      versionCode: versionCode(),
       // The document locker holds personal data; keep it out of cloud backups (same as the Kotlin app).
       allowBackup: false,
       adaptiveIcon: {
@@ -131,6 +142,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           delayAppMeasurementInit: true,
         },
       ],
+      './plugins/withAndroidReleaseSigning',
     ],
     experiments: {
       typedRoutes: true,
@@ -147,7 +159,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         rewardedAndroid: admobUnit('ADMOB_REWARDED_ANDROID'),
         rewardedIos: admobUnit('ADMOB_REWARDED_IOS'),
       },
-      eas: env('EAS_PROJECT_ID') ? { projectId: env('EAS_PROJECT_ID') } : undefined,
     },
   };
 };
