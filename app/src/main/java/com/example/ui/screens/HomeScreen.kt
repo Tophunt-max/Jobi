@@ -109,7 +109,7 @@ import com.example.ui.theme.StatusUrgentBg
 import com.example.ui.theme.VerifiedBlue
 import com.example.ui.viewmodel.MainTab
 
-data class SarkariPortalPillar(
+data class RozgarOnePortalPillar(
     val title: String,
     val subtitle: String,
     val iconEmoji: String,
@@ -128,13 +128,13 @@ data class JobSectorDef(
     val filterKey: String
 )
 
-private val SarkariPillarsList = listOf(
-    SarkariPortalPillar("Latest Job", "Active Recruitments", "💼", Color(0xFFEFF6FF), Color(0xFF1D4ED8), "ACTIVE", Color(0xFF2563EB), "pillar_latest_job", 0),
-    SarkariPortalPillar("Admit Card", "Exam Hall Tickets", "🎫", Color(0xFFFFF7ED), Color(0xFFC2410C), "LIVE", Color(0xFFEA580C), "pillar_admit_card", 2),
-    SarkariPortalPillar("Results", "Cut-off & Merit", "🏆", Color(0xFFF0FDF4), Color(0xFF15803D), "NEW", Color(0xFF059669), "pillar_results", 1),
-    SarkariPortalPillar("Syllabus", "Exam Pattern & Marks", "📚", Color(0xFFFAF5FF), Color(0xFF7E22CE), "2026", Color(0xFF7C3AED), "pillar_syllabus", 3),
-    SarkariPortalPillar("Admission", "Colleges & NTA", "🎓", Color(0xFFFDF2F8), Color(0xFFBE185D), "OPEN", Color(0xFFDB2777), "pillar_admission", 4),
-    SarkariPortalPillar("Answer Key", "Official Objections", "🔑", Color(0xFFFFFBEB), Color(0xFFB45309), "KEYS", Color(0xFFD97706), "pillar_answer_key", 5)
+private val RozgarOnePillarsList = listOf(
+    RozgarOnePortalPillar("Latest Job", "Active Recruitments", "💼", Color(0xFFEFF6FF), Color(0xFF1D4ED8), "ACTIVE", Color(0xFF2563EB), "pillar_latest_job", 0),
+    RozgarOnePortalPillar("Admit Card", "Exam Hall Tickets", "🎫", Color(0xFFFFF7ED), Color(0xFFC2410C), "LIVE", Color(0xFFEA580C), "pillar_admit_card", 2),
+    RozgarOnePortalPillar("Results", "Cut-off & Merit", "🏆", Color(0xFFF0FDF4), Color(0xFF15803D), "NEW", Color(0xFF059669), "pillar_results", 1),
+    RozgarOnePortalPillar("Syllabus", "Exam Pattern & Marks", "📚", Color(0xFFFAF5FF), Color(0xFF7E22CE), "2026", Color(0xFF7C3AED), "pillar_syllabus", 3),
+    RozgarOnePortalPillar("Admission", "Colleges & NTA", "🎓", Color(0xFFFDF2F8), Color(0xFFBE185D), "OPEN", Color(0xFFDB2777), "pillar_admission", 4),
+    RozgarOnePortalPillar("Answer Key", "Official Objections", "🔑", Color(0xFFFFFBEB), Color(0xFFB45309), "KEYS", Color(0xFFD97706), "pillar_answer_key", 5)
 )
 
 private val TopJobSectorsList = listOf(
@@ -278,7 +278,7 @@ fun HomeScreen(
                                     )
                                     Spacer(modifier = Modifier.width(5.dp))
                                     Text(
-                                        text = "BHARAT SARKARI JOBS 2026",
+                                        text = "ROZGARONE GOVT JOBS 2026",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = PureWhite,
@@ -589,8 +589,8 @@ fun HomeScreen(
             }
         }
 
-        // 2b. Official Sarkari 6 Pillar Portals Hub (Latest Jobs, Admit Card, Results, Syllabus, Admission, Answer Key)
-        item(key = "sarkari_pillars_hub") {
+        // 2b. Official RozgarOne 6 Pillar Portals Hub (Latest Jobs, Admit Card, Results, Syllabus, Admission, Answer Key)
+        item(key = "rozgarone_pillars_hub") {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -618,7 +618,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // 2 Rows x 3 Columns grid of pillars
-                val chunkedPillars = SarkariPillarsList.chunked(3)
+                val chunkedPillars = RozgarOnePillarsList.chunked(3)
                 chunkedPillars.forEachIndexed { rowIndex, rowItems ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),

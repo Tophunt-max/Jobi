@@ -20,8 +20,8 @@ const ADMOB_APP_ID_RE = /^ca-app-pub-\d{16}~\d{10}$/;
 const ADMOB_UNIT_ID_RE = /^ca-app-pub-\d{16}\/\d{10}$/;
 
 // Same applicationId as the Kotlin app, so the Play Store treats this as an update.
-const ANDROID_PACKAGE = process.env.ANDROID_PACKAGE ?? 'com.aistudio.sarkarijobportal.kxrtzp';
-const IOS_BUNDLE_ID = process.env.IOS_BUNDLE_ID ?? 'com.aistudio.sarkarijobportal.kxrtzp';
+const ANDROID_PACKAGE = process.env.ANDROID_PACKAGE ?? 'com.rozgarone.app';
+const IOS_BUNDLE_ID = process.env.IOS_BUNDLE_ID ?? 'com.rozgarone.app';
 
 function env(name: string): string {
   return (process.env[name] ?? '').trim();
@@ -56,12 +56,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     name: appName,
-    slug: 'sarkari-jobs',
+    slug: 'rozgarone',
     owner: env('EXPO_OWNER') || undefined,
     version: '2.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
-    scheme: 'sarkari',
+    scheme: 'rozgarone',
     userInterfaceStyle: 'automatic',
     runtimeVersion: { policy: 'appVersion' },
     ios: {

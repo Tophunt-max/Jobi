@@ -90,7 +90,7 @@ class AiMentorRepository {
         userProfile: UserEligibilityProfile
     ): String = withContext(Dispatchers.IO) {
         val prompt = buildString {
-            appendLine("You are the official AI Sarkari Job & Examination Advisor for Indian aspirants.")
+            appendLine("You are the official RozgarOne AI Government Job & Examination Advisor for Indian aspirants.")
             appendLine("Candidate Profile: Age: ${userProfile.age}, Category: ${userProfile.category.displayName}, Qualification: ${userProfile.qualification.displayName}, State: ${userProfile.homeState}.")
             appendLine("USER QUESTION:")
             appendLine(query)

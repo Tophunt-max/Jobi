@@ -85,7 +85,7 @@ export async function handlePublic(request, env, url, cors) {
     const h = { ...cors, ...PUBLIC_CACHE };
 
     if (path === "/" ) {
-        return json({ success: true, name: "Sarkari Job Portal API", version: "3.0.0" }, { headers: cors });
+        return json({ success: true, name: "RozgarOne API", version: "3.0.0" }, { headers: cors });
     }
 
     if (path === "/api/health") {

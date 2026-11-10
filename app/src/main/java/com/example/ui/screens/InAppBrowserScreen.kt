@@ -96,7 +96,7 @@ import com.example.ui.theme.StatusUrgent
 import java.net.URLEncoder
 
 /**
- * High-performance In-App WebView Browser for Sarkari Job Alert candidates.
+ * High-performance In-App WebView Browser for RozgarOne candidates.
  * Replaces direct external browser redirection to keep candidates inside the app
  * while reviewing official recruitment portals, notifications, admit cards, and results.
  */

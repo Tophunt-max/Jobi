@@ -375,7 +375,7 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
         val exams = _appliedExams.value
         val sb = StringBuilder()
         sb.appendLine("==================================================")
-        sb.appendLine("       SARKARI ASPIRANT CAREER DOSSIER           ")
+        sb.appendLine("       ROZGARONE ASPIRANT CAREER DOSSIER           ")
         sb.appendLine("==================================================")
         sb.appendLine("Candidate Name: ${p.candidateName}")
         sb.appendLine("Father's Name : ${d.fatherName}")
@@ -403,7 +403,7 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
             if (ex.notes.isNotBlank()) sb.appendLine("   Note: ${ex.notes}")
         }
         sb.appendLine("==================================================")
-        sb.appendLine("Generated via Sarkari Portal • Verified Aspirant Profile")
+        sb.appendLine("Generated via RozgarOne • Verified Aspirant Profile")
         return sb.toString()
     }
 
@@ -411,7 +411,7 @@ class JobViewModel(application: Application) : AndroidViewModel(application) {
         val text = generateAspirantDossierText()
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "Sarkari Aspirant Profile Dossier - ${_userProfile.value.candidateName}")
+            putExtra(Intent.EXTRA_SUBJECT, "RozgarOne Aspirant Profile Dossier - ${_userProfile.value.candidateName}")
             putExtra(Intent.EXTRA_TEXT, text)
         }
         val chooser = Intent.createChooser(intent, "Share / Print Aspirant Dossier")

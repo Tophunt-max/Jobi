@@ -3,10 +3,10 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="user_private_data.xml" />
-        <exclude domain="database" path="sarkari_job_portal.db" />
+        <exclude domain="database" path="rozgarone.db" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="user_private_data.xml" />
-        <exclude domain="database" path="sarkari_job_portal.db" />
+        <exclude domain="database" path="rozgarone.db" />
     </device-transfer>
 </data-extraction-rules>

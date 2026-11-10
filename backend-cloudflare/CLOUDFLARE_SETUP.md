@@ -1,8 +1,8 @@
 # Cloudflare Worker backend
 
-Production: https://sarkari-jobs-worker.bubunmohanta14.workers.dev (D1 `sarkari_jobs_db`).
+Production: https://rozgarone-worker.bubunmohanta14.workers.dev (D1 `rozgarone_db`).
 R2 is not enabled on the account yet, so PDF upload returns 503 until you enable R2 in the
-dashboard, run `npx wrangler r2 bucket create sarkari-job-docs`, and uncomment
+dashboard, run `npx wrangler r2 bucket create rozgarone-docs`, and uncomment
 `[[r2_buckets]]` in `wrangler.toml`.
 
 The Worker (`src/index.js`) serves the Android app's read API, the admin API used by
@@ -29,8 +29,8 @@ cd backend-cloudflare
 npm ci
 
 npx wrangler login
-npx wrangler d1 create sarkari_jobs_db      # copy the database_id into wrangler.toml
-npx wrangler r2 bucket create sarkari-job-docs
+npx wrangler d1 create rozgarone_db      # copy the database_id into wrangler.toml
+npx wrangler r2 bucket create rozgarone-docs
 
 # Secrets (never put these in wrangler.toml)
 openssl rand -base64 48 | npx wrangler secret put ADMIN_API_KEY   # required, >= 32 chars
@@ -51,7 +51,7 @@ Migrations are idempotent on such a database: `0001` creates nothing that alread
 - deletes `job-imp-*` rows still in `pending_review` (they came from the old placeholder importer, not from real portals);
 - moves the 16 sample jobs that the old `schema.sql` seeded as `ACTIVE` back to `pending_review`, so an admin verifies them before they are public.
 
-Back up first: `npx wrangler d1 export sarkari_jobs_db --remote --output backup.sql`.
+Back up first: `npx wrangler d1 export rozgarone_db --remote --output backup.sql`.
 
 ## Security model
 

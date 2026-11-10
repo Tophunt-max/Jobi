@@ -1,6 +1,6 @@
 -- LOCAL DEVELOPMENT ONLY. Do not apply to production.
 -- These rows are illustrative sample data; their PDF links are not real notices.
--- Apply with: npx wrangler d1 execute sarkari_jobs_db --local --file=seed/dev_sample_jobs.sql
+-- Apply with: npx wrangler d1 execute rozgarone_db --local --file=seed/dev_sample_jobs.sql
 -- ============================================================
 -- Seed Sample Active & Verified Jobs across All Categories
 -- ============================================================

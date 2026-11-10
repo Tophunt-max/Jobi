@@ -71,7 +71,7 @@ All values are read in `app.config.ts`. Set them in `.env` locally or as
 | `ADMOB_ANDROID_APP_ID`, `ADMOB_IOS_APP_ID` | production | Non-production builds always use Google test IDs |
 | `ADMOB_{BANNER,INTERSTITIAL,REWARDED}_{ANDROID,IOS}` | production | Empty falls back to test units |
 | `EAS_PROJECT_ID`, `EXPO_OWNER` | EAS | From `npx eas-cli@latest init` |
-| `ANDROID_PACKAGE`, `IOS_BUNDLE_ID` | no | Default keeps the Kotlin app's ID `com.aistudio.sarkarijobportal.kxrtzp` |
+| `ANDROID_PACKAGE`, `IOS_BUNDLE_ID` | no | Default keeps the Kotlin app's ID `com.rozgarone.app` |
 
 Production config fails fast on a missing/non-https API URL or a malformed AdMob ID.
 
@@ -97,7 +97,7 @@ Register the bundle ID (or set `IOS_BUNDLE_ID`) in App Store Connect first.
 
 ```bash
 EXPO_PUBLIC_API_BASE_URL=https://… npx expo export --platform web
-npx wrangler pages deploy dist --project-name sarkari-jobs-web
+npx wrangler pages deploy dist --project-name rozgarone-web
 ```
 
 The export is a single-page app; Cloudflare Pages serves `index.html` for unknown paths.
@@ -109,7 +109,7 @@ On first launch, `src/features/migration/legacy.ts` calls the `legacy-data` modu
 
 - SharedPreferences `user_private_data`: eligibility profile, document locker, applied exams
 - SharedPreferences `targeted_job_alert_prefs`: alert preferences
-- Room DB `sarkari_job_portal.db`: bookmarked jobs and read notifications
+- Room DB `rozgarone.db`: bookmarked jobs and read notifications
 
 The data is saved into the new stores. The old copies are deleted on the next launch,
 after the new data is on disk. Bookmarks then get fresh reminders.

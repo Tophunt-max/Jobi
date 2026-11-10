@@ -25,7 +25,7 @@ check "old upload route gone"     405 "$(code -X POST "$BASE/api/upload")"
 
 # Admin auth
 check "admin no key"              401 "$(code "$BASE/api/admin/jobs/pending")"
-check "admin wrong key"           401 "$(code -H 'X-Admin-Key: sarkari_admin_secret_key_change_me' "$BASE/api/admin/jobs/pending")"
+check "admin wrong key"           401 "$(code -H 'X-Admin-Key: rozgarone_admin_secret_key_change_me' "$BASE/api/admin/jobs/pending")"
 check "admin key in query ignored" 401 "$(code "$BASE/api/admin/jobs/pending?admin_key=$KEY")"
 check "admin sources no key"      401 "$(code "$BASE/api/admin/job-import/sources")"
 check "admin runs no key"         401 "$(code "$BASE/api/admin/job-import/runs")"

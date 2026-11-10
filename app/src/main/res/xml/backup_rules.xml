@@ -2,5 +2,5 @@
 <!-- Android 11 and lower. Personal documents and the local cache are never backed up. -->
 <full-backup-content>
     <exclude domain="sharedpref" path="user_private_data.xml" />
-    <exclude domain="database" path="sarkari_job_portal.db" />
+    <exclude domain="database" path="rozgarone.db" />
 </full-backup-content>

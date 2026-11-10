@@ -98,7 +98,7 @@ object DeadlineNotificationScheduler {
     private fun alarmIntent(context: Context, jobId: String, daysBefore: Int): Intent =
         Intent(context, DeadlineAlertReceiver::class.java).apply {
             action = DeadlineAlertReceiver.ACTION_DEADLINE_ALERT
-            data = Uri.Builder().scheme("sarkari").authority("deadline")
+            data = Uri.Builder().scheme("rozgarone").authority("deadline")
                 .appendPath(jobId).appendPath(daysBefore.toString()).build()
         }
 

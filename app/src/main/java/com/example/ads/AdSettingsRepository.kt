@@ -73,7 +73,7 @@ data class AdSettings(
  * exposing reactive StateFlow for instant, zero-restart UI and SDK updates.
  */
 object AdSettingsRepository {
-    private const val PREFS_NAME = "sarkari_admin_ad_settings"
+    private const val PREFS_NAME = "rozgarone_admin_ad_settings"
 
     private const val KEY_MASTER_ENABLED = "key_master_enabled"
     private const val KEY_BANNER_ENABLED = "key_banner_enabled"

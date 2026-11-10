@@ -62,7 +62,7 @@
         android:fillColor="#81C784"
         android:pathData="M75,65 C72,62 69,64 70,68 C71,70 75,69 75,65 Z" />
 
-    <!-- Bottom Ribbon / Banner (Sarkari Portal) in Tricolor gradient layers -->
+    <!-- Bottom Ribbon / Banner (RozgarOne) in Tricolor gradient layers -->
     <!-- Saffron top bar -->
     <path
         android:fillColor="#FF9933"

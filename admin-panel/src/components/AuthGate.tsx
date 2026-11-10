@@ -41,10 +41,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     // Earlier versions kept the Worker URL and the raw admin API key in browser storage.
     // Remove them so a stale copy of the key does not linger on admins' machines.
     try {
-      localStorage.removeItem('sarkari_admin_api_url');
+      localStorage.removeItem('rozgarone_admin_api_url');
       localStorage.removeItem('CLOUDFLARE_ADMIN_KEY');
       localStorage.removeItem('CLOUDFLARE_WORKER_URL');
-      sessionStorage.removeItem('sarkari_admin_session_key');
+      sessionStorage.removeItem('rozgarone_admin_session_key');
     } catch {
       /* storage may be unavailable (private mode) */
     }

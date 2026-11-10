@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker backend for Sarkari Job Portal.
+ * Cloudflare Worker backend for RozgarOne.
  *
  * - Public read API for the Android app (ACTIVE notices only).
  * - Admin API (moderation, importer, ads, uploads) protected by ADMIN_API_KEY secret.

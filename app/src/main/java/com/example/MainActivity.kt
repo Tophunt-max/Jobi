@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
         fun openJobIntent(context: Context, jobId: String): Intent =
             Intent(context, MainActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
-                data = Uri.Builder().scheme("sarkari").authority("job").appendPath(jobId).build()
+                data = Uri.Builder().scheme("rozgarone").authority("job").appendPath(jobId).build()
                 putExtra(EXTRA_OPEN_JOB_ID, jobId)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             }
