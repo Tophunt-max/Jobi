@@ -162,6 +162,8 @@ export type Gender = 'MALE' | 'FEMALE';
 
 export interface EligibilityProfile {
   candidateName: string;
+  /** Shown on the profile card only; never sent to the server. */
+  email?: string;
   age: number;
   gender: Gender;
   category: CasteCategory;

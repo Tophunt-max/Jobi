@@ -28,8 +28,16 @@ export const INDIAN_STATES = [
   'Jammu & Kashmir',
 ] as const;
 
-/** Sector filters. Each matches on category, organisation and title keywords. */
+/**
+ * Sector filters. Keyword sectors match on category, organisation and title words.
+ * `central`, `state` and `other` have no keywords; `features/jobs/logic.ts` derives them
+ * from the job's scope and from the keyword sectors.
+ */
 export const SECTORS: { key: string; icon: string; keywords: string[] }[] = [
+  { key: 'central', icon: '🏛', keywords: [] },
+  { key: 'state', icon: '🏢', keywords: [] },
+  { key: 'psu', icon: '🏭', keywords: ['psu', 'bhel', 'ongc', 'ntpc', 'iocl', 'indian oil', 'gail', 'sail', 'bel', 'hal', 'coal india', 'powergrid', 'power grid', 'bpcl', 'hpcl', 'nhpc', 'aai', 'airports authority', 'optcl', 'ohpc'] },
+  { key: 'other', icon: '💼', keywords: [] },
   { key: 'ssc', icon: '📝', keywords: ['ssc', 'staff selection'] },
   { key: 'upsc', icon: '🏛️', keywords: ['upsc', 'union public service'] },
   { key: 'banking', icon: '🏦', keywords: ['bank', 'ibps', 'sbi', 'rbi', 'nabard', 'insurance', 'lic'] },

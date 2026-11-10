@@ -1,4 +1,6 @@
+import type { ArtKey } from '@/assets/images';
 import { ALL, SECTORS } from '@/constants/catalog';
+import { requiredEducationRank } from '@/features/profile/eligibility';
 import { daysUntil } from '@/lib/dates';
 import type { Job, JobStatus } from '@/types/domain';
 
@@ -48,7 +50,7 @@ function escapeRegExp(s: string): string {
  * (3 letters or fewer, e.g. "ssc", "je") must be a whole word, so "OSSC" is not "SSC".
  */
 const SECTOR_PATTERNS = new Map(
-  SECTORS.map((s) => {
+  SECTORS.filter((s) => s.keywords.length > 0).map((s) => {
     const parts = s.keywords.map((k) => {
       const kw = escapeRegExp(k.trim());
       return k.trim().length <= 3 ? `${kw}(?![a-z0-9])` : kw;
@@ -57,10 +59,91 @@ const SECTOR_PATTERNS = new Map(
   }),
 );
 
-export function matchesSector(job: Job, sectorKey: string): boolean {
+/** Keyword sector test on any text (used for results, admit cards and other lists). */
+export function textMatchesSector(text: string, sectorKey: string, scope = ''): boolean {
   if (sectorKey === ALL) return true;
-  const pattern = SECTOR_PATTERNS.get(sectorKey);
-  return pattern ? pattern.test(haystack(job)) : true;
+  const isAllIndia = scope === '' || scope.toLowerCase() === 'all india';
+  const statePsc = SECTOR_PATTERNS.get('statePsc')?.test(text) ?? false;
+  switch (sectorKey) {
+    case 'central':
+      return isAllIndia && !statePsc && !(SECTOR_PATTERNS.get('psu')?.test(text) ?? false);
+    case 'state':
+      return !isAllIndia || statePsc;
+    case 'other':
+      return ![...SECTOR_PATTERNS.values()].some((p) => p.test(text));
+    default: {
+      const pattern = SECTOR_PATTERNS.get(sectorKey);
+      return pattern ? pattern.test(text) : true;
+    }
+  }
+}
+
+export function matchesSector(job: Job, sectorKey: string): boolean {
+  return textMatchesSector(haystack(job), sectorKey, job.state);
+}
+
+/** Order used to pick one artwork for a notice; the first match wins. */
+const ART_ORDER: { sector: string; art: ArtKey }[] = [
+  { sector: 'railways', art: 'railway' },
+  { sector: 'banking', art: 'banking' },
+  { sector: 'defence', art: 'defence' },
+  { sector: 'police', art: 'police' },
+  { sector: 'teaching', art: 'teaching' },
+  { sector: 'medical', art: 'medical' },
+  { sector: 'psu', art: 'psu' },
+  { sector: 'upsc', art: 'upsc' },
+  { sector: 'ssc', art: 'ssc' },
+  { sector: 'engineering', art: 'engineering' },
+  { sector: 'statePsc', art: 'state-govt' },
+];
+
+/** Picks the emblem artwork for any text (organisation, exam name, title). */
+export function artForText(text: string, scope = ''): ArtKey {
+  for (const { sector, art } of ART_ORDER) {
+    if (SECTOR_PATTERNS.get(sector)?.test(text)) return art;
+  }
+  return scope && scope.toLowerCase() !== 'all india' ? 'state-govt' : 'central-govt';
+}
+
+export function artForJob(job: Job): ArtKey {
+  return artForText(haystack(job), job.state);
+}
+
+/** Artwork for a sector filter key. */
+export const SECTOR_ART: Record<string, ArtKey> = {
+  central: 'central-govt',
+  state: 'state-govt',
+  statePsc: 'state-govt',
+  railways: 'railway',
+  banking: 'banking',
+  defence: 'defence',
+  police: 'police',
+  teaching: 'teaching',
+  medical: 'medical',
+  psu: 'psu',
+  other: 'other',
+  ssc: 'ssc',
+  upsc: 'upsc',
+  engineering: 'engineering',
+};
+
+/** Short qualification label for list pills ("Graduate", "12th Pass"). */
+export function shortQualification(qualification: string): string {
+  const rank = requiredEducationRank(qualification);
+  switch (rank) {
+    case 1:
+      return '10th Pass';
+    case 2:
+      return '12th Pass';
+    case 3:
+      return 'Diploma';
+    case 4:
+      return 'Graduate';
+    case 5:
+      return 'Post Graduate';
+    default:
+      return '';
+  }
 }
 
 export function matchesState(job: Job, state: string): boolean {

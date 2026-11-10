@@ -1,28 +1,42 @@
 import { Ionicons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
-import { Container, EmptyState, IconButton, Text } from '@/components/ui';
+import { images } from '@/assets/images';
+import { ArtIcon, EmptyArt, FilterChips, Page, ScreenHeader, Surface, Text } from '@/components/ui';
 import { useInbox, type InboxItem } from '@/features/notifications/inbox';
 import { relativeTime } from '@/lib/dates';
 import { useUserStore } from '@/store/userStore';
 import { useTheme } from '@/theme';
 
-const TYPE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
-  DEADLINE_ALERT: 'alarm-outline',
-  NEW_JOB: 'briefcase-outline',
-  RESULT: 'trophy-outline',
-  ADMIT_CARD: 'id-card-outline',
+type Filter = 'all' | 'jobs' | 'results' | 'admit';
+
+const TYPE_ICON: Record<string, ImageSourcePropType> = {
+  NEW_JOB: images.notifications.newJob,
+  DEADLINE_ALERT: images.notifications.deadline,
+  RESULT: images.notifications.result,
+  ANSWER_KEY: images.notifications.result,
+  ADMIT_CARD: images.notifications.admitCard,
 };
+
+function group(type: string): Filter {
+  if (type === 'NEW_JOB' || type === 'DEADLINE_ALERT') return 'jobs';
+  if (type === 'RESULT' || type === 'ANSWER_KEY') return 'results';
+  if (type === 'ADMIT_CARD') return 'admit';
+  return 'all';
+}
 
 export default function NotificationsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { colors, spacing } = useTheme();
+  const { colors } = useTheme();
   const { items } = useInbox();
   const markRead = useUserStore((s) => s.markRead);
+  const [filter, setFilter] = useState<Filter>('all');
+  const shown = useMemo(() => (filter === 'all' ? items : items.filter((n) => group(n.type) === filter)), [items, filter]);
 
   const open = (n: InboxItem) => {
     markRead([n.id]);
@@ -31,38 +45,39 @@ export default function NotificationsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Stack.Screen
-        options={{
-          headerRight: () =>
-            items.some((n) => !n.read) ? (
-              <IconButton icon="checkmark-done-outline" label={t('notifications.markAllRead')} onPress={() => markRead(items.map((n) => n.id))} />
-            ) : null,
-        }}
+      <ScreenHeader
+        title={t('notifications.title')}
+        right={
+          items.some((n) => !n.read) ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={t('notifications.markAllRead')} onPress={() => markRead(items.map((n) => n.id))} hitSlop={8} style={{ padding: 6 }}>
+              <Ionicons name="checkmark-done-outline" size={22} color={colors.primary} />
+            </Pressable>
+          ) : null
+        }
       />
+      <View style={{ backgroundColor: colors.surface, paddingBottom: 10 }}>
+        <FilterChips<Filter>
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'all', label: t('jobs.statusAll') },
+            { value: 'jobs', label: t('tabs.jobs') },
+            { value: 'results', label: t('results.tabResults') },
+            { value: 'admit', label: t('notifications.admitCard') },
+          ]}
+        />
+      </View>
       <FlashList
-        data={items}
+        data={shown}
         keyExtractor={(n) => n.id}
-        ListEmptyComponent={<EmptyState icon="notifications-off-outline" title={t('notifications.empty')} />}
-        contentContainerStyle={{ paddingVertical: spacing.sm }}
+        ListEmptyComponent={<EmptyArt title={t('notifications.empty')} />}
+        contentContainerStyle={{ paddingVertical: 12, paddingBottom: 24 }}
         renderItem={({ item }) => (
-          <Container>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => open(item)}
-              style={({ pressed }) => [
-                styles.row,
-                { borderBottomColor: colors.border, backgroundColor: pressed ? colors.surfaceMuted : 'transparent' },
-              ]}
-            >
-              <View style={[styles.icon, { backgroundColor: item.type === 'DEADLINE_ALERT' ? colors.dangerSoft : colors.primarySoft }]}>
-                <Ionicons
-                  name={TYPE_ICON[item.type] ?? 'megaphone-outline'}
-                  size={18}
-                  color={item.type === 'DEADLINE_ALERT' ? colors.danger : colors.primary}
-                />
-              </View>
+          <Page style={{ paddingBottom: 10 }}>
+            <Surface onPress={() => open(item)} accessibilityLabel={item.title} style={styles.row}>
+              <ArtIcon source={TYPE_ICON[item.type] ?? images.notifications.general} size={42} />
               <View style={{ flex: 1, gap: 2 }}>
-                <Text variant="subheading" weight={item.read ? '500' : '800'} numberOfLines={2}>
+                <Text weight={item.read ? '700' : '900'} numberOfLines={2}>
                   {item.title}
                 </Text>
                 {item.body ? (
@@ -70,13 +85,13 @@ export default function NotificationsScreen() {
                     {item.body}
                   </Text>
                 ) : null}
-                <Text variant="tiny" tone="muted">
+                <Text variant="tiny" tone="muted" style={{ marginTop: 2 }}>
                   {relativeTime(item.timestamp)}
                 </Text>
               </View>
               {!item.read ? <View style={[styles.dot, { backgroundColor: colors.primary }]} /> : null}
-            </Pressable>
-          </Container>
+            </Surface>
+          </Page>
         )}
       />
     </View>
@@ -84,7 +99,6 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 12, padding: 16, borderBottomWidth: StyleSheet.hairlineWidth, alignItems: 'flex-start' },
-  icon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
+  row: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  dot: { width: 9, height: 9, borderRadius: 5, marginTop: 6 },
 });

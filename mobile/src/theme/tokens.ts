@@ -48,7 +48,7 @@ export type ThemeColors = {
 
 export const colors: Record<ColorScheme, ThemeColors> = {
   light: {
-    background: '#F8FAFC',
+    background: '#F4F6FB',
     surface: '#FFFFFF',
     surfaceMuted: '#F1F5F9',
     border: '#E2E8F0',
@@ -107,6 +107,20 @@ export const typography = {
   caption: { fontSize: 12, fontWeight: '500' as const, lineHeight: 16 },
   tiny: { fontSize: 10, fontWeight: '600' as const, lineHeight: 13 },
 };
+
+/** Card elevation. `boxShadow` works on Android, iOS and web in RN 0.76+. */
+export const shadows = {
+  light: {
+    card: '0px 2px 10px rgba(15, 23, 42, 0.06)',
+    raised: '0px 6px 18px rgba(29, 78, 216, 0.28)',
+    bar: '0px -2px 12px rgba(15, 23, 42, 0.06)',
+  },
+  dark: {
+    card: '0px 2px 10px rgba(0, 0, 0, 0.35)',
+    raised: '0px 6px 18px rgba(0, 0, 0, 0.5)',
+    bar: '0px -2px 12px rgba(0, 0, 0, 0.4)',
+  },
+} as const;
 
 /** Content never stretches wider than this on tablets and desktop web. */
 export const MAX_CONTENT_WIDTH = 760;
