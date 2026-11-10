@@ -22,6 +22,14 @@ export default function EditProfileScreen() {
       </Text>
       <Card>
         <TextField label={t('profile.name')} value={p.candidateName} onChangeText={(candidateName) => patch({ candidateName })} maxLength={80} autoCapitalize="words" />
+        <TextField
+          label={t('profile.email')}
+          value={p.email ?? ''}
+          onChangeText={(email) => patch({ email: email.trim() })}
+          maxLength={120}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
         <NumberField label={t('profile.age')} value={p.age} min={14} max={70} onChange={(age) => patch({ age })} />
         <Text variant="caption" tone="muted">
           {t('profile.gender')}

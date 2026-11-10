@@ -23,7 +23,8 @@ type MentorState = {
   busy: boolean;
   askEligibility: (job: Job) => Promise<void>;
   askStrategy: (examName: string, job?: Job | null) => Promise<void>;
-  askQuestion: (question: string) => Promise<void>;
+  /** `display` is shown in the chat instead of the full question (e.g. when notice details are attached). */
+  askQuestion: (question: string, display?: string) => Promise<void>;
   clear: () => void;
 };
 
@@ -68,9 +69,9 @@ export const useMentorStore = create<MentorState>()((set, get) => {
     },
     askStrategy: (examName, job) =>
       run('strategy', `Preparation strategy for ${examName}`, strategyPrompt(examName, job), () => offlineStrategy(examName)),
-    askQuestion: (question) => {
+    askQuestion: (question, display) => {
       const profile = useUserStore.getState().profile;
-      return run('query', question, queryPrompt(question, profile), offlineQuery);
+      return run('query', display ?? question, queryPrompt(question, profile), offlineQuery);
     },
     clear: () => {
       controller?.abort();

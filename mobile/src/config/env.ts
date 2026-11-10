@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 type Extra = {
   variant?: 'development' | 'preview' | 'production';
   apiBaseUrl?: string;
+  supportEmail?: string;
   admob?: Partial<Record<
     | 'bannerAndroid'
     | 'bannerIos'
@@ -24,6 +25,8 @@ export const env = {
   apiBaseUrl,
   /** The backend URL must be https; anything else is treated as "not configured". */
   isApiConfigured: apiBaseUrl.startsWith('https://'),
+  /** Optional support address shown on the Help screen (SUPPORT_EMAIL at build time). */
+  supportEmail: (extra.supportEmail ?? '').trim(),
   admob: extra.admob ?? {},
   appVersion: Constants.expoConfig?.version ?? '0.0.0',
 } as const;

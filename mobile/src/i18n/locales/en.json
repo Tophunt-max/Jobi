@@ -17,14 +17,18 @@
     "openLink": "Open",
     "done": "Done",
     "close": "Close",
-    "search": "Search"
+    "search": "Search",
+    "clear": "Clear",
+    "searchIn": "Search {{title}}",
+    "voiceSearch": "Voice search"
   },
   "tabs": {
     "home": "Home",
     "jobs": "Jobs",
     "results": "Results",
-    "mentor": "AI Mentor",
-    "profile": "Profile"
+    "mentor": "AI",
+    "profile": "Profile",
+    "saved": "Saved"
   },
   "sync": {
     "offline": "You are offline. Showing saved notices.",
@@ -49,7 +53,18 @@
     "alertsSetup": "Set up job alerts for your state and qualification",
     "statsOpen": "Open",
     "statsClosing": "Closing soon",
-    "statsSaved": "Saved"
+    "statsSaved": "Saved",
+    "menu": "Menu",
+    "heroTitle": "Find Latest Government Jobs",
+    "heroSub": "Trusted • Verified • Updated",
+    "quickLatest": "Latest Jobs",
+    "quickResults": "Results",
+    "quickAdmit": "Admit Cards",
+    "quickAnswerKey": "Answer Key",
+    "quickSyllabus": "Syllabus",
+    "quickCalendar": "Exam Calendar",
+    "topCategories": "Top Categories",
+    "noJobs": "No open notices yet. Pull down to refresh."
   },
   "tools": {
     "age": "Age calculator",
@@ -71,7 +86,11 @@
     "teaching": "Teaching",
     "engineering": "Engineering",
     "medical": "Medical",
-    "statePsc": "State PSC"
+    "statePsc": "State PSC",
+    "central": "Central Govt",
+    "state": "State Govt",
+    "psu": "PSU",
+    "other": "Other Jobs"
   },
   "status": {
     "ACTIVE": "Open",
@@ -97,7 +116,11 @@
     "sortDeadline": "Last date",
     "clearFilters": "Clear filters",
     "empty": "No notices match these filters",
-    "emptyHint": "Try another state or sector, or clear the filters."
+    "emptyHint": "Try another state or sector, or clear the filters.",
+    "latestTitle": "Latest Government Jobs",
+    "found_one": "{{formatted}} Job Found",
+    "found_other": "{{formatted}} Jobs Found",
+    "filters": "Filters"
   },
   "job": {
     "daysLeft_one": "{{count}} day left",
@@ -142,14 +165,29 @@
     "reminders": "Reminders at 9 AM, 3 days and 1 day before the last date.",
     "remindersWeb": "Deadline alerts appear in your notifications on this device.",
     "shareText": "{{title}} – last date {{date}}. Official notice: {{url}}",
-    "totalPosts": "Total posts"
+    "totalPosts": "Total posts",
+    "detailsTitle": "Job Details",
+    "vacancies_one": "{{formatted}} Vacancy",
+    "vacancies_other": "{{formatted}} Vacancies",
+    "verified": "Verified",
+    "tabOverview": "Overview",
+    "tabVacancy": "Vacancy",
+    "tabDates": "Dates",
+    "tabMore": "More",
+    "totalVacancies": "Total Vacancies",
+    "ageRangeShort": "{{min}} – {{max}} Years",
+    "genObc": "Gen/OBC",
+    "scStPwd": "SC/ST/PwD",
+    "postName": "Post name",
+    "department": "Department",
+    "downloadNotification": "Download Notification"
   },
   "results": {
     "tabResults": "Results",
-    "tabAdmitCards": "Admit cards",
+    "tabAdmitCards": "Admit Cards",
     "tabSyllabus": "Syllabus",
     "tabAdmissions": "Admissions",
-    "tabAnswerKeys": "Answer keys",
+    "tabAnswerKeys": "Answer Keys",
     "empty": "Nothing published yet",
     "emptyHint": "New items appear here once the official site publishes them.",
     "cutOff": "Cut-off",
@@ -173,7 +211,11 @@
     "bulletin": "Information bulletin",
     "apply": "Apply",
     "open": "Open",
-    "closed": "Closed"
+    "closed": "Closed",
+    "declared": "Declared: {{date}}",
+    "examDateLabel": "Exam Date: {{date}}",
+    "officialLink": "Official link",
+    "viewKey": "View Answer Key"
   },
   "mentor": {
     "title": "AI Mentor",
@@ -236,7 +278,8 @@
     "lastSync": "Last updated {{time}}",
     "never": "never",
     "refresh": "Refresh now",
-    "version": "Version {{version}}"
+    "version": "Version {{version}}",
+    "email": "Email"
   },
   "locker": {
     "personal": "Personal",
@@ -266,7 +309,7 @@
   "exams": {
     "title": "My applications",
     "empty": "Track forms you have submitted, their roll numbers and stage.",
-    "add": "Add application",
+    "add": "Add Application",
     "edit": "Edit application",
     "jobTitle": "Exam / post",
     "organization": "Organisation",
@@ -311,7 +354,8 @@
   "notifications": {
     "title": "Notifications",
     "markAllRead": "Mark all read",
-    "empty": "No notifications yet"
+    "empty": "No notifications yet",
+    "admitCard": "Admit Card"
   },
   "language": {
     "title": "Language",
@@ -372,5 +416,142 @@
   "error": {
     "title": "Something went wrong",
     "body": "The app hit an unexpected error. Your saved data is safe."
+  },
+  "splash": {
+    "tagline": "Government Job Portal",
+    "line1": "Latest Jobs • Results",
+    "line2": "Admit Cards • Syllabus",
+    "line3": "Exam Updates"
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next",
+    "getStarted": "Get Started",
+    "step": "Step {{current}} of {{total}}",
+    "title1": "All Government\nJob Updates",
+    "body1": "Get latest jobs, results, admit cards, syllabus and exam alerts in one place.",
+    "title2": "Check Your\nEligibility",
+    "body2": "Enter your qualification, date of birth and category to see if you can apply.",
+    "title3": "Never Miss a\nLast Date",
+    "body3": "Save notices and get reminders 3 days and 1 day before the last date."
+  },
+  "categories": {
+    "title": "Job Categories",
+    "count_one": "{{count}} job",
+    "count_other": "{{count}} jobs",
+    "central": "UPSC, SSC, etc.",
+    "state": "State PSC, SSC",
+    "railways": "RRB, RRC",
+    "banking": "IBPS, SBI, RBI",
+    "defence": "Army, Navy, IAF",
+    "police": "State & Central",
+    "teaching": "TET, PGT, TGT",
+    "medical": "Doctor, Nurse",
+    "psu": "BHEL, ONGC, etc.",
+    "other": "Court, Univ, etc."
+  },
+  "calendar": {
+    "title": "Exam Calendar",
+    "year": "Year",
+    "empty": "Nothing scheduled in {{month}} {{year}}",
+    "emptyHint": "Dates appear here when official notices publish them.",
+    "kind_exam": "Exam Date",
+    "kind_examStart": "Exam Start",
+    "kind_lastDate": "Last Date",
+    "kind_applyStart": "Application Start"
+  },
+  "assistant": {
+    "title": "RozgarOne AI Assistant",
+    "hello": "Hi! I'm RozgarOne AI",
+    "subtitle": "Your government job assistant",
+    "findJobs": "Find jobs for my qualification",
+    "checkEligibility": "Check eligibility",
+    "explainNotice": "Explain notification (PDF)",
+    "lastDate": "What's the last date?",
+    "latestIn": "Latest updates in {{state}}",
+    "placeholder": "Ask anything about jobs...",
+    "explainPrompt": "Explain this government job notification in simple words: who can apply, important dates, fees, selection process and how to apply.",
+    "lastDatePrompt": "What is the last date to apply for this notice, and what other important dates should I know?"
+  },
+  "eligibility": {
+    "title": "Eligibility Checker",
+    "heading": "Check if you are eligible\nfor a specific job",
+    "selectJob": "Select Job / Exam",
+    "selectJobPlaceholder": "Choose a notice",
+    "qualification": "Your Qualification",
+    "dob": "Date of Birth *",
+    "category": "Category (Optional)",
+    "check": "Check Eligibility",
+    "fillHint": "Select a notice and your date of birth to check.",
+    "eligible": "You are Eligible",
+    "notEligible": "You are Not Eligible",
+    "checkNotice": "Check the official notice",
+    "ageLine": "Age: {{age}} Years (as on {{date}})",
+    "requiredLine": "Required: {{range}}",
+    "inclRelaxation_one": "(incl. {{count}} year relaxation)",
+    "inclRelaxation_other": "(incl. {{count}} years relaxation)",
+    "qualificationLine": "Qualification: {{label}}",
+    "notListed": "Not listed in the notice",
+    "relaxation_one": "+{{count}} year age relaxation",
+    "relaxation_other": "+{{count}} years age relaxation"
+  },
+  "applications": {
+    "title": "My Applications",
+    "applied": "Applied",
+    "saved": "Saved",
+    "alerts": "Alerts",
+    "appliedOn": "Applied on: {{date}}",
+    "status": "Status: {{stage}}",
+    "emptyApplied": "No applications yet",
+    "noDate": "Applied date not added",
+    "alertsOff": "Turn on job alerts to see matching notices"
+  },
+  "saved": {
+    "title": "Saved Jobs",
+    "empty": "No saved jobs",
+    "count_one": "{{count}} saved notice",
+    "count_other": "{{count}} saved notices",
+    "hint": "You get reminders before the last date of each saved notice."
+  },
+  "profileMenu": {
+    "title": "My Profile",
+    "addName": "Add your name",
+    "addEmail": "Add your email",
+    "editProfile": "Edit Profile",
+    "jobPreferences": "Job Preferences",
+    "notificationSettings": "Notification Settings",
+    "savedJobs": "Saved Jobs",
+    "languageHint": "English, Hindi, Odia and more",
+    "theme": "Theme",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "more": "More tools"
+  },
+  "help": {
+    "title": "Help & Support",
+    "faq": "Frequently asked questions",
+    "contact": "Contact",
+    "q1": "Where does RozgarOne get its information?",
+    "a1": "Every notice links to the official website or PDF it came from. Always confirm details there before applying.",
+    "q2": "How do deadline reminders work?",
+    "a2": "Save a notice with the bookmark icon. The app reminds you at 9 AM, 3 days and 1 day before its last date.",
+    "q3": "Is my personal data uploaded?",
+    "a3": "No. Your profile, document locker and applications stay on this phone. AI answers only receive your age, category, qualification and state.",
+    "q4": "How is eligibility checked?",
+    "a4": "Age is counted on the notice's last date and the category relaxation is added. Education is matched against keywords in the notice, so always read the official criteria.",
+    "q5": "I found wrong information. What should I do?",
+    "a5": "Open the notice, go to the More tab and tap Report a problem. Our team reviews every report.",
+    "reportWrong": "Report wrong information",
+    "reportWrongHint": "Open a notice → More → Report a problem",
+    "email": "Email support"
+  },
+  "about": {
+    "title": "About RozgarOne",
+    "body": "RozgarOne collects official government job notices, results, admit cards, syllabus and exam dates in one simple app.",
+    "point1": "Every notice links to its official source.",
+    "point2": "Works offline with the last downloaded data.",
+    "point3": "Your profile and documents never leave your phone.",
+    "point4": "Available in 13 Indian languages."
   }
 }

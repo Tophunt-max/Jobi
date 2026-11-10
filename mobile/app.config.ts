@@ -70,7 +70,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     slug: 'rozgarone',
     version: env('VERSION_NAME') || '2.0.0',
     orientation: 'portrait',
-    icon: './assets/icon.png',
+    icon: './assets/app/icon.png',
     scheme: 'rozgarone',
     userInterfaceStyle: 'automatic',
     ios: {
@@ -89,10 +89,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // The document locker holds personal data; keep it out of cloud backups.
       allowBackup: false,
       adaptiveIcon: {
-        backgroundColor: '#E6F4FE',
-        foregroundImage: './assets/android-icon-foreground.png',
-        backgroundImage: './assets/android-icon-background.png',
-        monochromeImage: './assets/android-icon-monochrome.png',
+        backgroundColor: '#1D4ED8',
+        foregroundImage: './assets/app/android-icon-foreground.png',
+        backgroundImage: './assets/app/android-icon-background.png',
+        monochromeImage: './assets/app/android-icon-monochrome.png',
       },
       blockedPermissions: [
         'android.permission.RECORD_AUDIO',
@@ -106,11 +106,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       bundler: 'metro',
       // Single-page output: the app reads device storage on start, so it is not pre-rendered.
       output: 'single',
-      favicon: './assets/favicon.png',
+      favicon: './assets/app/favicon.png',
       name: 'RozgarOne',
       shortName: 'RozgarOne',
       themeColor: '#2563EB',
-      backgroundColor: '#F8FAFC',
+      backgroundColor: '#1D4ED8',
     },
     plugins: [
       'expo-router',
@@ -119,17 +119,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         'expo-splash-screen',
         {
-          image: './assets/splash-icon.png',
-          imageWidth: 160,
+          image: './assets/app/splash-icon.png',
+          imageWidth: 120,
           resizeMode: 'contain',
-          backgroundColor: '#F8FAFC',
-          dark: { backgroundColor: '#0B1220' },
+          // Same blue as the branded JS splash (src/components/BrandSplash.tsx) for a seamless hand-off.
+          backgroundColor: '#1D4ED8',
+          dark: { backgroundColor: '#1D4ED8' },
         },
       ],
       [
         'expo-notifications',
         {
-          icon: './assets/android-icon-monochrome.png',
+          icon: './assets/app/android-icon-monochrome.png',
           color: '#2563EB',
           // Only local reminders are used; no APNs entitlement needed.
           enableRemoteNotifications: false,
@@ -152,6 +153,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     extra: {
       variant: VARIANT,
       apiBaseUrl,
+      supportEmail: env('SUPPORT_EMAIL'),
       admob: {
         // Empty values fall back to Google test units at runtime.
         bannerAndroid: admobUnit('ADMOB_BANNER_ANDROID'),
