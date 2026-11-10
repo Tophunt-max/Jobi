@@ -2,7 +2,8 @@
 
 | Part | Folder | Docs |
 |---|---|---|
-| Android app (Kotlin, Jetpack Compose, Room) | `app/` | this file |
+| Mobile app for Android, iOS and web (Expo, React Native) | `mobile/` | [README](mobile/README.md) |
+| Android app (Kotlin, Jetpack Compose, Room), being replaced by `mobile/` | `app/` | this file |
 | Backend (Cloudflare Worker + D1 + R2) | `backend-cloudflare/` | [CLOUDFLARE_SETUP.md](backend-cloudflare/CLOUDFLARE_SETUP.md) |
 | Admin panel (static Next.js on Cloudflare Pages) | `admin-panel/` | [README](admin-panel/README.md) |
 
