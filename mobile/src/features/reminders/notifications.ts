@@ -97,7 +97,7 @@ export async function syncDeadlineReminders(bookmarks: Job[], enabled: boolean):
         content: {
           title: r.title,
           body: r.body,
-          data: { jobId: r.jobId, fireAt: r.fireAt.getTime(), url: `sarkari://job/${encodeURIComponent(r.jobId)}` },
+          data: { jobId: r.jobId, fireAt: r.fireAt.getTime(), url: `rozgarone://job/${encodeURIComponent(r.jobId)}` },
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,

@@ -74,16 +74,6 @@ export default function ProfileScreen() {
 
   return (
     <ScrollScreen>
-      {settings.legacyNoticePending ? (
-        <InlineBanner
-          tone="success"
-          icon="checkmark-circle-outline"
-          message={t('profile.migrated')}
-          action={t('common.done')}
-          onAction={settings.dismissLegacyNotice}
-        />
-      ) : null}
-
       <Card>
         <Row>
           <View style={{ flex: 1, gap: 2 }}>

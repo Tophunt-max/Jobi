@@ -36,7 +36,6 @@ type UserState = {
   refreshBookmarks: (jobs: Job[]) => void;
   markRead: (ids: string[]) => void;
   setAlertPrefs: (prefs: AlertPreferences) => void;
-  importLegacy: (data: Partial<Pick<UserState, 'profile' | 'locker' | 'appliedExams' | 'bookmarks' | 'readNotificationIds' | 'alertPrefs'>>) => void;
 };
 
 const MAX_READ_IDS = 500;
@@ -93,16 +92,6 @@ export const useUserStore = create<UserState>()(
 
       setAlertPrefs: (alertPrefs) => set({ alertPrefs }),
 
-      importLegacy: (data) =>
-        set((s) => ({
-          profile: data.profile ? { ...s.profile, ...data.profile } : s.profile,
-          profileCompleted: s.profileCompleted || !!data.profile,
-          locker: data.locker ? { ...s.locker, ...data.locker } : s.locker,
-          appliedExams: data.appliedExams?.length ? data.appliedExams : s.appliedExams,
-          bookmarks: { ...(data.bookmarks ?? {}), ...s.bookmarks },
-          readNotificationIds: Array.from(new Set([...(data.readNotificationIds ?? []), ...s.readNotificationIds])).slice(0, MAX_READ_IDS),
-          alertPrefs: data.alertPrefs ?? s.alertPrefs,
-        })),
     }),
     {
       name: StorageKeys.user,

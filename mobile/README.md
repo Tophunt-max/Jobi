@@ -1,6 +1,6 @@
-# Sarkari Jobs – Expo app (Android, iOS, web)
+# RozgarOne – Expo app (Android, iOS, web)
 
-React Native rewrite of the original Kotlin app (removed from the repo; see the `v1.1.x` tags), built with Expo SDK 58 and Expo Router.
+RozgarOne mobile app, built with Expo SDK 58 and Expo Router.
 It talks to the same Cloudflare Worker (`../backend-cloudflare`); no backend change is needed.
 
 ## Folder structure
@@ -10,7 +10,6 @@ mobile/
 ├── app.config.ts            Build-time config (env vars, plugins, identifiers)
 ├── plugins/                 Config plugins (Android release signing)
 ├── scripts/ci-version.sh    Version name/code from the release tag
-├── modules/legacy-data/     Android-only native module that imports the Kotlin app's data
 ├── public/_headers          Security headers for the web build (Cloudflare Pages)
 └── src/
     ├── app/                 Routes only (Expo Router). Every file is a screen.
@@ -26,11 +25,10 @@ mobile/
     ├── features/            Feature logic and feature components
     │   ├── ads/             AdMob (native) + sponsor card; *.web.ts = no-op on web
     │   ├── alerts/          Job-alert matching
-    │   ├── bootstrap/       Start-up tasks (sync, ads, reminders, migration)
+    │   ├── bootstrap/       Start-up tasks (sync, ads, reminders)
     │   ├── browser/         Locked-down in-app WebView (native), new tab (web)
     │   ├── jobs/            Status, filters, job card, open/bookmark hooks
     │   ├── mentor/          AI prompts, offline answers, chat store
-    │   ├── migration/       Kotlin-app data import
     │   ├── notifications/   In-app inbox
     │   ├── profile/         Eligibility checks, physical standards, dossier
     │   ├── reminders/       Deadline reminders (expo-notifications; inbox-only on web)
@@ -54,7 +52,7 @@ npx expo run:android          # needs Android Studio / SDK
 npx expo run:ios              # needs macOS + Xcode
 ```
 
-AdMob, notifications, the WebView and the legacy module are native code, so the app
+AdMob, notifications and the WebView are native code, so the app
 does not run in Expo Go. Use a development build (`npx expo run:android` / `npx expo run:ios`).
 
 Checks: `npm run typecheck`, `npm run lint`, `npx expo-doctor`, `npm run export:web`.
@@ -72,7 +70,7 @@ GitHub repository variables and secrets (see below).
 | `ADMOB_{BANNER,INTERSTITIAL,REWARDED}_{ANDROID,IOS}` | production | Empty falls back to test units |
 | `VERSION_NAME`, `VERSION_CODE` | CI | Set from the release tag by `scripts/ci-version.sh` |
 | `APPLE_TEAM_ID` | iOS release | Lets Xcode sign automatically |
-| `ANDROID_PACKAGE`, `IOS_BUNDLE_ID` | no | Default keeps the Kotlin app's ID `com.aistudio.sarkarijobportal.kxrtzp` |
+| `ANDROID_PACKAGE`, `IOS_BUNDLE_ID` | no | Default `com.rozgarone.app` |
 
 Production config fails fast on a missing/non-https API URL or a malformed AdMob ID.
 
@@ -92,9 +90,8 @@ Release signing is added by `plugins/withAndroidReleaseSigning.js`, which reads 
 from environment variables at build time.
 
 **Version numbers:** tag `v2.3.4` gives version name `2.3.4` and version code
-`VERSION_CODE_OFFSET + 2*10000 + 3*100 + 4` (20304). The Kotlin app used small codes
-(GitHub run numbers), so `v2.0.0` → 20000 is already higher. If Play reports a conflict,
-set the `VERSION_CODE_OFFSET` variable.
+`VERSION_CODE_OFFSET + 2*10000 + 3*100 + 4` (20304). Each tag must be higher than the last one;
+use the `VERSION_CODE_OFFSET` variable if you ever need to jump ahead.
 
 ### Repository settings
 
@@ -105,8 +102,8 @@ can require approval before a release runs.
 |---|---|---|
 | Variable | `API_BASE_URL` | Worker URL (required for tags) |
 | Variable | `ADMOB_ANDROID_APP_ID` (or old `ADMOB_APP_ID`), `ADMOB_BANNER_ANDROID` (or `ADMOB_BANNER_ID`), `ADMOB_INTERSTITIAL_ANDROID`, `ADMOB_REWARDED_ANDROID`, `ADMOB_*_IOS` | Real ads |
-| Variable | `CF_PAGES_PROJECT` (default `sarkari-jobs-web`), `VERSION_CODE_OFFSET` | Optional |
-| Secret | `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_STORE_PASSWORD`, `UPLOAD_KEY_PASSWORD`, `UPLOAD_KEY_ALIAS` (default `upload`) | Android signing. Same upload key as the Kotlin app. |
+| Variable | `CF_PAGES_PROJECT` (default `rozgarone-web`), `VERSION_CODE_OFFSET` | Optional |
+| Secret | `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_STORE_PASSWORD`, `UPLOAD_KEY_PASSWORD`, `UPLOAD_KEY_ALIAS` (default `upload`) | Android signing (upload key for `com.rozgarone.app`) |
 | Secret | `PLAY_SERVICE_ACCOUNT_JSON` | Optional Google Play upload |
 | Secret | `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_BASE64` | Optional iOS signing and TestFlight upload (App Store Connect API key, App Manager role) |
 | Secret | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Optional web deploy (token with Pages edit permission) |
@@ -119,8 +116,7 @@ Optional steps are skipped with a warning when their secrets are missing.
 git tag v2.0.0 && git push origin v2.0.0
 ```
 
-1. The first time, open the Play Console internal track and test the upgrade from the
-   Kotlin app (see below) before promoting the draft.
+1. Check the draft on the Play Console internal track before promoting it.
 2. For iOS, the app record must already exist in App Store Connect with the same bundle ID.
 
 ### Local release builds
@@ -131,21 +127,7 @@ ANDROID_KEYSTORE_PATH=/path/upload.jks ANDROID_KEYSTORE_PASSWORD=… ANDROID_KEY
   (cd android && ./gradlew :app:bundleRelease)
 ```
 
-## Upgrade from the Kotlin app
-
-On first launch, `src/features/migration/legacy.ts` calls the `legacy-data` module, which reads:
-
-- SharedPreferences `user_private_data`: eligibility profile, document locker, applied exams
-- SharedPreferences `targeted_job_alert_prefs`: alert preferences
-- Room DB `sarkari_job_portal.db`: bookmarked jobs and read notifications
-
-The data is saved into the new stores. The old copies are deleted on the next launch,
-after the new data is on disk. Bookmarks then get fresh reminders.
-
-Test it before release: install the last Kotlin APK (GitHub release `v1.1.2`), add a profile, locker entries, an
-application and bookmarks, then install the Expo build over it with the same signing key.
-
-## Behaviour changes from the Kotlin app
+## Design notes
 
 - Job status (open / closing soon / closed) is computed from the date when shown, and all
   dates are normalised to ISO, so "closing soon" sorting is correct.

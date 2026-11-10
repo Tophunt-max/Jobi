@@ -1,4 +1,4 @@
-# Sarkari Jobs
+# RozgarOne
 
 | Part | Folder | Docs |
 |---|---|---|
@@ -16,9 +16,9 @@ On launch, on pull-to-refresh and when it returns to the foreground (at most eve
 
 Deadline reminders fire at 09:00, 3 days and 1 day before the last date of each saved notice (Android and iOS).
 
-## Previous Kotlin app
+## History
 
-The original Android app (Kotlin, Jetpack Compose, Room) was removed from this repository. It is still in git history and in the `v1.1.x` tags. The Expo app keeps its applicationId and imports its on-device data on first launch; see [Upgrade from the Kotlin app](mobile/README.md#upgrade-from-the-kotlin-app).
+The earlier Kotlin Android app was removed; it is still in git history and the `v1.1.x` tags.
 
 ## CI
 

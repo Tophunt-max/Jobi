@@ -160,8 +160,8 @@ jobs:
             echo "::warning::APK contains Google's test AdMob app ID"
           fi
           mkdir -p "$RUNNER_TEMP/out"
-          cp "$apk" "$RUNNER_TEMP/out/sarkari-jobs-$VERSION_NAME.apk"
-          cp android/app/build/outputs/bundle/release/*.aab "$RUNNER_TEMP/out/sarkari-jobs-$VERSION_NAME.aab"
+          cp "$apk" "$RUNNER_TEMP/out/rozgarone-$VERSION_NAME.apk"
+          cp android/app/build/outputs/bundle/release/*.aab "$RUNNER_TEMP/out/rozgarone-$VERSION_NAME.aab"
       - name: Remove keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/upload.jks"
@@ -250,7 +250,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CF_PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT || 'sarkari-jobs-web' }}
+      CF_PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT || 'rozgarone-web' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -285,7 +285,7 @@ jobs:
         working-directory: .
     env:
       PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-      ANDROID_PACKAGE: ${{ vars.ANDROID_PACKAGE || 'com.aistudio.sarkarijobportal.kxrtzp' }}
+      ANDROID_PACKAGE: ${{ vars.ANDROID_PACKAGE || 'com.rozgarone.app' }}
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:

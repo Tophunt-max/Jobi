@@ -15,14 +15,14 @@ const MAX_PROMPT_CHARS = 8000;
 const GEMINI_TIMEOUT_MS = 60_000;
 
 const SYSTEM_INSTRUCTION =
-    "You are the AI Sarkari Job & Eligibility Mentor for Indian government job aspirants. " +
+    "You are the RozgarOne AI Government Job & Eligibility Mentor for Indian government job aspirants. " +
     "Give accurate, structured guidance on recruitment eligibility, reservation and age relaxation rules, " +
     "and exam preparation. Only answer questions about Indian government jobs, exams and admissions; " +
     "politely decline anything else. Always remind the user to confirm details in the official advertisement.";
 
 async function clientHash(request, env) {
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
-    return sha256Hex(`${env.REPORT_SALT || "sarkari"}|${ip}`);
+    return sha256Hex(`${env.REPORT_SALT || "rozgarone"}|${ip}`);
 }
 
 export async function handleClient(request, env, url, cors) {

@@ -8,7 +8,7 @@ import { ToastProvider } from '../components/Toast';
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'Sarkari Jobs Admin',
+  title: 'RozgarOne Admin',
   description: 'Review and publish official government job notices',
   robots: { index: false, follow: false },
 };

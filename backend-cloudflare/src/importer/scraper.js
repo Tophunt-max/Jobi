@@ -10,7 +10,7 @@
  * from the page are populated; nothing is invented.
  */
 
-const USER_AGENT = "SarkariJobPortalBot/2.0 (+https://github.com/Tophunt-max/Jobi; official-notices-indexer)";
+const USER_AGENT = "RozgarOneBot/2.0 (+https://github.com/Tophunt-max/Jobi; official-notices-indexer)";
 const FETCH_TIMEOUT_MS = 15_000;
 const MAX_HTML_BYTES = 3 * 1024 * 1024;
 const MAX_NOTICES_PER_SOURCE = 25;

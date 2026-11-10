@@ -5,7 +5,6 @@ import { AppState } from 'react-native';
 import { useAdConfigStore } from '@/features/ads/config';
 import { initAds } from '@/features/ads/service';
 import { useBookmarkedJobs } from '@/features/jobs/hooks';
-import { runLegacyMigration } from '@/features/migration/legacy';
 import { subscribeToReminderTaps, syncDeadlineReminders } from '@/features/reminders/notifications';
 import { initI18n } from '@/i18n';
 import { useContentStore } from '@/store/contentStore';
@@ -14,7 +13,7 @@ import { useUserStore } from '@/store/userStore';
 
 /**
  * Start-up work that needs the persisted stores:
- * language, legacy import, content sync, ads, reminders and notification taps.
+ * language, content sync, ads, reminders and notification taps.
  */
 export function useAppBootstrap(hydrated: boolean) {
   const router = useRouter();
@@ -33,10 +32,7 @@ export function useAppBootstrap(hydrated: boolean) {
   useEffect(() => {
     if (!hydrated || started.current) return;
     started.current = true;
-    void (async () => {
-      await runLegacyMigration();
-      await useContentStore.getState().sync({ force: true });
-    })();
+    void useContentStore.getState().sync({ force: true });
     void useAdConfigStore
       .getState()
       .refresh()
