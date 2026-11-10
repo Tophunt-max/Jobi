@@ -17,7 +17,7 @@ Copy `.env.example` to `.env` (gitignored), or pass the same names as environmen
 
 | Name | Required | Notes |
 |---|---|---|
-| `API_BASE_URL` | release builds | Worker URL, `https://…`. Release builds fail without it. |
+| `API_BASE_URL` | no | Worker URL. Defaults to `https://rozgarone-worker.bubunmohanta14.workers.dev` (set in `.env.example`). |
 | `ADMOB_APP_ID`, `ADMOB_*_ID` | for revenue | Release only. Debug builds always use Google's test IDs. |
 
 The APK contains no secrets. The Gemini key lives on the Worker (`wrangler secret put GEMINI_API_KEY`).

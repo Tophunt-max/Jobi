@@ -67,7 +67,7 @@ All values are read in `app.config.ts`. Set them in `.env` locally or as
 | Name | Needed | Notes |
 |---|---|---|
 | `APP_VARIANT` | yes | `development`, `preview` or `production` (set by `eas.json`) |
-| `EXPO_PUBLIC_API_BASE_URL` | yes | Worker URL, must be `https://` for production |
+| `EXPO_PUBLIC_API_BASE_URL` | no | Worker URL. Defaults to `https://rozgarone-worker.bubunmohanta14.workers.dev` |
 | `ADMOB_ANDROID_APP_ID`, `ADMOB_IOS_APP_ID` | production | Non-production builds always use Google test IDs |
 | `ADMOB_{BANNER,INTERSTITIAL,REWARDED}_{ANDROID,IOS}` | production | Empty falls back to test units |
 | `EAS_PROJECT_ID`, `EXPO_OWNER` | EAS | From `npx eas-cli@latest init` |

@@ -11,6 +11,9 @@ type Variant = 'development' | 'preview' | 'production';
 const VARIANT = (process.env.APP_VARIANT ?? 'development') as Variant;
 const IS_PROD = VARIANT === 'production';
 
+// Production Cloudflare Worker. Override with EXPO_PUBLIC_API_BASE_URL.
+const DEFAULT_API_BASE_URL = 'https://rozgarone-worker.bubunmohanta14.workers.dev';
+
 // Google's public AdMob sample app IDs. Non-production builds always use them.
 const TEST_ADMOB_APP_ID = {
   android: 'ca-app-pub-3940256099942544~3347511713',
@@ -46,7 +49,7 @@ function admobUnit(name: string): string {
 }
 
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const apiBaseUrl = env('EXPO_PUBLIC_API_BASE_URL').replace(/\/+$/, '');
+  const apiBaseUrl = (env('EXPO_PUBLIC_API_BASE_URL') || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
   if (IS_PROD && !apiBaseUrl.startsWith('https://')) {
     throw new Error('EXPO_PUBLIC_API_BASE_URL must be an https:// URL for production builds.');
   }
