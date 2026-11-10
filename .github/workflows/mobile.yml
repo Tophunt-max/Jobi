@@ -1,0 +1,59 @@
+name: Mobile (Expo)
+
+on:
+  push:
+    branches: [main, master]
+    paths: ['mobile/**', '.github/workflows/mobile.yml']
+  pull_request:
+    branches: [main, master]
+    paths: ['mobile/**', '.github/workflows/mobile.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck, lint and bundle
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      CI: 1
+      EXPO_PUBLIC_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://example.invalid' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Expo doctor
+        run: npx --yes expo-doctor
+
+      - name: Bundle Android and iOS JavaScript
+        run: npx expo export --platform android --platform ios --output-dir dist-native
+
+      - name: Export web
+        run: npx expo export --platform web
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-web
+          path: mobile/dist
+          retention-days: 7
