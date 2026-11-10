@@ -1,8 +1,7 @@
 import type { EligibilityProfile } from '@/types/domain';
 
 /**
- * Physical standards for common police and defence recruitments (general guide,
- * same figures as the Kotlin app). Official notices can differ by state and year.
+ * Physical standards for common police and defence recruitments (general guide). Official notices can differ by state and year.
  */
 export type PhysicalStatus = 'PASS' | 'BORDERLINE' | 'BELOW';
 

@@ -1,8 +1,22 @@
 name: Mobile (Expo)
 
+# Every push / PR touching mobile/: typecheck, lint, bundles, and an Android release
+# build (debug-signed, for verification). Pushes to main deploy the web app.
+#
+# Pushing a tag vX.Y.Z (path filters do not apply to tags):
+#   - signed Android AAB + APK  -> GitHub Release (+ Google Play internal track if configured)
+#   - iOS archive                -> App Store Connect / TestFlight (if configured)
+#   - web                        -> Cloudflare Pages (if configured)
+#
+# Repository variables: API_BASE_URL, ADMOB_* (see mobile/README.md), CF_PAGES_PROJECT, VERSION_CODE_OFFSET
+# Secrets (in the "release" environment or repo): UPLOAD_KEYSTORE_BASE64, UPLOAD_STORE_PASSWORD,
+#   UPLOAD_KEY_PASSWORD, UPLOAD_KEY_ALIAS, PLAY_SERVICE_ACCOUNT_JSON, APPLE_TEAM_ID, ASC_KEY_ID,
+#   ASC_ISSUER_ID, ASC_KEY_P8_BASE64, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+
 on:
   push:
     branches: [main, master]
+    tags: ['v*']
     paths: ['mobile/**', '.github/workflows/mobile.yml']
   pull_request:
     branches: [main, master]
@@ -14,46 +28,281 @@ permissions:
 
 concurrency:
   group: mobile-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  CI: 1
+  APP_VARIANT: production
+  EXPO_PUBLIC_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://example.invalid' }}
+  ADMOB_ANDROID_APP_ID: ${{ vars.ADMOB_ANDROID_APP_ID || vars.ADMOB_APP_ID }}
+  ADMOB_IOS_APP_ID: ${{ vars.ADMOB_IOS_APP_ID }}
+  ADMOB_BANNER_ANDROID: ${{ vars.ADMOB_BANNER_ANDROID || vars.ADMOB_BANNER_ID }}
+  ADMOB_INTERSTITIAL_ANDROID: ${{ vars.ADMOB_INTERSTITIAL_ANDROID || vars.ADMOB_INTERSTITIAL_ID }}
+  ADMOB_REWARDED_ANDROID: ${{ vars.ADMOB_REWARDED_ANDROID || vars.ADMOB_REWARDED_ID }}
+  ADMOB_BANNER_IOS: ${{ vars.ADMOB_BANNER_IOS }}
+  ADMOB_INTERSTITIAL_IOS: ${{ vars.ADMOB_INTERSTITIAL_IOS }}
+  ADMOB_REWARDED_IOS: ${{ vars.ADMOB_REWARDED_IOS }}
+  VERSION_CODE_OFFSET: ${{ vars.VERSION_CODE_OFFSET || '0' }}
+
+defaults:
+  run:
+    working-directory: mobile
 
 jobs:
   checks:
-    name: Typecheck, lint and bundle
+    name: Typecheck, lint, bundles
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile
-    env:
-      CI: 1
-      EXPO_PUBLIC_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://example.invalid' }}
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: mobile/package-lock.json
-
       - run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Expo doctor
-        run: npx --yes expo-doctor
-
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npx --yes expo-doctor
       - name: Bundle Android and iOS JavaScript
         run: npx expo export --platform android --platform ios --output-dir dist-native
 
-      - name: Export web
-        run: npx expo export --platform web
-
-      - uses: actions/upload-artifact@v4
+  android:
+    name: Android build (verification)
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          name: mobile-web
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - run: npm ci
+      - run: ./scripts/ci-version.sh
+      - run: npx expo prebuild --platform android --no-install --clean
+      # No upload key here, so the release APK is signed with the debug key (not for Play).
+      - name: Build release APK
+        working-directory: mobile/android
+        run: ./gradlew :app:assembleRelease --no-daemon
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: android-apk-unsigned-for-store
+          path: mobile/android/app/build/outputs/apk/release/*.apk
+          retention-days: 7
+
+  android-release:
+    name: Android release (signed)
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    needs: checks
+    runs-on: ubuntu-latest
+    environment: release
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 17
+      # No Gradle cache for signed builds, so a poisoned cache cannot reach the release.
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-disabled: true
+      - run: npm ci
+      - run: ./scripts/ci-version.sh
+      - name: Check release configuration
+        run: |
+          if [[ "$EXPO_PUBLIC_API_BASE_URL" != https://* || "$EXPO_PUBLIC_API_BASE_URL" == "https://example.invalid" ]]; then
+            echo "::error::Set the API_BASE_URL repository variable to the Worker's https:// URL"; exit 1
+          fi
+          [[ -n "$ADMOB_ANDROID_APP_ID" ]] || echo "::warning::ADMOB_ANDROID_APP_ID not set: this release serves Google TEST ads"
+      - name: Decode upload keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+        run: |
+          if [[ -z "$KEYSTORE_B64" || -z "$STORE_PASSWORD" ]]; then
+            echo "::error::UPLOAD_KEYSTORE_BASE64 and UPLOAD_STORE_PASSWORD are required for releases"; exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          {
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks"
+            echo "ANDROID_KEYSTORE_PASSWORD=$STORE_PASSWORD"
+            echo "ANDROID_KEY_PASSWORD=${KEY_PASSWORD:-$STORE_PASSWORD}"
+            echo "ANDROID_KEY_ALIAS=${KEY_ALIAS:-upload}"
+          } >> "$GITHUB_ENV"
+      - run: npx expo prebuild --platform android --no-install --clean
+      - name: Build signed AAB and APK
+        working-directory: mobile/android
+        run: ./gradlew :app:bundleRelease :app:assembleRelease --no-daemon
+      - name: Verify signature and AdMob app ID
+        run: |
+          apk=$(ls android/app/build/outputs/apk/release/*.apk | head -1)
+          bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          certs=$("$bt/apksigner" verify --print-certs "$apk")
+          if grep -q "Android Debug" <<<"$certs"; then
+            echo "::error::APK is signed with the debug key"; exit 1
+          fi
+          if "$bt/aapt2" dump xmltree --file AndroidManifest.xml "$apk" | grep -q "3940256099942544"; then
+            echo "::warning::APK contains Google's test AdMob app ID"
+          fi
+          mkdir -p "$RUNNER_TEMP/out"
+          cp "$apk" "$RUNNER_TEMP/out/rozgarone-$VERSION_NAME.apk"
+          cp android/app/build/outputs/bundle/release/*.aab "$RUNNER_TEMP/out/rozgarone-$VERSION_NAME.aab"
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: android-release
+          path: ${{ runner.temp }}/out/*
+          retention-days: 30
+
+  ios:
+    name: iOS build
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+    needs: checks
+    runs-on: macos-latest
+    environment: release
+    timeout-minutes: 90
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: ./scripts/ci-version.sh
+      - name: Generate the Xcode project (runs pod install)
+        run: npx expo prebuild --platform ios --clean
+      - name: Locate workspace
+        run: |
+          ws=$(ls -d ios/*.xcworkspace | head -1)
+          echo "IOS_WORKSPACE=$ws" >> "$GITHUB_ENV"
+          echo "IOS_SCHEME=$(basename "$ws" .xcworkspace)" >> "$GITHUB_ENV"
+      - name: Decide signed or simulator build
+        run: |
+          if [[ -n "$APPLE_TEAM_ID" && -n "$ASC_KEY_ID" && -n "$ASC_ISSUER_ID" && -n "$ASC_KEY_P8_BASE64" ]]; then
+            echo "IOS_SIGNED=true" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Apple secrets not set: building for the simulator only (nothing is uploaded)"
+            echo "IOS_SIGNED=false" >> "$GITHUB_ENV"
+          fi
+      - name: Simulator build (compile check)
+        if: env.IOS_SIGNED != 'true'
+        run: |
+          xcodebuild -workspace "$IOS_WORKSPACE" -scheme "$IOS_SCHEME" -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | tail -50
+          exit "${PIPESTATUS[0]}"
+      - name: Archive and upload to App Store Connect
+        if: env.IOS_SIGNED == 'true'
+        run: |
+          key="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          echo "$ASC_KEY_P8_BASE64" | base64 -d > "$key"
+          auth=(-allowProvisioningUpdates -authenticationKeyPath "$key" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          set -o pipefail
+          xcodebuild -workspace "$IOS_WORKSPACE" -scheme "$IOS_SCHEME" -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/app.xcarchive" \
+            "${auth[@]}" archive | tail -50
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/app.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            "${auth[@]}" | tail -30
+      - name: Remove API key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+
+  web:
+    name: Web build and deploy
+    if: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') }}
+    needs: checks
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT || 'rozgarone-web' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: ./scripts/ci-version.sh
+      - run: npx expo export --platform web
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: web
           path: mobile/dist
           retention-days: 7
+      - name: Deploy to Cloudflare Pages
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        run: |
+          npx --yes wrangler@4 pages project create "$CF_PAGES_PROJECT" --production-branch main 2>/dev/null || true
+          npx --yes wrangler@4 pages deploy dist --project-name "$CF_PAGES_PROJECT" --branch main --commit-dirty=true
+
+  release:
+    name: GitHub Release and Google Play
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    needs: android-release
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: .
+    env:
+      PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      ANDROID_PACKAGE: ${{ vars.ANDROID_PACKAGE || 'com.rozgarone.app' }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: android-release
+          path: out
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: |
+            out/*.apk
+            out/*.aab
+          generate_release_notes: true
+      - name: Upload AAB to Google Play (internal track, draft)
+        if: env.PLAY_JSON != ''
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.ANDROID_PACKAGE }}
+          releaseFiles: out/*.aab
+          track: internal
+          status: draft

@@ -1,4 +1,4 @@
-/** Design tokens shared by every screen. Colours follow the Kotlin app's palette. */
+/** Design tokens shared by every screen. */
 export const palette = {
   navy: '#0B132B',
   blue: '#2563EB',
