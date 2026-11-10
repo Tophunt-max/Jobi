@@ -1,6 +1,6 @@
 # Sarkari Jobs – Expo app (Android, iOS, web)
 
-React Native rewrite of the Kotlin app in `../app`, built with Expo SDK 58 and Expo Router.
+React Native rewrite of the original Kotlin app (removed from the repo; see the `v1.1.x` tags), built with Expo SDK 58 and Expo Router.
 It talks to the same Cloudflare Worker (`../backend-cloudflare`); no backend change is needed.
 
 ## Folder structure
@@ -114,7 +114,7 @@ On first launch, `src/features/migration/legacy.ts` calls the `legacy-data` modu
 The data is saved into the new stores. The old copies are deleted on the next launch,
 after the new data is on disk. Bookmarks then get fresh reminders.
 
-Test it before release: install the last Kotlin APK, add a profile, locker entries, an
+Test it before release: install the last Kotlin APK (GitHub release `v1.1.2`), add a profile, locker entries, an
 application and bookmarks, then install the Expo build over it with the same signing key.
 
 ## Behaviour changes from the Kotlin app

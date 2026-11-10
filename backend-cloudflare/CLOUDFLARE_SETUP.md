@@ -5,7 +5,7 @@ R2 is not enabled on the account yet, so PDF upload returns 503 until you enable
 dashboard, run `npx wrangler r2 bucket create sarkari-job-docs`, and uncomment
 `[[r2_buckets]]` in `wrangler.toml`.
 
-The Worker (`src/index.js`) serves the Android app's read API, the admin API used by
+The Worker (`src/index.js`) serves the mobile app's read API, the admin API used by
 `admin-panel/`, an AI-mentor proxy, and a cron job that scrapes official recruitment
 portals into a review queue.
 
