@@ -12,18 +12,18 @@ class ExampleUnitTest {
     @Test
     fun testLanguageRegistryMultiLingualCoverage() {
         // Test key translations across supported Indian languages
-        assertEquals("Sarkari Jobs", LanguageRegistry.getString("app_title", AppLanguage.ENGLISH))
-        assertEquals("सरकारी नौकरी", LanguageRegistry.getString("app_title", AppLanguage.HINDI))
-        assertEquals("ସରକାରୀ ଚାକିରି", LanguageRegistry.getString("app_title", AppLanguage.ODIA))
-        assertEquals("সরকারি চাকরি", LanguageRegistry.getString("app_title", AppLanguage.BENGALI))
-        assertEquals("அரசு வேலைகள்", LanguageRegistry.getString("app_title", AppLanguage.TAMIL))
-        assertEquals("ప్రభుత్వ ఉద్యోగాలు", LanguageRegistry.getString("app_title", AppLanguage.TELUGU))
-        assertEquals("સરકારી નોકરી", LanguageRegistry.getString("app_title", AppLanguage.GUJARATI))
-        assertEquals("ਸਰਕਾਰੀ ਨੌਕਰੀਆਂ", LanguageRegistry.getString("app_title", AppLanguage.PUNJABI))
-        assertEquals("سرکاری نوکریاں", LanguageRegistry.getString("app_title", AppLanguage.URDU))
-        assertEquals("ಸರ್ಕಾರಿ ಉದ್ಯೋಗಗಳು", LanguageRegistry.getString("app_title", AppLanguage.KANNADA))
-        assertEquals("സർക്കാർ ജോലികൾ", LanguageRegistry.getString("app_title", AppLanguage.MALAYALAM))
-        assertEquals("চৰকাৰী চাকৰি", LanguageRegistry.getString("app_title", AppLanguage.ASSAMESE))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.ENGLISH))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.HINDI))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.ODIA))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.BENGALI))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.TAMIL))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.TELUGU))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.GUJARATI))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.PUNJABI))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.URDU))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.KANNADA))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.MALAYALAM))
+        assertEquals("RozgarOne", LanguageRegistry.getString("app_title", AppLanguage.ASSAMESE))
     }
 
     @Test

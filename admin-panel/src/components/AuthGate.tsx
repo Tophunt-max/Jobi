@@ -119,7 +119,7 @@ function LoginForm({ onSignedIn }: { onSignedIn: (u: SessionUser) => void }) {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
             <ShieldCheck className="h-5 w-5" />
           </div>
-          <span className="text-lg font-semibold">Sarkari Jobs</span>
+          <span className="text-lg font-semibold">RozgarOne</span>
         </div>
         <div className="relative max-w-md">
           <h2 className="text-3xl font-semibold leading-tight">Verified government notices, published with care.</h2>

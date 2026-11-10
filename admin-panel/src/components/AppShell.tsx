@@ -89,7 +89,7 @@ function SidebarContent({ pendingCount, onNavigate }: { pendingCount: number | n
           <ShieldCheck className="h-5 w-5" />
         </div>
         <div className="leading-tight">
-          <p className="text-sm font-semibold">Sarkari Jobs</p>
+          <p className="text-sm font-semibold">RozgarOne</p>
           <p className="text-[11px] text-sidebar-muted">Admin console</p>
         </div>
       </div>

@@ -30,19 +30,19 @@ object LanguageRegistry {
     // Multi-language dictionary for key UI labels
     private val translations = mapOf(
         "app_title" to mapOf(
-            "en" to "Sarkari Jobs",
-            "hi" to "सरकारी नौकरी",
-            "or" to "ସରକାରୀ ଚାକିରି",
-            "bn" to "সরকারি চাকরি",
-            "mr" to "सरकारी नोकरी",
-            "ta" to "அரசு வேலைகள்",
-            "te" to "ప్రభుత్వ ఉద్యోగాలు",
-            "gu" to "સરકારી નોકરી",
-            "pa" to "ਸਰਕਾਰੀ ਨੌਕਰੀਆਂ",
-            "ur" to "سرکاری نوکریاں",
-            "kn" to "ಸರ್ಕಾರಿ ಉದ್ಯೋಗಗಳು",
-            "ml" to "സർക്കാർ ജോലികൾ",
-            "as" to "চৰকাৰী চাকৰি"
+            "en" to "RozgarOne",
+            "hi" to "RozgarOne",
+            "or" to "RozgarOne",
+            "bn" to "RozgarOne",
+            "mr" to "RozgarOne",
+            "ta" to "RozgarOne",
+            "te" to "RozgarOne",
+            "gu" to "RozgarOne",
+            "pa" to "RozgarOne",
+            "ur" to "RozgarOne",
+            "kn" to "RozgarOne",
+            "ml" to "RozgarOne",
+            "as" to "RozgarOne"
         ),
         "search_hint" to mapOf(
             "en" to "Search jobs, exams, dept, advt no...",

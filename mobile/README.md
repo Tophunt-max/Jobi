@@ -1,4 +1,4 @@
-# Sarkari Jobs – Expo app (Android, iOS, web)
+# RozgarOne – Expo app (Android, iOS, web)
 
 React Native rewrite of the Kotlin app in `../app`, built with Expo SDK 58 and Expo Router.
 It talks to the same Cloudflare Worker (`../backend-cloudflare`); no backend change is needed.

@@ -51,7 +51,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     throw new Error('EXPO_PUBLIC_API_BASE_URL must be an https:// URL for production builds.');
   }
 
-  const appName = VARIANT === 'production' ? 'Sarkari Jobs' : `Sarkari Jobs (${VARIANT})`;
+  const appName = VARIANT === 'production' ? 'RozgarOne' : `RozgarOne (${VARIANT})`;
 
   return {
     ...config,
@@ -94,8 +94,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // Single-page output: the app reads device storage on start, so it is not pre-rendered.
       output: 'single',
       favicon: './assets/favicon.png',
-      name: 'Sarkari Jobs',
-      shortName: 'Sarkari Jobs',
+      name: 'RozgarOne',
+      shortName: 'RozgarOne',
       themeColor: '#2563EB',
       backgroundColor: '#F8FAFC',
     },

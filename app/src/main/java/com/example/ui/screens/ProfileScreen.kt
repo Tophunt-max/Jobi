@@ -1777,7 +1777,7 @@ fun ProfileScreen(
                                 lineHeight = 15.sp
                             )
                             Spacer(modifier = Modifier.height(10.dp))
-                            Text(text = "Sarkari Jobs App v2.5.0 • Aspirant Command Center 🇮🇳", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate500)
+                            Text(text = "RozgarOne App v2.5.0 • Aspirant Command Center 🇮🇳", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Slate500)
                         }
                     }
                 }

@@ -790,7 +790,7 @@ private fun shareUrl(context: Context, url: String, title: String) {
     try {
         val sendIntent = Intent().apply {
             action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, "$title\n$url\n\nShared via Sarkari Job Alert")
+            putExtra(Intent.EXTRA_TEXT, "$title\n$url\n\nShared via RozgarOne")
             type = "text/plain"
         }
         val shareIntent = Intent.createChooser(sendIntent, "Share Official Link")

@@ -110,7 +110,7 @@ object AppUtils {
             append("📍 *Location:* ${job.stateOrAllIndia}\n")
             append("🗓️ *Closing Date:* ${job.applicationClosingDate}\n\n")
             append("🔗 *Official Notification & Apply Link:*\n${job.applyOnlineUrl}\n\n")
-            append("📲 Shared via Sarkari Job Alert App")
+            append("📲 Shared via RozgarOne App")
         }
 
         val sendIntent = Intent().apply {

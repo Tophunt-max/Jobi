@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Sarkari Jobs"
+rootProject.name = "RozgarOne"
 
 include(":app")

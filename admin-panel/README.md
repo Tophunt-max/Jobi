@@ -1,4 +1,4 @@
-# Sarkari Job Portal admin panel
+# RozgarOne admin panel
 
 A static Next.js app for reviewing scraped notices, publishing jobs, managing sources, ads, user reports and the admin team.
 
