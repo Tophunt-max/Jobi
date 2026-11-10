@@ -1,6 +1,0 @@
-{
-  "name": "RozgarOne",
-  "description": "Verified Indian Government Jobs, Results, Admit Cards, Syllabi & AI Eligibility Mentor",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

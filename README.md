@@ -3,50 +3,24 @@
 | Part | Folder | Docs |
 |---|---|---|
 | Mobile app for Android, iOS and web (Expo, React Native) | `mobile/` | [README](mobile/README.md) |
-| Android app (Kotlin, Jetpack Compose, Room), being replaced by `mobile/` | `app/` | this file |
 | Backend (Cloudflare Worker + D1 + R2) | `backend-cloudflare/` | [CLOUDFLARE_SETUP.md](backend-cloudflare/CLOUDFLARE_SETUP.md) |
-| Admin panel (static Next.js on Cloudflare Pages) | `admin-panel/` | [README](admin-panel/README.md) |
+| Admin panel (static Next.js on Cloudflare) | `admin-panel/` | [README](admin-panel/README.md) |
 
 Deploy in this order: backend, then admin panel, then the app.
 
-## Android app
+The Gemini key lives on the Worker (`wrangler secret put GEMINI_API_KEY`). The app bundle contains no secrets.
 
-### Configuration
+## Data flow
 
-Copy `.env.example` to `.env` (gitignored), or pass the same names as environment variables or `-P` Gradle properties:
+On launch, on pull-to-refresh and when it returns to the foreground (at most every 15 minutes), the app calls `GET /api/sync/all` and caches the result on the device. Bookmarks, read state, the eligibility profile, the document locker and the applications tracker are stored on the device only and are never uploaded. If the network fails, the app shows cached data with an offline message.
 
-| Name | Required | Notes |
-|---|---|---|
-| `API_BASE_URL` | no | Worker URL. Defaults to `https://rozgarone-worker.bubunmohanta14.workers.dev` (set in `.env.example`). |
-| `ADMOB_APP_ID`, `ADMOB_*_ID` | for revenue | Release only. Debug builds always use Google's test IDs. |
+Deadline reminders fire at 09:00, 3 days and 1 day before the last date of each saved notice (Android and iOS).
 
-The APK contains no secrets. The Gemini key lives on the Worker (`wrangler secret put GEMINI_API_KEY`).
+## History
 
-### Build
+The earlier Kotlin Android app was removed; it is still in git history and the `v1.1.x` tags.
 
-```bash
-./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
-# Release (R8 minified), needs the upload keystore:
-KEYSTORE_PATH=/path/upload.jks STORE_PASSWORD=… KEY_PASSWORD=… ./gradlew :app:bundleRelease
-```
+## CI
 
-### Data flow
-
-The app has no admin features. On launch and on manual refresh it calls `GET /api/sync/all` once and writes the result to Room in a transaction. Bookmarks and notification read-state are local and survive every sync. If the network fails, the app shows cached data with an offline message; it never substitutes bundled sample data.
-
-The user's eligibility profile, document locker and applied-exam tracker are stored on the device only and excluded from cloud backup.
-
-Deadline reminders fire at 09:00, 3 days and 1 day before the last date of each bookmarked job. They are restored after reboot or app update, and work without the exact-alarm permission (slightly less precise).
-
-### Room migrations
-
-The schema is exported to `app/schemas/`. Any change to an `@Entity` needs a version bump and a `Migration` in `AppDatabase`. Destructive fallback is enabled only from v1.
-
-## CI (`.github/workflows/android-build-apk.yml`)
-
-Every push and PR runs Android unit tests, lint and a debug build; Worker migrations and the API smoke test; and the admin panel typecheck and static build. Pushing a `v*` tag builds a signed AAB and APK and attaches them to a GitHub Release.
-
-Repository settings needed:
-
-- **Variables:** `API_BASE_URL`, optionally `ADMOB_APP_ID`, `ADMOB_BANNER_ID`, `ADMOB_INTERSTITIAL_ID`, `ADMOB_REWARDED_ID`, `ADMOB_NATIVE_ID`.
-- **Secrets:** `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_STORE_PASSWORD`, `UPLOAD_KEY_PASSWORD` (release), and optionally `DEBUG_KEYSTORE_BASE64` so debug builds can be installed over each other.
+- `.github/workflows/ci.yml`: Worker migrations and API smoke test; admin panel typecheck and static build.
+- `.github/workflows/mobile.yml`: Expo checks and native builds on every change under `mobile/`; web deploy on `main`; signed Android/iOS release builds, GitHub Release, Google Play and TestFlight upload on `vX.Y.Z` tags. Everything runs on GitHub Actions, no EAS. See [mobile/README.md](mobile/README.md#cicd-github-actions-no-eas).

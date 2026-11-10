@@ -236,8 +236,7 @@
     "lastSync": "Last updated {{time}}",
     "never": "never",
     "refresh": "Refresh now",
-    "version": "Version {{version}}",
-    "migrated": "Your saved data from the previous version was restored."
+    "version": "Version {{version}}"
   },
   "locker": {
     "personal": "Personal",

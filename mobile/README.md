@@ -1,6 +1,6 @@
 # RozgarOne – Expo app (Android, iOS, web)
 
-React Native rewrite of the Kotlin app in `../app`, built with Expo SDK 58 and Expo Router.
+RozgarOne mobile app, built with Expo SDK 58 and Expo Router.
 It talks to the same Cloudflare Worker (`../backend-cloudflare`); no backend change is needed.
 
 ## Folder structure
@@ -8,9 +8,9 @@ It talks to the same Cloudflare Worker (`../backend-cloudflare`); no backend cha
 ```
 mobile/
 ├── app.config.ts            Build-time config (env vars, plugins, identifiers)
-├── eas.json                 EAS build profiles: development, preview, production
-├── modules/legacy-data/     Android-only native module that imports the Kotlin app's data
-├── public/_headers          Security headers for the web build (Cloudflare Pages)
+├── plugins/                 Config plugins (Android release signing)
+├── scripts/ci-version.sh    Version name/code from the release tag
+├── public/_headers          Security headers for the web build
 └── src/
     ├── app/                 Routes only (Expo Router). Every file is a screen.
     │   ├── (tabs)/          Home, Jobs, Results, AI Mentor, Profile
@@ -25,11 +25,10 @@ mobile/
     ├── features/            Feature logic and feature components
     │   ├── ads/             AdMob (native) + sponsor card; *.web.ts = no-op on web
     │   ├── alerts/          Job-alert matching
-    │   ├── bootstrap/       Start-up tasks (sync, ads, reminders, migration)
+    │   ├── bootstrap/       Start-up tasks (sync, ads, reminders)
     │   ├── browser/         Locked-down in-app WebView (native), new tab (web)
     │   ├── jobs/            Status, filters, job card, open/bookmark hooks
     │   ├── mentor/          AI prompts, offline answers, chat store
-    │   ├── migration/       Kotlin-app data import
     │   ├── notifications/   In-app inbox
     │   ├── profile/         Eligibility checks, physical standards, dossier
     │   ├── reminders/       Deadline reminders (expo-notifications; inbox-only on web)
@@ -53,71 +52,82 @@ npx expo run:android          # needs Android Studio / SDK
 npx expo run:ios              # needs macOS + Xcode
 ```
 
-AdMob, notifications, the WebView and the legacy module are native code, so the app
-does not run in Expo Go. Use a development build (`npx expo run:*` or
-`npx eas-cli@latest build --profile development`).
+AdMob, notifications and the WebView are native code, so the app
+does not run in Expo Go. Use a development build (`npx expo run:android` / `npx expo run:ios`).
 
 Checks: `npm run typecheck`, `npm run lint`, `npx expo-doctor`, `npm run export:web`.
 
 ## Configuration
 
-All values are read in `app.config.ts`. Set them in `.env` locally or as
-[EAS environment variables](https://docs.expo.dev/eas/environment-variables/) for cloud builds.
+All values are read in `app.config.ts`. Set them in `.env` locally; in CI they come from
+GitHub repository variables and secrets (see below).
 
 | Name | Needed | Notes |
 |---|---|---|
-| `APP_VARIANT` | yes | `development`, `preview` or `production` (set by `eas.json`) |
+| `APP_VARIANT` | yes | `development`, `preview` or `production` (CI uses `production`) |
 | `EXPO_PUBLIC_API_BASE_URL` | no | Worker URL. Defaults to `https://rozgarone-worker.bubunmohanta14.workers.dev` |
 | `ADMOB_ANDROID_APP_ID`, `ADMOB_IOS_APP_ID` | production | Non-production builds always use Google test IDs |
 | `ADMOB_{BANNER,INTERSTITIAL,REWARDED}_{ANDROID,IOS}` | production | Empty falls back to test units |
-| `EAS_PROJECT_ID`, `EXPO_OWNER` | EAS | From `npx eas-cli@latest init` |
-| `ANDROID_PACKAGE`, `IOS_BUNDLE_ID` | no | Default keeps the Kotlin app's ID `com.rozgarone.app` |
+| `VERSION_NAME`, `VERSION_CODE` | CI | Set from the release tag by `scripts/ci-version.sh` |
+| `APPLE_TEAM_ID` | iOS release | Lets Xcode sign automatically |
+| `ANDROID_PACKAGE`, `IOS_BUNDLE_ID` | no | Default `com.rozgarone.app` |
 
 Production config fails fast on a missing/non-https API URL or a malformed AdMob ID.
 
-## Releasing
+## CI/CD (GitHub Actions, no EAS)
 
-### Android (replaces the Kotlin app on the Play Store)
+`.github/workflows/mobile.yml` builds everything on GitHub runners:
 
-The Expo app keeps the same `applicationId`, so it ships as an update and the user keeps their data:
+| Trigger | What happens |
+|---|---|
+| PR or push touching `mobile/` | Typecheck, lint, `expo-doctor`, JS bundles, Android release APK (debug-signed, for verification) |
+| Push to `main` | Same, plus web export and deploy to the `rozgarone-web` Cloudflare Worker |
+| Tag `vX.Y.Z` | Signed AAB + APK attached to a GitHub Release, AAB uploaded to Google Play internal track (draft), iOS archive uploaded to App Store Connect / TestFlight, web deploy |
+| Manual run | Same as a push, plus the iOS job (simulator build unless Apple secrets are set) |
 
-1. Upload the existing upload keystore to EAS: `npx eas-cli@latest credentials -p android`
-   (alias `upload`). Without the same key, Play rejects the update.
-2. Set the starting version code above the last Kotlin release:
-   `npx eas-cli@latest build:version:set -p android`. After that `autoIncrement` handles it.
-3. `npx eas-cli@latest build -p android --profile production`
-4. Release to the internal track first and test the upgrade path (see below).
+Native projects are generated in CI with `expo prebuild`; `android/` and `ios/` are never committed.
+Release signing is added by `plugins/withAndroidReleaseSigning.js`, which reads the keystore
+from environment variables at build time.
 
-### iOS
+**Version numbers:** tag `v2.3.4` gives version name `2.3.4` and version code
+`VERSION_CODE_OFFSET + 2*10000 + 3*100 + 4` (20304). Each tag must be higher than the last one;
+use the `VERSION_CODE_OFFSET` variable if you ever need to jump ahead.
 
-`npx eas-cli@latest build -p ios --profile production`, then `eas submit -p ios`.
-Register the bundle ID (or set `IOS_BUNDLE_ID`) in App Store Connect first.
+### Repository settings
 
-### Web
+Put the secrets in a GitHub environment named `release` (the signing jobs use it), so you
+can require approval before a release runs.
+
+| Kind | Name | Used for |
+|---|---|---|
+| Variable | `API_BASE_URL` | Worker URL (required for tags) |
+| Variable | `ADMOB_ANDROID_APP_ID` (or old `ADMOB_APP_ID`), `ADMOB_BANNER_ANDROID` (or `ADMOB_BANNER_ID`), `ADMOB_INTERSTITIAL_ANDROID`, `ADMOB_REWARDED_ANDROID`, `ADMOB_*_IOS` | Real ads |
+| Variable | `VERSION_CODE_OFFSET` | Optional |
+| Secret | `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_STORE_PASSWORD`, `UPLOAD_KEY_PASSWORD`, `UPLOAD_KEY_ALIAS` (default `upload`) | Android signing (upload key for `com.rozgarone.app`) |
+| Secret | `PLAY_SERVICE_ACCOUNT_JSON` | Optional Google Play upload |
+| Secret | `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_BASE64` | Optional iOS signing and TestFlight upload (App Store Connect API key, App Manager role) |
+| Secret | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Optional web deploy (token with Workers Scripts edit permission) |
+
+Optional steps are skipped with a warning when their secrets are missing.
+
+### Making a release
 
 ```bash
-EXPO_PUBLIC_API_BASE_URL=https://… npx expo export --platform web
-npx wrangler pages deploy dist --project-name rozgarone-web
+git tag v2.0.0 && git push origin v2.0.0
 ```
 
-The export is a single-page app; Cloudflare Pages serves `index.html` for unknown paths.
-The Worker's public API already allows any origin, so no CORS change is needed.
+1. Check the draft on the Play Console internal track before promoting it.
+2. For iOS, the app record must already exist in App Store Connect with the same bundle ID.
 
-## Upgrade from the Kotlin app
+### Local release builds
 
-On first launch, `src/features/migration/legacy.ts` calls the `legacy-data` module, which reads:
+```bash
+npx expo prebuild -p android --clean
+ANDROID_KEYSTORE_PATH=/path/upload.jks ANDROID_KEYSTORE_PASSWORD=… ANDROID_KEY_PASSWORD=… \
+  (cd android && ./gradlew :app:bundleRelease)
+```
 
-- SharedPreferences `user_private_data`: eligibility profile, document locker, applied exams
-- SharedPreferences `targeted_job_alert_prefs`: alert preferences
-- Room DB `rozgarone.db`: bookmarked jobs and read notifications
-
-The data is saved into the new stores. The old copies are deleted on the next launch,
-after the new data is on disk. Bookmarks then get fresh reminders.
-
-Test it before release: install the last Kotlin APK, add a profile, locker entries, an
-application and bookmarks, then install the Expo build over it with the same signing key.
-
-## Behaviour changes from the Kotlin app
+## Design notes
 
 - Job status (open / closing soon / closed) is computed from the date when shown, and all
   dates are normalised to ISO, so "closing soon" sorting is correct.

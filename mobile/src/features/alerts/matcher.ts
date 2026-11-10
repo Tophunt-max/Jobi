@@ -8,7 +8,7 @@ export type MatchedJob = {
 };
 
 /**
- * Scores a job against the user's alert preferences (same weights as the Kotlin app):
+ * Scores a job against the user's alert preferences:
  * sector 40, qualification 30, state 20, vacancies 10. An empty preference list matches all.
  */
 export function evaluateMatch(job: Job, prefs: AlertPreferences): MatchedJob {

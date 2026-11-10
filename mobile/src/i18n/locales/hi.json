@@ -236,8 +236,7 @@
     "lastSync": "अंतिम अपडेट {{time}}",
     "never": "कभी नहीं",
     "refresh": "अभी अपडेट करें",
-    "version": "संस्करण {{version}}",
-    "migrated": "पिछले संस्करण का आपका सेव डेटा वापस आ गया है।"
+    "version": "संस्करण {{version}}"
   },
   "locker": {
     "personal": "व्यक्तिगत",
