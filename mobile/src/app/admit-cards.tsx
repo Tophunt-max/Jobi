@@ -25,6 +25,7 @@ export default function AdmitCardsScreen() {
         <ContentCard
           index={index}
           icon={images.content.admitCard}
+          art="admitCards"
           title={item.examName}
           subtitle={item.recruitingOrg}
           onPress={item.url ? () => void openLink(item.url, item.examName) : undefined}

@@ -62,6 +62,36 @@ export const images = {
   },
 } satisfies Record<string, Record<string, ImageSourcePropType>>;
 
+/**
+ * Full-colour list icons, one per tone, in the same order as LIST_TINTS
+ * (red, green, purple, blue, orange) so rows alternate like the mockup.
+ */
+export const listArt = {
+  results: [
+    require('../../assets/images/lists/results/red.webp'),
+    require('../../assets/images/lists/results/green.webp'),
+    require('../../assets/images/lists/results/purple.webp'),
+    require('../../assets/images/lists/results/blue.webp'),
+    require('../../assets/images/lists/results/orange.webp'),
+  ],
+  admitCards: [
+    require('../../assets/images/lists/admit-cards/red.webp'),
+    require('../../assets/images/lists/admit-cards/green.webp'),
+    require('../../assets/images/lists/admit-cards/purple.webp'),
+    require('../../assets/images/lists/admit-cards/blue.webp'),
+    require('../../assets/images/lists/admit-cards/orange.webp'),
+  ],
+  syllabus: [
+    require('../../assets/images/lists/syllabus/red.webp'),
+    require('../../assets/images/lists/syllabus/green.webp'),
+    require('../../assets/images/lists/syllabus/purple.webp'),
+    require('../../assets/images/lists/syllabus/blue.webp'),
+    require('../../assets/images/lists/syllabus/orange.webp'),
+  ],
+} satisfies Record<string, ImageSourcePropType[]>;
+
+export type ListArtKind = keyof typeof listArt;
+
 export type ArtKey =
   | 'central-govt'
   | 'state-govt'

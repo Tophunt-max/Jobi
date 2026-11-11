@@ -39,6 +39,7 @@ function SyllabusRow({ item, index, label }: { item: SyllabusItem; index: number
     <ContentCard
       index={index + 4}
       icon={images.content.pdf}
+      art="syllabus"
       title={item.examName}
       subtitle={subtitle}
       onPress={item.url ? () => void openLink(item.url, item.examName) : undefined}

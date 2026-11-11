@@ -40,7 +40,9 @@ export function BrandSplash({ ready, onDone }: { ready: boolean; onDone: () => v
           <Image source={images.brand.logoTile} style={styles.logo} accessibilityIgnoresInvertColors />
           <View style={styles.titleWrap}>
             <Image source={images.brand.laurel} style={styles.laurel} resizeMode="contain" accessibilityIgnoresInvertColors />
-            <Text style={styles.title}>{t('app.title')}</Text>
+            <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+              {t('app.title')}
+            </Text>
             <Text style={styles.subtitle}>{t('splash.tagline')}</Text>
           </View>
           <View style={styles.features}>
@@ -60,10 +62,11 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: 'center', paddingTop: '30%', gap: 8 },
   logo: { width: 108, height: 108 },
-  titleWrap: { alignItems: 'center', justifyContent: 'center', width: 300, height: 140, marginTop: -6 },
-  laurel: { position: 'absolute', width: 300, height: 140, top: 0 },
-  title: { color: '#fff', fontSize: 38, fontWeight: '900', letterSpacing: 1 },
-  subtitle: { color: '#fff', fontSize: 15, fontWeight: '600', opacity: 0.92 },
+  // Laurel art is 320×150; its branches leave about 210 px free in the middle for the title.
+  titleWrap: { alignItems: 'center', justifyContent: 'center', width: 320, height: 150, marginTop: -6 },
+  laurel: { position: 'absolute', width: 320, height: 150, top: 0 },
+  title: { color: '#fff', fontSize: 31, lineHeight: 38, fontWeight: '900', letterSpacing: 0.5, maxWidth: 210, textAlign: 'center' },
+  subtitle: { color: '#fff', fontSize: 13, lineHeight: 18, fontWeight: '600', opacity: 0.92, marginTop: 2 },
   features: { alignItems: 'center', gap: 6, marginTop: 28 },
   feature: { color: '#fff', fontSize: 15, fontWeight: '600', opacity: 0.88 },
 });
