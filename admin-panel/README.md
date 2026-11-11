@@ -2,7 +2,7 @@
 
 A static Next.js app for reviewing scraped notices, publishing jobs, managing sources, ads, user reports and the admin team.
 
-Production: https://rozgarone-admin.bubunmohanta14.workers.dev
+Production: https://rozgarone-admin.jobi.workers.dev
 
 ## How it is served
 
@@ -27,7 +27,7 @@ So the panel and its API share one origin. No CORS is involved and the session c
 An owner account can always be created with the backend's `ADMIN_API_KEY` (kept for automation and recovery):
 
 ```bash
-curl -X POST https://rozgarone-worker.bubunmohanta14.workers.dev/api/admin/users \
+curl -X POST https://rozgarone-worker.jobi.workers.dev/api/admin/users \
   -H "Authorization: Bearer $ADMIN_API_KEY" -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"at-least-12-characters","role":"owner"}'
 ```

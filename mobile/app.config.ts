@@ -12,7 +12,7 @@ const VARIANT = (process.env.APP_VARIANT ?? 'development') as Variant;
 const IS_PROD = VARIANT === 'production';
 
 // Production Cloudflare Worker. Override with EXPO_PUBLIC_API_BASE_URL.
-const DEFAULT_API_BASE_URL = 'https://rozgarone-worker.bubunmohanta14.workers.dev';
+const DEFAULT_API_BASE_URL = 'https://rozgarone-worker.jobi.workers.dev';
 
 // Google's public AdMob sample app IDs. Non-production builds always use them.
 const TEST_ADMOB_APP_ID = {

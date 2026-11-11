@@ -67,7 +67,7 @@ python3 scripts/translate-locales.py pa ur kn ml as      # day 2 (or the same da
 
 ## 3. Admin panel and data
 
-- [ ] **Approve the pending jobs.** All 67 imported jobs are `pending_review`, so the app shows no jobs. Open https://rozgarone-admin.bubunmohanta14.workers.dev → Pending.
+- [ ] **Approve the pending jobs.** All 67 imported jobs are `pending_review`, so the app shows no jobs. Open https://rozgarone-admin.jobi.workers.dev → Pending.
 - [ ] Store the admin API key in a password manager, then delete the copy left in the sandbox (`/projects/sandbox/rozgarone-admin-api-key.txt`).
 
 ## 4. GitHub
