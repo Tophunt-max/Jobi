@@ -12,6 +12,7 @@ import sharp from 'sharp';
 
 import { categoryIcon, emblem } from './categories.mjs';
 import * as art from './illustrations.mjs';
+import { admitCardIcon, LIST_TONES, resultIcon, syllabusIcon } from './list-icons.mjs';
 import { C, circleIcon, tile, tintable } from './shapes.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets');
@@ -79,6 +80,13 @@ const CATEGORY_KEYS = [
 for (const key of CATEGORY_KEYS) {
   images.push([`images/categories/${key}.webp`, categoryIcon(key)]);
   images.push([`images/emblems/${key}.webp`, emblem(key)]);
+}
+
+// Full-colour list icons, one per tone: images/lists/<kind>/<tone>.webp
+for (const tone of LIST_TONES) {
+  images.push([`images/lists/results/${tone[0]}.webp`, resultIcon(tone)]);
+  images.push([`images/lists/admit-cards/${tone[0]}.webp`, admitCardIcon(tone)]);
+  images.push([`images/lists/syllabus/${tone[0]}.webp`, syllabusIcon(tone)]);
 }
 
 const pngs = [

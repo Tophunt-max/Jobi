@@ -1,16 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { Image, Pressable, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+
+import { listArt, type ListArtKind } from '@/assets/images';
 
 import { ArtIcon, Surface, Text } from '@/components/ui';
 import { useTheme } from '@/theme';
 
-import { tintFor } from './ContentList';
+import { LIST_TINTS, tintFor } from './ContentList';
 
-/** List row used by the content screens: tinted icon, title, organisation, meta line and an action. */
+/**
+ * List row used by the content screens: icon, title, organisation, meta line and an action.
+ * `art` picks a full-colour icon set; otherwise `icon` is tinted with the row colour.
+ */
 export function ContentCard({
   index,
   icon,
+  art,
   title,
   subtitle,
   meta,
@@ -21,6 +27,7 @@ export function ContentCard({
 }: {
   index: number;
   icon: ImageSourcePropType;
+  art?: ListArtKind;
   title: string;
   subtitle?: string;
   meta?: ReactNode;
@@ -33,7 +40,15 @@ export function ContentCard({
   const tint = tintFor(index, scheme === 'dark');
   return (
     <Surface onPress={onPress} accessibilityLabel={title} style={styles.card}>
-      <ArtIcon source={icon} size={46} tint={tint.fg} background={tint.bg} radius={12} padding={20} />
+      {art ? (
+        <Image
+          source={listArt[art][index % LIST_TINTS.length]!}
+          style={[styles.art, scheme === 'dark' ? { opacity: 0.92 } : null]}
+          accessibilityIgnoresInvertColors
+        />
+      ) : (
+        <ArtIcon source={icon} size={46} tint={tint.fg} background={tint.bg} radius={12} padding={20} />
+      )}
       <View style={styles.body}>
         <Text weight="800" numberOfLines={2} style={{ fontSize: 14, lineHeight: 19 }}>
           {title}
@@ -73,6 +88,7 @@ export function SoftAction({ label, onPress, tone = 'green' }: { label: string; 
 
 const styles = StyleSheet.create({
   card: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  art: { width: 46, height: 46, borderRadius: 12 },
   body: { flex: 1, gap: 3 },
   download: { alignSelf: 'center', padding: 4 },
   soft: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginTop: 6 },

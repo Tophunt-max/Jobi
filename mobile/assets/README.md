@@ -26,6 +26,10 @@ assets/
     ├── categories/         Category illustrations (central-govt, state-govt, railway, banking, defence, police, …)
     ├── emblems/            Circular organisation emblems, one per category
     ├── content/            Single-colour list icons, tinted at runtime (result, admit-card, pdf, answer-key, …)
+    ├── lists/              Full-colour list icons, one file per row tone (red, green, purple, blue, orange)
+    │   ├── results/
+    │   ├── admit-cards/
+    │   └── syllabus/
     ├── notifications/      Notification type icons
     ├── ai/                 robot (AI assistant)
     ├── eligibility/        checklist

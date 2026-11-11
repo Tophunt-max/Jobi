@@ -25,6 +25,7 @@ export default function ResultsScreen() {
         <ContentCard
           index={index}
           icon={images.content.result}
+          art="results"
           title={item.examName}
           subtitle={item.recruitingOrg}
           onPress={item.url ? () => void openLink(item.url, item.examName) : undefined}
