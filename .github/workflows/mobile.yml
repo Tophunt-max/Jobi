@@ -1,17 +1,17 @@
 name: Mobile (Expo)
 
 # Every push / PR touching mobile/: typecheck, lint, bundles, and an Android release
-# build (debug-signed, for verification). Pushes to main deploy the web app.
+# build (debug-signed, for verification). The web app is deployed by Cloudflare Workers
+# Builds (see docs/CLOUDFLARE_DEPLOY.md), not by this workflow.
 #
 # Pushing a tag vX.Y.Z (path filters do not apply to tags):
 #   - signed Android AAB + APK  -> GitHub Release (+ Google Play internal track if configured)
 #   - iOS archive                -> App Store Connect / TestFlight (if configured)
-#   - web                        -> Cloudflare Worker rozgarone-web (if configured)
 #
 # Repository variables: API_BASE_URL, ADMOB_* (see mobile/README.md), VERSION_CODE_OFFSET
 # Secrets (in the "release" environment or repo): UPLOAD_KEYSTORE_BASE64, UPLOAD_STORE_PASSWORD,
 #   UPLOAD_KEY_PASSWORD, UPLOAD_KEY_ALIAS, PLAY_SERVICE_ACCOUNT_JSON, APPLE_TEAM_ID, ASC_KEY_ID,
-#   ASC_ISSUER_ID, ASC_KEY_P8_BASE64, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+#   ASC_ISSUER_ID, ASC_KEY_P8_BASE64
 
 on:
   push:
@@ -241,34 +241,6 @@ jobs:
       - name: Remove API key
         if: always()
         run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
-
-  web:
-    name: Web build and deploy
-    if: ${{ github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') }}
-    needs: checks
-    runs-on: ubuntu-latest
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
-      - run: npm ci
-      - run: ./scripts/ci-version.sh
-      - run: npx expo export --platform web
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: web
-          path: mobile/dist
-          retention-days: 7
-      # Static assets Worker "rozgarone-web" (see mobile/wrangler.toml).
-      - name: Deploy to Cloudflare Workers
-        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
-        run: npx --yes wrangler@4 deploy
 
   release:
     name: GitHub Release and Google Play

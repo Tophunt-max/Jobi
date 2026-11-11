@@ -38,7 +38,8 @@
     "@types/react": "~19.3.0",
     "eslint": "^9.39.5",
     "sharp": "^0.34.5",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "wrangler": "^4.155.0"
   },
   "scripts": {
     "start": "expo start",
@@ -49,7 +50,9 @@
     "lint": "expo lint",
     "export:web": "expo export --platform web",
     "doctor": "expo-doctor",
-    "assets": "node scripts/assets/build.mjs"
+    "assets": "node scripts/assets/build.mjs",
+    "build:web": "APP_VARIANT=production expo export --platform web",
+    "deploy:web": "wrangler deploy"
   },
   "private": true
 }

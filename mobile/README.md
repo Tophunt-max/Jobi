@@ -55,7 +55,7 @@ npx expo run:ios              # needs macOS + Xcode
 AdMob, notifications and the WebView are native code, so the app
 does not run in Expo Go. Use a development build (`npx expo run:android` / `npx expo run:ios`).
 
-Checks: `npm run typecheck`, `npm run lint`, `npx expo-doctor`, `npm run export:web`.
+Checks: `npm run typecheck`, `npm run lint`, `npx expo-doctor`, `npm run build:web`.
 
 ## Configuration
 
@@ -81,8 +81,8 @@ Production config fails fast on a missing/non-https API URL or a malformed AdMob
 | Trigger | What happens |
 |---|---|
 | PR or push touching `mobile/` | Typecheck, lint, `expo-doctor`, JS bundles, Android release APK (debug-signed, for verification) |
-| Push to `main` | Same, plus web export and deploy to the `rozgarone-web` Cloudflare Worker |
-| Tag `vX.Y.Z` | Signed AAB + APK attached to a GitHub Release, AAB uploaded to Google Play internal track (draft), iOS archive uploaded to App Store Connect / TestFlight, web deploy |
+| Push to `main` | Same. The web app is deployed by Cloudflare Workers Builds, not here ([docs](../docs/CLOUDFLARE_DEPLOY.md)) |
+| Tag `vX.Y.Z` | Signed AAB + APK attached to a GitHub Release, AAB uploaded to Google Play internal track (draft), iOS archive uploaded to App Store Connect / TestFlight |
 | Manual run | Same as a push, plus the iOS job (simulator build unless Apple secrets are set) |
 
 Native projects are generated in CI with `expo prebuild`; `android/` and `ios/` are never committed.
@@ -106,7 +106,6 @@ can require approval before a release runs.
 | Secret | `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_STORE_PASSWORD`, `UPLOAD_KEY_PASSWORD`, `UPLOAD_KEY_ALIAS` (default `upload`) | Android signing (upload key for `com.rozgarone.app`) |
 | Secret | `PLAY_SERVICE_ACCOUNT_JSON` | Optional Google Play upload |
 | Secret | `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8_BASE64` | Optional iOS signing and TestFlight upload (App Store Connect API key, App Manager role) |
-| Secret | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Optional web deploy (token with Workers Scripts edit permission) |
 
 Optional steps are skipped with a warning when their secrets are missing.
 
