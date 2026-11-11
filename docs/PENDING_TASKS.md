@@ -54,6 +54,7 @@ python3 scripts/translate-locales.py pa ur kn ml as      # day 2 (or the same da
 
 ## 2. Cloudflare
 
+- [ ] **Connect the three Workers to Workers Builds** (after PR #13 is merged). Settings for each Worker are in [CLOUDFLARE_DEPLOY.md](CLOUDFLARE_DEPLOY.md). From then on Cloudflare deploys the backend, admin panel and web app on every push to `main`.
 - [ ] **Set `GEMINI_API_KEY`** on `rozgarone-worker`; the AI Assistant answers in offline mode until then:
   `cd backend-cloudflare && npx wrangler secret put GEMINI_API_KEY`
 - [ ] **Delete the old database `sarkari_jobs_db`.** The old `sarkari-*` workers are already gone and all data is in `rozgarone_db`. Take a backup first, because a deleted database cannot be restored:
@@ -71,7 +72,6 @@ python3 scripts/translate-locales.py pa ur kn ml as      # day 2 (or the same da
 
 ## 4. GitHub
 
-- [ ] Add repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` so pushes to `main` deploy the web app.
 - [ ] Create the `release` environment and add the Android signing secrets (`UPLOAD_KEYSTORE_BASE64`, `UPLOAD_STORE_PASSWORD`, `UPLOAD_KEY_PASSWORD`, `UPLOAD_KEY_ALIAS`).
 - [ ] Add the real AdMob IDs as variables (without them the app shows Google test ads).
 - [ ] Protect `main` so CI must pass before merging.
@@ -85,4 +85,4 @@ python3 scripts/translate-locales.py pa ur kn ml as      # day 2 (or the same da
   - Deadline reminders fire for a saved job.
   - Theme switch (System / Light / Dark).
   - Onboarding appears on a fresh install only.
-- [ ] Deploy the latest web app (automatic once the GitHub secrets above are set; manual: `cd mobile && APP_VARIANT=production npx expo export --platform web && npx wrangler deploy`).
+- [ ] Deploy the latest web app: automatic once Workers Builds is connected (manual: `cd mobile && npm run build:web && npm run deploy:web`).
