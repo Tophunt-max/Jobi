@@ -553,5 +553,10 @@
     "point2": "Works offline with the last downloaded data.",
     "point3": "Your profile and documents never leave your phone.",
     "point4": "Available in 13 Indian languages."
+  },
+  "voice": {
+    "deniedTitle": "Microphone blocked",
+    "deniedBody": "Allow microphone and speech recognition for RozgarOne in system settings to use voice search.",
+    "unavailable": "Voice search is not available for this language on this device."
   }
 }

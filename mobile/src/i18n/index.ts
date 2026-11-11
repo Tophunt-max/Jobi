@@ -29,7 +29,7 @@ export type AppLanguage = {
 export const LANGUAGES: AppLanguage[] = [
   { code: 'en', nativeName: 'English', englishName: 'English', complete: true },
   { code: 'hi', nativeName: 'हिन्दी', englishName: 'Hindi', complete: true },
-  { code: 'or', nativeName: 'ଓଡ଼ିଆ', englishName: 'Odia' },
+  { code: 'or', nativeName: 'ଓଡ଼ିଆ', englishName: 'Odia', complete: true },
   { code: 'bn', nativeName: 'বাংলা', englishName: 'Bengali' },
   { code: 'mr', nativeName: 'मराठी', englishName: 'Marathi' },
   { code: 'ta', nativeName: 'தமிழ்', englishName: 'Tamil' },
