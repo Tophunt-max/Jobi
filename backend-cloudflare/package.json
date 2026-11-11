@@ -9,7 +9,8 @@
     "db:migrate:local": "wrangler d1 migrations apply rozgarone_db --local",
     "db:migrate:remote": "wrangler d1 migrations apply rozgarone_db --remote",
     "db:seed:local": "wrangler d1 execute rozgarone_db --local --file=seed/dev_sample_jobs.sql",
-    "test": "node --test test/"
+    "test": "node --test test/",
+    "deploy:ci": "wrangler d1 migrations apply rozgarone_db --remote && wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^4.40.0"

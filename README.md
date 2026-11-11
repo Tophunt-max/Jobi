@@ -6,7 +6,7 @@
 | Backend (Cloudflare Worker + D1 + R2) | `backend-cloudflare/` | [CLOUDFLARE_SETUP.md](backend-cloudflare/CLOUDFLARE_SETUP.md) |
 | Admin panel (static Next.js on Cloudflare) | `admin-panel/` | [README](admin-panel/README.md) |
 
-Deploy in this order: backend, then admin panel, then the app.
+Deploy in this order: backend, then admin panel, then the app. Cloudflare Workers Builds deploys the three Workers from `main` ([docs/CLOUDFLARE_DEPLOY.md](docs/CLOUDFLARE_DEPLOY.md)); GitHub Actions only builds the Android and iOS apps.
 
 All secrets, variables and the production checklist: [docs/PRODUCTION_SETUP.md](docs/PRODUCTION_SETUP.md).
 
@@ -25,4 +25,4 @@ The earlier Kotlin Android app was removed; it is still in git history and the `
 ## CI
 
 - `.github/workflows/ci.yml`: Worker migrations and API smoke test; admin panel typecheck and static build.
-- `.github/workflows/mobile.yml`: Expo checks and native builds on every change under `mobile/`; web deploy on `main`; signed Android/iOS release builds, GitHub Release, Google Play and TestFlight upload on `vX.Y.Z` tags. Everything runs on GitHub Actions, no EAS. See [mobile/README.md](mobile/README.md#cicd-github-actions-no-eas).
+- `.github/workflows/mobile.yml`: Expo checks and native builds on every change under `mobile/`; signed Android/iOS release builds, GitHub Release, Google Play and TestFlight upload on `vX.Y.Z` tags. Everything runs on GitHub Actions, no EAS. See [mobile/README.md](mobile/README.md#cicd-github-actions-no-eas).

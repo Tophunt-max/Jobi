@@ -89,19 +89,10 @@ To reset a password without the panel, see "First owner / lost access" in `admin
 This worker needs no secrets. It only serves static files. Its config is in
 `mobile/wrangler.toml`.
 
-### 1.4 Deploy commands
+### 1.4 Deploys
 
-```bash
-# Backend
-cd backend-cloudflare && npm ci && npx wrangler deploy
-npx wrangler d1 migrations apply rozgarone_db --remote   # only when a new migration is added
-
-# Admin panel (deploy the backend first)
-cd admin-panel && npm ci && npm run build && npx wrangler deploy
-
-# Web app
-cd mobile && npm ci && APP_VARIANT=production npx expo export --platform web && npx wrangler deploy
-```
+Cloudflare Workers Builds deploys all three Workers when `main` changes; GitHub Actions does not.
+Setup, build settings and the manual fallback are in [CLOUDFLARE_DEPLOY.md](CLOUDFLARE_DEPLOY.md).
 
 Back up the database before running migrations:
 
@@ -138,19 +129,11 @@ Location: **Settings → Secrets and variables → Actions → Variables**
 If the AdMob IDs are not set, the app shows Google's test ads and earns nothing. An ID in the
 wrong format makes the build fail on purpose.
 
-### 2.3 Repository secrets (web auto-deploy)
+### 2.3 Cloudflare secrets
 
-Location: **Settings → Secrets and variables → Actions → Secrets → Repository secrets**
-
-Add these at the **repository level**, not in the `release` environment, because the web
-deploy job does not use an environment.
-
-| Name | Where to get it |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens → Create Token → template **"Edit Cloudflare Workers"**. Under Account Resources, select only your account. Create a separate token for CI. |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → Workers & Pages → "Account ID" on the right side |
-
-After this, every push to `main` deploys the web app.
+Not needed on GitHub. The Workers are deployed by Cloudflare Workers Builds
+([CLOUDFLARE_DEPLOY.md](CLOUDFLARE_DEPLOY.md)). Remove `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+from the repository secrets if you added them.
 
 ### 2.4 Secrets in the `release` environment
 
@@ -198,8 +181,8 @@ Before the first iOS release, create the app record in App Store Connect with bu
 | Trigger | Result |
 |---|---|
 | Pull request | Backend smoke test, admin panel build, mobile typecheck, lint, bundles and Android verification build |
-| Push to `main` | Same as a pull request, plus web export and deploy (if the Cloudflare secrets are set) |
-| Tag `vX.Y.Z` | Signed AAB and APK attached to a GitHub Release, Play internal draft, iOS TestFlight upload and web deploy |
+| Push to `main` | Same checks as a pull request. Cloudflare deploys the Workers on its own. |
+| Tag `vX.Y.Z` | Signed AAB and APK attached to a GitHub Release, Play internal draft, iOS TestFlight upload |
 
 Release a version:
 
@@ -214,7 +197,7 @@ Tag `v2.3.4` produces version name `2.3.4` and version code
 
 - [ ] Set `GEMINI_API_KEY` on `rozgarone-worker`.
 - [ ] Store `ADMIN_API_KEY` in a password manager.
-- [ ] Add the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets.
+- [ ] Connect the three Workers to Workers Builds ([CLOUDFLARE_DEPLOY.md](CLOUDFLARE_DEPLOY.md)).
 - [ ] Create the `release` environment with required reviewers.
 - [ ] Create the Android upload keystore, back it up, and add the 4 signing secrets.
 - [ ] Add the real AdMob IDs as variables.
