@@ -137,33 +137,72 @@ function floatingCard(x, y, color, glyphName, rot = 0, size = 40) {
   </g>`;
 }
 
-function person({ shirt = C.blue600, shirtShade = C.blue700 } = {}) {
-  return `
-    <path d="M78 270 C78 214 100 192 140 192 C180 192 202 214 202 270z" fill="${shirt}"/>
-    <path d="M110 196 L140 236 L170 196" fill="${shirtShade}" opacity=".55"/>
-    <rect x="128" y="168" width="24" height="28" rx="8" fill="${C.skinShade}"/>
-    <ellipse cx="140" cy="140" rx="31" ry="34" fill="${C.skin}"/>
-    <ellipse cx="109" cy="144" rx="5" ry="8" fill="${C.skinShade}"/>
-    <ellipse cx="171" cy="144" rx="5" ry="8" fill="${C.skinShade}"/>
-    <path d="M107 136 C104 104 124 92 144 94 C166 95 178 112 173 136 C168 122 160 114 150 116 C136 119 122 116 114 110 C112 120 110 128 107 136z" fill="${C.hair}"/>
-    <circle cx="129" cy="142" r="3" fill="${C.hair}"/><circle cx="153" cy="142" r="3" fill="${C.hair}"/>
-    <path d="M131 158 Q141 166 151 158" stroke="#B45309" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-    <path d="M186 214 C204 204 212 186 212 168" stroke="${shirt}" stroke-width="20" fill="none" stroke-linecap="round"/>
-    <g transform="rotate(12 214 150)">
-      <rect x="198" y="118" width="34" height="58" rx="7" fill="${C.slate900}"/>
-      <rect x="201.5" y="123" width="27" height="46" rx="4" fill="${C.blue400}"/>
-      <rect x="205" y="129" width="20" height="4" rx="2" fill="#fff" opacity=".9"/>
-      <rect x="205" y="137" width="14" height="3" rx="1.5" fill="#fff" opacity=".7"/>
-      <rect x="205" y="146" width="20" height="8" rx="2" fill="#fff" opacity=".85"/>
-    </g>
-    <ellipse cx="210" cy="168" rx="11" ry="9" fill="${C.skin}"/>`;
+/** Head with hair, ears, eyes, brows and smile, centred on (cx, cy), unit = head half-width. */
+function face(cx, cy, r) {
+  const k = r / 31;
+  return `<g transform="translate(${cx} ${cy}) scale(${k})">
+    <ellipse cx="-30" cy="4" rx="6" ry="9" fill="${C.skinShade}"/>
+    <ellipse cx="30" cy="4" rx="6" ry="9" fill="${C.skinShade}"/>
+    <ellipse cx="0" cy="0" rx="30" ry="34" fill="url(#skin)"/>
+    <path d="M-31 -2 C-35 -32 -14 -44 4 -42 C24 -40 36 -26 31 -2 C29 -12 24 -20 16 -22 C6 -16 -12 -14 -24 -20 C-27 -14 -29 -8 -31 -2z" fill="${C.hair}"/>
+    <path d="M-14 -36 C-6 -40 6 -40 14 -36" stroke="#475569" stroke-width="2" fill="none" stroke-linecap="round" opacity=".6"/>
+    <path d="M-17 -6 q6 -4 11 0M6 -6 q6 -4 11 0" stroke="${C.hair}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <ellipse cx="-11" cy="3" rx="3.2" ry="3.8" fill="${C.hair}"/><ellipse cx="11" cy="3" rx="3.2" ry="3.8" fill="${C.hair}"/>
+    <circle cx="-10" cy="1.8" r="1.1" fill="#fff"/><circle cx="12" cy="1.8" r="1.1" fill="#fff"/>
+    <path d="M-2 8 q2 4 4 0" stroke="${C.skinShade}" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M-10 17 Q0 25 10 17" stroke="#9A3412" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <ellipse cx="-19" cy="13" rx="5" ry="3" fill="#FB7185" opacity=".25"/><ellipse cx="19" cy="13" rx="5" ry="3" fill="#FB7185" opacity=".25"/>
+  </g>`;
+}
+
+const SKIN_DEFS = linear('skin', [
+  [0, '#F8D5B8'],
+  [1, C.skin],
+]);
+
+function person({ shirt = C.blue600, shirtShade = C.blue800 } = {}) {
+  // Clipped to the backdrop circle so the torso ends in a curve, not a flat cut.
+  return `<g clip-path="url(#stage)">
+    <path d="M74 300 C74 222 100 196 140 196 C180 196 206 222 206 300z" fill="url(#shirt)"/>
+    <path d="M124 196 L140 222 L156 196z" fill="#fff"/>
+    <path d="M118 194 L140 222 L128 230 L112 200z" fill="${shirtShade}" opacity=".9"/>
+    <path d="M162 194 L140 222 L152 230 L168 200z" fill="${shirtShade}" opacity=".9"/>
+    <path d="M140 230 V300" stroke="${shirtShade}" stroke-width="2" opacity=".35"/>
+    <circle cx="140" cy="248" r="2.4" fill="#fff" opacity=".7"/><circle cx="140" cy="270" r="2.4" fill="#fff" opacity=".7"/>
+    <rect x="129" y="170" width="22" height="30" rx="9" fill="${C.skinShade}"/>
+  </g>
+  ${face(140, 140, 31)}
+  <path d="M188 222 C206 210 214 194 214 176" stroke="url(#shirt)" stroke-width="21" fill="none" stroke-linecap="round"/>
+  <g transform="rotate(12 214 150)">
+    <rect x="198" y="114" width="34" height="60" rx="8" fill="${C.slate900}"/>
+    <rect x="201.5" y="120" width="27" height="47" rx="4.5" fill="url(#screen)"/>
+    <rect x="210" y="116.5" width="10" height="2" rx="1" fill="#334155"/>
+    <rect x="205" y="126" width="19" height="9" rx="2.5" fill="#fff" opacity=".95"/>
+    <rect x="207" y="128.5" width="8" height="1.8" rx=".9" fill="${C.blue600}"/>
+    <rect x="207" y="131.5" width="12" height="1.6" rx=".8" fill="${C.slate300}"/>
+    <rect x="205" y="139" width="19" height="9" rx="2.5" fill="#fff" opacity=".8"/>
+    <rect x="205" y="152" width="19" height="9" rx="2.5" fill="#fff" opacity=".65"/>
+  </g>
+  <path d="M200 172 c-2 -8 6 -12 10 -8 l8 -2 c5 0 6 6 2 8 l-1 6 c-1 6 -9 8 -14 5z" fill="url(#skin)"/>
+  <path d="M204 164 h10" stroke="${C.skinShade}" stroke-width="1.6" stroke-linecap="round"/>`;
 }
 
 const ONBOARDING_DEFS =
   radial('blob', [
     [0, '#DBEAFE'],
     [1, '#EFF6FF'],
-  ]) + shadow('cs', { dy: 3, blur: 3, opacity: 0.2 });
+  ]) +
+  shadow('cs', { dy: 3, blur: 3, opacity: 0.2 }) +
+  SKIN_DEFS +
+  linear('shirt', [
+    [0, C.blue500],
+    [1, C.blue700],
+  ]) +
+  linear('screen', [
+    [0, C.blue400],
+    [1, C.blue600],
+  ]) +
+  '<clipPath id="stage"><circle cx="140" cy="150" r="118"/></clipPath>';
 
 export function onboardingJobs() {
   const body = `
@@ -180,12 +219,20 @@ export function onboardingJobs() {
 }
 
 export function onboardingEligibility() {
+  const defs = ONBOARDING_DEFS + linear('clip', [
+    [0, C.blue500],
+    [1, C.blue700],
+  ]) + linear('lens', [
+    [0, C.blue500],
+    [1, C.blue700],
+  ]);
   const body = `
     <circle cx="140" cy="150" r="118" fill="url(#blob)"/>
     <g filter="url(#cs)">
-      <rect x="74" y="54" width="132" height="176" rx="16" fill="#fff"/>
-      <rect x="110" y="42" width="60" height="24" rx="10" fill="${C.blue600}"/>
-      <circle cx="140" cy="54" r="5" fill="#fff"/>
+      <rect x="74" y="62" width="132" height="168" rx="16" fill="#fff"/>
+      <rect x="74" y="62" width="132" height="168" rx="16" fill="none" stroke="${C.blue100}" stroke-width="2"/>
+      <rect x="110" y="50" width="60" height="24" rx="10" fill="url(#clip)"/>
+      <circle cx="140" cy="62" r="5" fill="#fff"/>
     </g>
     ${[96, 136, 176]
       .map(
@@ -196,12 +243,12 @@ export function onboardingEligibility() {
       )
       .join('')}
     <g filter="url(#cs)">
-      <circle cx="212" cy="196" r="34" fill="${C.blue600}"/>
-      <circle cx="207" cy="191" r="15" fill="none" stroke="#fff" stroke-width="5"/>
-      <path d="M218 202 l12 12" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="210" cy="194" r="32" fill="url(#lens)" stroke="#fff" stroke-width="4"/>
+      <circle cx="205" cy="189" r="13" fill="none" stroke="#fff" stroke-width="5"/>
+      <path d="M215 199 l10 10" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
     </g>
     ${floatingCard(30, 70, C.amber500, 'cap', -10, 40)}`;
-  return svg(280, 280, body, ONBOARDING_DEFS);
+  return svg(280, 280, body, defs);
 }
 
 export function onboardingAlerts() {
@@ -219,12 +266,12 @@ export function onboardingAlerts() {
       const hot = i === 6;
       return `<rect x="${x}" y="${y}" width="20" height="18" rx="5" fill="${hot ? C.rose600 : C.slate100}"/>`;
     }).join('')}
-    <g filter="url(#cs)" transform="rotate(14 206 92)">
+    <g filter="url(#cs)" transform="translate(-6 8) rotate(14 206 92)">
       <path d="M182 108 v-18 a24 24 0 1 1 48 0 v18 l7 9 h-62z" fill="${C.amber500}"/>
       <circle cx="206" cy="124" r="8" fill="${C.amber600}"/>
       <circle cx="226" cy="62" r="10" fill="${C.rose600}"/>
     </g>
-    <path d="M238 48 q10 8 8 22M250 40 q16 14 12 36" stroke="${C.amber500}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+    <path d="M234 58 q9 8 7 20M245 50 q14 13 10 32" stroke="${C.amber500}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
   return svg(280, 280, body, ONBOARDING_DEFS);
 }
 
@@ -288,29 +335,34 @@ export function checklist() {
 
 /** Default profile avatar. */
 export function avatar() {
-  const defs = linear('av', [
-    [0, C.blue100],
-    [1, C.blue200],
-  ]);
+  const defs =
+    linear('av', [
+      [0, C.blue100],
+      [1, C.blue200],
+    ]) +
+    SKIN_DEFS +
+    linear('shirt', [
+      [0, C.blue500],
+      [1, C.blue700],
+    ]) +
+    '<clipPath id="clip"><circle cx="48" cy="48" r="48"/></clipPath>';
   const body = `
     <circle cx="48" cy="48" r="48" fill="url(#av)"/>
-    <defs><clipPath id="clip"><circle cx="48" cy="48" r="48"/></clipPath></defs>
     <g clip-path="url(#clip)">
-      <path d="M12 104 C12 78 28 66 48 66 C68 66 84 78 84 104z" fill="${C.blue600}"/>
-      <path d="M38 66 L48 80 L58 66" fill="#fff" opacity=".85"/>
-      <rect x="41" y="54" width="14" height="14" rx="5" fill="${C.skinShade}"/>
-      <ellipse cx="48" cy="40" rx="16" ry="18" fill="${C.skin}"/>
-      <path d="M31 38 C29 20 42 16 50 17 C61 18 67 26 65 38 C61 30 56 28 50 29 C43 30 37 29 33 26z" fill="${C.hair}"/>
-      <circle cx="42" cy="42" r="1.8" fill="${C.hair}"/><circle cx="54" cy="42" r="1.8" fill="${C.hair}"/>
-      <path d="M43 49 Q48 53 53 49" stroke="#B45309" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-    </g>`;
+      <path d="M10 110 C10 80 26 68 48 68 C70 68 86 80 86 110z" fill="url(#shirt)"/>
+      <path d="M40 68 L48 80 L56 68z" fill="#fff"/>
+      <path d="M37 67 L48 80 L42 84 L33 70z" fill="${C.blue800}"/>
+      <path d="M59 67 L48 80 L54 84 L63 70z" fill="${C.blue800}"/>
+      <rect x="41.5" y="56" width="13" height="14" rx="5" fill="${C.skinShade}"/>
+    </g>
+    ${face(48, 41, 15.5)}`;
   return svg(96, 96, body, defs);
 }
 
 /** Empty-state illustration. */
 export function emptyState() {
   const body = `
-    <ellipse cx="80" cy="108" rx="58" ry="8" fill="${C.slate200}"/>
+    <ellipse cx="80" cy="108" rx="58" ry="7" fill="url(#es)"/>
     <rect x="44" y="22" width="64" height="80" rx="10" fill="#fff" stroke="${C.slate200}" stroke-width="2"/>
     <rect x="54" y="36" width="36" height="6" rx="3" fill="${C.blue200}"/>
     <rect x="54" y="50" width="44" height="5" rx="2.5" fill="${C.slate200}"/>
@@ -318,7 +370,10 @@ export function emptyState() {
     <circle cx="106" cy="76" r="20" fill="#fff" stroke="${C.blue500}" stroke-width="6"/>
     <path d="M120 90 l14 14" stroke="${C.blue500}" stroke-width="8" stroke-linecap="round"/>
     ${glyph('sparkle', { x: 20, y: 18, size: 20, color: C.amber500, width: 2 })}`;
-  return svg(160, 120, body);
+  return svg(160, 120, body, radial('es', [
+    [0, C.slate300, 0.9],
+    [1, C.slate200, 0],
+  ]));
 }
 
 // ---- App icons (PNG; stores require PNG) -----------------------------------------------
