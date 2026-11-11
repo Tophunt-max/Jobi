@@ -95,7 +95,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         monochromeImage: './assets/app/android-icon-monochrome.png',
       },
       blockedPermissions: [
-        'android.permission.RECORD_AUDIO',
         'android.permission.READ_EXTERNAL_STORAGE',
         'android.permission.WRITE_EXTERNAL_STORAGE',
         'android.permission.SYSTEM_ALERT_WINDOW',
@@ -116,6 +115,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-router',
       'expo-localization',
       'expo-web-browser',
+      [
+        // Voice search in the search boxes and the AI assistant. Audio is not recorded or uploaded by the app.
+        'expo-speech-recognition',
+        {
+          microphonePermission: 'Allow $(PRODUCT_NAME) to use the microphone for voice search.',
+          speechRecognitionPermission: 'Allow $(PRODUCT_NAME) to turn your speech into search text.',
+          androidSpeechServicePackages: ['com.google.android.googlequicksearchbox'],
+        },
+      ],
       [
         'expo-splash-screen',
         {
