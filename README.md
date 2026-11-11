@@ -8,7 +8,7 @@
 
 Deploy in this order: backend, then admin panel, then the app.
 
-All secrets, variables and the production checklist: [docs/PRODUCTION_SETUP.md](docs/PRODUCTION_SETUP.md).
+All secrets, variables and the production checklist: [docs/PRODUCTION_SETUP.md](docs/PRODUCTION_SETUP.md). Open work: [docs/PENDING_TASKS.md](docs/PENDING_TASKS.md).
 
 The Gemini key lives on the Worker (`wrangler secret put GEMINI_API_KEY`). The app bundle contains no secrets.
 
