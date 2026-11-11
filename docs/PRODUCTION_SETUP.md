@@ -7,9 +7,9 @@ GitHub Actions, where to get each value, and what still has to be done for produ
 
 | Service | URL | Connected to the backend through |
 |---|---|---|
-| Backend API (`rozgarone-worker`) | https://rozgarone-worker.bubunmohanta14.workers.dev | D1 database `rozgarone_db` |
-| Admin panel (`rozgarone-admin`) | https://rozgarone-admin.bubunmohanta14.workers.dev | Service binding `BACKEND` |
-| Web app (`rozgarone-web`) | https://rozgarone-web.bubunmohanta14.workers.dev | Backend URL built into the app |
+| Backend API (`rozgarone-worker`) | https://rozgarone-worker.jobi.workers.dev | D1 database `rozgarone_db` |
+| Admin panel (`rozgarone-admin`) | https://rozgarone-admin.jobi.workers.dev | Service binding `BACKEND` |
+| Web app (`rozgarone-web`) | https://rozgarone-web.jobi.workers.dev | Backend URL built into the app |
 | Android / iOS app (Expo) | Built by GitHub Actions | Backend URL built into the app |
 
 ## 1. Cloudflare Workers
@@ -77,7 +77,7 @@ This worker needs no secrets. It reaches the backend through the service binding
 To create the first admin user:
 
 ```bash
-curl -X POST https://rozgarone-worker.bubunmohanta14.workers.dev/api/admin/users \
+curl -X POST https://rozgarone-worker.jobi.workers.dev/api/admin/users \
   -H "Authorization: Bearer $ADMIN_API_KEY" -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"at-least-12-characters","role":"owner"}'
 ```
@@ -116,7 +116,7 @@ Location: **Settings → Secrets and variables → Actions → Variables**
 
 | Name | Required | Value / purpose |
 |---|---|---|
-| `API_BASE_URL` | No (default is in code) | `https://rozgarone-worker.bubunmohanta14.workers.dev`. Change it when you add a custom domain. |
+| `API_BASE_URL` | No (default is in code) | `https://rozgarone-worker.jobi.workers.dev`. Change it when you add a custom domain. |
 | `ADMOB_ANDROID_APP_ID` | For ad revenue | Format `ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX` |
 | `ADMOB_BANNER_ANDROID` | For ad revenue | Format `ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX` |
 | `ADMOB_INTERSTITIAL_ANDROID` | For ad revenue | Same format as above |

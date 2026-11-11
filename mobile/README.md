@@ -65,7 +65,7 @@ GitHub repository variables and secrets (see below).
 | Name | Needed | Notes |
 |---|---|---|
 | `APP_VARIANT` | yes | `development`, `preview` or `production` (CI uses `production`) |
-| `EXPO_PUBLIC_API_BASE_URL` | no | Worker URL. Defaults to `https://rozgarone-worker.bubunmohanta14.workers.dev` |
+| `EXPO_PUBLIC_API_BASE_URL` | no | Worker URL. Defaults to `https://rozgarone-worker.jobi.workers.dev` |
 | `ADMOB_ANDROID_APP_ID`, `ADMOB_IOS_APP_ID` | production | Non-production builds always use Google test IDs |
 | `ADMOB_{BANNER,INTERSTITIAL,REWARDED}_{ANDROID,IOS}` | production | Empty falls back to test units |
 | `VERSION_NAME`, `VERSION_CODE` | CI | Set from the release tag by `scripts/ci-version.sh` |

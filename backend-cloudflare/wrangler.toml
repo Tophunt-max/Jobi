@@ -12,7 +12,7 @@ workers_dev = true
 [vars]
 ENVIRONMENT = "production"
 # Comma-separated list of browser origins allowed to call /api/admin/* (your admin panel URL).
-ADMIN_ALLOWED_ORIGINS = "https://rozgarone-admin.bubunmohanta14.workers.dev"
+ADMIN_ALLOWED_ORIGINS = "https://rozgarone-admin.jobi.workers.dev"
 # Gemini model used by the AI mentor proxy (POST /api/ai/generate).
 GEMINI_MODEL = "gemini-2.5-flash"
 

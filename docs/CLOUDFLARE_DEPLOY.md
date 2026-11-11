@@ -69,9 +69,9 @@ production Worker and can be overridden with an `EXPO_PUBLIC_API_BASE_URL` build
 
 1. Push any commit to `main` that touches each folder, or open the Worker and select **Deployments → View build history → Retry build**.
 2. Confirm each build is green. Then check:
-   - https://rozgarone-worker.bubunmohanta14.workers.dev/ returns `"name":"RozgarOne API"`.
-   - https://rozgarone-admin.bubunmohanta14.workers.dev/ loads the login page.
-   - https://rozgarone-web.bubunmohanta14.workers.dev/ loads the app.
+   - https://rozgarone-worker.jobi.workers.dev/ returns `"name":"RozgarOne API"`.
+   - https://rozgarone-admin.jobi.workers.dev/ loads the login page.
+   - https://rozgarone-web.jobi.workers.dev/ loads the app.
 3. Build logs are under **Deployments → View build history**. Cloudflare also posts a check run on the GitHub commit.
 
 ## Deploy order

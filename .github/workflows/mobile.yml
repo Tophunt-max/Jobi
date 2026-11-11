@@ -33,7 +33,7 @@ concurrency:
 env:
   CI: 1
   APP_VARIANT: production
-  EXPO_PUBLIC_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://rozgarone-worker.bubunmohanta14.workers.dev' }}
+  EXPO_PUBLIC_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://rozgarone-worker.jobi.workers.dev' }}
   ADMOB_ANDROID_APP_ID: ${{ vars.ADMOB_ANDROID_APP_ID || vars.ADMOB_APP_ID }}
   ADMOB_IOS_APP_ID: ${{ vars.ADMOB_IOS_APP_ID }}
   ADMOB_BANNER_ANDROID: ${{ vars.ADMOB_BANNER_ANDROID || vars.ADMOB_BANNER_ID }}
