@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AccessibilityInfo, Animated, Image, Platform, StyleSheet, View } from 'react-native';
+import { AccessibilityInfo, Animated, Image, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { images } from '@/assets/images';
 import { Text } from '@/components/ui';
@@ -36,6 +36,9 @@ export function BrandSplash({ ready, minVisibleMs, onPainted, onDone }: Props) {
   const [lift] = useState(() => new Animated.Value(12));
   const [leaving, setLeaving] = useState(false);
   const reduceMotion = useReduceMotion();
+  const { height: screenHeight } = useWindowDimensions();
+  // Building and wave take the bottom ~30% at most, so they never reach the text on short screens.
+  const art = Math.min(1, Math.max(0.55, (screenHeight * 0.3) / 280));
   const painted = useRef(false);
   const callbacks = useRef({ onPainted, onDone });
   useEffect(() => {
@@ -89,16 +92,31 @@ export function BrandSplash({ ready, minVisibleMs, onPainted, onDone }: Props) {
         onLoadEnd={markPainted}
         accessibilityIgnoresInvertColors
       />
+      {/* Building and tricolour sit on the bottom edge, behind the text. */}
+      <View style={styles.bottom} pointerEvents="none">
+        <Image
+          source={images.splash.building}
+          style={[styles.building, { width: 300 * art, height: 174 * art, marginBottom: -46 * art }]}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
+        <Image source={images.splash.wave} style={[styles.wave, { height: 150 * art }]} resizeMode="stretch" accessibilityIgnoresInvertColors />
+      </View>
       <Animated.View style={[styles.center, { transform: [{ translateY: lift }] }]}>
-        <Image source={images.brand.logoTile} style={styles.logo} accessibilityIgnoresInvertColors />
-        <View style={styles.titleWrap}>
-          <Image source={images.brand.laurel} style={styles.laurel} resizeMode="contain" accessibilityIgnoresInvertColors />
-          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
-            {t('app.title')}
-          </Text>
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {t('splash.tagline')}
-          </Text>
+        <View style={styles.logoCard}>
+          <Image source={images.splash.logo} style={styles.logo} resizeMode="contain" accessibilityIgnoresInvertColors />
+        </View>
+        <View style={styles.titleRow}>
+          <Image source={images.splash.laurelLeft} style={styles.laurel} resizeMode="contain" accessibilityIgnoresInvertColors />
+          <View style={styles.titleText}>
+            <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+              {t('app.title')}
+            </Text>
+            <Text style={styles.subtitle} numberOfLines={1} adjustsFontSizeToFit>
+              {t('splash.tagline')}
+            </Text>
+          </View>
+          <Image source={images.splash.laurelRight} style={styles.laurel} resizeMode="contain" accessibilityIgnoresInvertColors />
         </View>
         <View style={styles.features}>
           <Text style={styles.feature}>{t('splash.line1')}</Text>
@@ -131,13 +149,19 @@ const styles = StyleSheet.create({
   root: { zIndex: 10, backgroundColor: SPLASH_BLUE },
   // Explicit size: on web an absolutely positioned image otherwise keeps its natural width.
   fillImage: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
-  center: { flex: 1, alignItems: 'center', paddingTop: '30%', gap: 8 },
-  logo: { width: 108, height: 108 },
-  // Laurel art is 320×150; its branches leave about 210 px free in the middle for the title.
-  titleWrap: { alignItems: 'center', justifyContent: 'center', width: 320, height: 150, marginTop: -6 },
-  laurel: { position: 'absolute', width: 320, height: 150, top: 0 },
-  title: { color: '#fff', fontSize: 31, lineHeight: 38, fontWeight: '900', letterSpacing: 0.5, maxWidth: 210, textAlign: 'center' },
-  subtitle: { color: '#fff', fontSize: 13, lineHeight: 18, fontWeight: '600', opacity: 0.92, marginTop: 2, maxWidth: 200 },
+  center: { flex: 1, alignItems: 'center', paddingTop: '18%', gap: 14 },
+  // The wordmark is dark blue, so it sits on a white card to stay readable on the splash blue.
+  logoCard: { backgroundColor: '#fff', borderRadius: 30, paddingHorizontal: 18, paddingVertical: 14, boxShadow: '0 8px 24px rgba(11, 42, 111, 0.35)' },
+  logo: { width: 150, height: 101 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  // Sizes match scripts/assets/convert.mjs (46×82 dp and 42×82 dp at 3x); keep both in step.
+  laurel: { width: 40, height: 76 },
+  titleText: { alignItems: 'center', maxWidth: 220 },
+  title: { color: '#fff', fontSize: 30, lineHeight: 36, fontWeight: '900', letterSpacing: 0.5, textAlign: 'center' },
+  subtitle: { color: '#fff', fontSize: 13, lineHeight: 18, fontWeight: '600', opacity: 0.92, marginTop: 2 },
+  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },
+  building: { opacity: 0.95 },
+  wave: { width: '100%' },
   features: { alignItems: 'center', gap: 6, marginTop: 28 },
   feature: { color: '#fff', fontSize: 15, fontWeight: '600', opacity: 0.88 },
 });

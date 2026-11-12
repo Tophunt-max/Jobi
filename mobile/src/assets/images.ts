@@ -6,12 +6,16 @@ import type { ImageSourcePropType } from 'react-native';
 
 export const images = {
   brand: {
-    logoTile: require('../../assets/images/brand/logo-tile.webp'),
     logoMark: require('../../assets/images/brand/logo-mark.webp'),
-    laurel: require('../../assets/images/brand/laurel.webp'),
   },
+  /** Background is drawn in code; the other pieces are converted from assets/source/splash. */
   splash: {
     background: require('../../assets/images/splash/background.webp'),
+    logo: require('../../assets/images/splash/logo.webp'),
+    laurelLeft: require('../../assets/images/splash/laurel-left.webp'),
+    laurelRight: require('../../assets/images/splash/laurel-right.webp'),
+    building: require('../../assets/images/splash/government-building.webp'),
+    wave: require('../../assets/images/splash/tricolor-wave.webp'),
   },
   onboarding: {
     jobs: require('../../assets/images/onboarding/jobs.webp'),

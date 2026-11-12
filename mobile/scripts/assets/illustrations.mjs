@@ -1,5 +1,7 @@
-// Larger illustrations: brand, splash, onboarding, home header, AI robot, eligibility, avatar.
-import { C, arcPoints, briefcaseMark, flag, glyph, linear, parliament, radial, shadow, svg, wheel } from './shapes.mjs';
+// Larger illustrations: brand mark, splash background, onboarding, home header, AI robot, eligibility, avatar.
+// The app icon, splash logo/laurels/building/wave and the first onboarding image are hand-made PNGs
+// in assets/source/, converted by convert.mjs.
+import { C, briefcaseMark, flag, glyph, linear, parliament, radial, shadow, svg } from './shapes.mjs';
 
 const brandGradient = (id) =>
   linear(id, [
@@ -7,54 +9,12 @@ const brandGradient = (id) =>
     [1, C.blue800],
   ], { x1: 0, y1: 0, x2: 1, y2: 1 });
 
-/** White rounded tile with the gradient briefcase (splash + about screen). */
-export function logoTile() {
-  return svg(
-    120,
-    120,
-    `<rect x="6" y="6" width="108" height="108" rx="30" fill="#fff" filter="url(#s)"/>
-     <rect x="6" y="6" width="108" height="54" rx="30" fill="#fff"/>
-     ${briefcaseMark(60, 62, 64, 'url(#b)')}`,
-    brandGradient('b') + shadow('s', { dy: 4, blur: 4, opacity: 0.25, color: '#0B2A6F' }),
-  );
-}
-
 /** Gradient tile with a white briefcase (header + small brand mark). */
 export function logoMark() {
   return svg(64, 64, `<rect width="64" height="64" rx="18" fill="url(#b)"/>${briefcaseMark(32, 33.5, 36, '#fff', C.blue700)}`, brandGradient('b'));
 }
 
-/** Two laurel branches that frame the splash title. */
-export function laurel() {
-  // Each branch follows an arc around the title; leaves sit in pairs on both sides of the stem.
-  const branch = (side) => {
-    const left = side === 'left';
-    const cx = 160;
-    const cy = 78;
-    const r = 118;
-    const from = left ? 160 : 20;
-    const to = left ? 228 : -48;
-    const pts = arcPoints(cx, cy, r, from, to, 9);
-    const stem = `<path d="M${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)} A${r} ${r} 0 0 ${left ? 1 : 0} ${pts[8].x.toFixed(1)} ${pts[8].y.toFixed(1)}" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".9"/>`;
-    const leaves = pts
-      .slice(0, 8)
-      .map((p, i) => {
-        // Tangent pointing towards the tip of the branch.
-        const tangent = p.deg + (left ? 90 : -90);
-        const size = 1 - i * 0.06;
-        const ry = 10 * size;
-        const rx = 4.2 * size;
-        const leaf = (angle, op) =>
-          `<ellipse cx="0" cy="${-ry}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="#fff" opacity="${op}" transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${(angle + 90).toFixed(1)})"/>`;
-        return leaf(tangent - 38, 0.95) + leaf(tangent + 38, 0.75);
-      })
-      .join('');
-    return stem + leaves;
-  };
-  return svg(320, 150, branch('left') + branch('right'));
-}
-
-/** Full-screen splash background: blue gradient, light rays, Parliament silhouette and a tricolour wave. */
+/** Full-screen splash background: blue gradient and light rays. The building and wave are separate images. */
 export function splashBackground() {
   const w = 390;
   const h = 844;
@@ -81,13 +41,7 @@ export function splashBackground() {
   const body = `
     <rect width="${w}" height="${h}" fill="url(#bg)"/>
     <rect width="${w}" height="${h}" fill="url(#glow)"/>
-    ${rays}
-    <g opacity=".9">${parliament(35, 560, 320, { body: 'url(#sil)', shade: 'rgba(255,255,255,0.10)', dark: 'rgba(255,255,255,0.16)', dome: 'url(#sil)' })}</g>
-    <path d="M0 740 C110 690 220 760 390 700 V844 H0z" fill="${C.saffron}"/>
-    <path d="M0 760 C120 712 230 782 390 724 V844 H0z" fill="#fff"/>
-    <path d="M0 784 C130 738 240 806 390 752 V844 H0z" fill="${C.green}"/>
-    <path d="M0 804 C140 762 250 828 390 780 V844 H0z" fill="#0F6E07"/>
-    ${wheel(300, 742, 9, '#1E3A8A', 0.7)}`;
+    ${rays}`;
   return svg(w, h, body, defs);
 }
 
@@ -160,63 +114,12 @@ const SKIN_DEFS = linear('skin', [
   [1, C.skin],
 ]);
 
-function person({ shirt = C.blue600, shirtShade = C.blue800 } = {}) {
-  // Clipped to the backdrop circle so the torso ends in a curve, not a flat cut.
-  return `<g clip-path="url(#stage)">
-    <path d="M74 300 C74 222 100 196 140 196 C180 196 206 222 206 300z" fill="url(#shirt)"/>
-    <path d="M124 196 L140 222 L156 196z" fill="#fff"/>
-    <path d="M118 194 L140 222 L128 230 L112 200z" fill="${shirtShade}" opacity=".9"/>
-    <path d="M162 194 L140 222 L152 230 L168 200z" fill="${shirtShade}" opacity=".9"/>
-    <path d="M140 230 V300" stroke="${shirtShade}" stroke-width="2" opacity=".35"/>
-    <circle cx="140" cy="248" r="2.4" fill="#fff" opacity=".7"/><circle cx="140" cy="270" r="2.4" fill="#fff" opacity=".7"/>
-    <rect x="129" y="170" width="22" height="30" rx="9" fill="${C.skinShade}"/>
-  </g>
-  ${face(140, 140, 31)}
-  <path d="M188 222 C206 210 214 194 214 176" stroke="url(#shirt)" stroke-width="21" fill="none" stroke-linecap="round"/>
-  <g transform="rotate(12 214 150)">
-    <rect x="198" y="114" width="34" height="60" rx="8" fill="${C.slate900}"/>
-    <rect x="201.5" y="120" width="27" height="47" rx="4.5" fill="url(#screen)"/>
-    <rect x="210" y="116.5" width="10" height="2" rx="1" fill="#334155"/>
-    <rect x="205" y="126" width="19" height="9" rx="2.5" fill="#fff" opacity=".95"/>
-    <rect x="207" y="128.5" width="8" height="1.8" rx=".9" fill="${C.blue600}"/>
-    <rect x="207" y="131.5" width="12" height="1.6" rx=".8" fill="${C.slate300}"/>
-    <rect x="205" y="139" width="19" height="9" rx="2.5" fill="#fff" opacity=".8"/>
-    <rect x="205" y="152" width="19" height="9" rx="2.5" fill="#fff" opacity=".65"/>
-  </g>
-  <path d="M200 172 c-2 -8 6 -12 10 -8 l8 -2 c5 0 6 6 2 8 l-1 6 c-1 6 -9 8 -14 5z" fill="url(#skin)"/>
-  <path d="M204 164 h10" stroke="${C.skinShade}" stroke-width="1.6" stroke-linecap="round"/>`;
-}
-
 const ONBOARDING_DEFS =
   radial('blob', [
     [0, '#DBEAFE'],
     [1, '#EFF6FF'],
   ]) +
-  shadow('cs', { dy: 3, blur: 3, opacity: 0.2 }) +
-  SKIN_DEFS +
-  linear('shirt', [
-    [0, C.blue500],
-    [1, C.blue700],
-  ]) +
-  linear('screen', [
-    [0, C.blue400],
-    [1, C.blue600],
-  ]) +
-  '<clipPath id="stage"><circle cx="140" cy="150" r="118"/></clipPath>';
-
-export function onboardingJobs() {
-  const body = `
-    <circle cx="140" cy="150" r="118" fill="url(#blob)"/>
-    <circle cx="140" cy="150" r="96" fill="#fff" opacity=".55"/>
-    ${person()}
-    ${floatingCard(38, 58, C.purple500, 'results', -10)}
-    ${floatingCard(186, 30, C.purple600, 'idCard', 8, 44)}
-    ${floatingCard(214, 196, C.amber500, 'bell', 10, 38)}
-    ${floatingCard(30, 168, C.green500, 'checkCircle', -8, 38)}
-    ${floatingCard(100, 24, C.blue500, 'briefcase', -4, 34)}
-    <circle cx="70" cy="122" r="4" fill="${C.blue400}"/><circle cx="232" cy="96" r="3" fill="${C.amber500}"/><circle cx="58" cy="232" r="3" fill="${C.purple500}"/>`;
-  return svg(280, 280, body, ONBOARDING_DEFS);
-}
+  shadow('cs', { dy: 3, blur: 3, opacity: 0.2 });
 
 export function onboardingEligibility() {
   const defs = ONBOARDING_DEFS + linear('clip', [
@@ -378,15 +281,6 @@ export function emptyState() {
 
 // ---- App icons (PNG; stores require PNG) -----------------------------------------------
 
-export function appIcon() {
-  return svg(
-    1024,
-    1024,
-    `<rect width="1024" height="1024" fill="url(#b)"/><circle cx="820" cy="160" r="360" fill="#fff" opacity=".06"/>${briefcaseMark(512, 530, 560, '#fff', C.blue700)}`,
-    brandGradient('b'),
-  );
-}
-
 export function adaptiveForeground() {
   return svg(512, 512, briefcaseMark(256, 262, 230, '#fff', C.blue700));
 }
@@ -397,15 +291,6 @@ export function adaptiveBackground() {
 
 export function adaptiveMonochrome() {
   return svg(432, 432, briefcaseMark(216, 222, 200, '#fff', '#000'));
-}
-
-export function splashIcon() {
-  return svg(
-    400,
-    400,
-    `<rect x="40" y="40" width="320" height="320" rx="84" fill="#fff"/>${briefcaseMark(200, 208, 180, 'url(#b)')}`,
-    brandGradient('b'),
-  );
 }
 
 export function favicon() {
