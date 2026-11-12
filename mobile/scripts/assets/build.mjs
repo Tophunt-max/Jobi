@@ -4,6 +4,8 @@
 //   npm run assets
 //
 // Output: mobile/assets/images/<group>/<name>.webp at 3x, plus mobile/assets/app/*.png.
+// Hand-made artwork (assets/source/) is converted afterwards by convert.mjs: the app icon,
+// native splash logo, splash pieces and the first onboarding image.
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,12 +23,8 @@ const SCALE = 3;
 /** [output path relative to assets/, svg string, options] */
 const images = [
   // brand
-  ['images/brand/logo-tile.webp', art.logoTile()],
-  ['images/brand/logo-mark.webp', art.logoMark()],
-  ['images/brand/laurel.webp', art.laurel()],
   // splash + onboarding
   ['images/splash/background.webp', art.splashBackground(), { scale: 2, quality: 80 }],
-  ['images/onboarding/jobs.webp', art.onboardingJobs()],
   ['images/onboarding/eligibility.webp', art.onboardingEligibility()],
   ['images/onboarding/alerts.webp', art.onboardingAlerts()],
   // home
@@ -90,12 +88,6 @@ for (const tone of LIST_TONES) {
 }
 
 const pngs = [
-  ['app/icon.png', art.appIcon(), 1],
-  ['app/android-icon-foreground.png', art.adaptiveForeground(), 1],
-  ['app/android-icon-background.png', art.adaptiveBackground(), 1],
-  ['app/android-icon-monochrome.png', art.adaptiveMonochrome(), 1],
-  ['app/splash-icon.png', art.splashIcon(), 2.56],
-  ['app/favicon.png', art.favicon(), 1],
 ];
 
 async function render(svgText, scale) {
@@ -121,3 +113,5 @@ for (const [rel, svgText, scale] of pngs) {
   console.log(`${rel.padEnd(44)} ${(buf.length / 1024).toFixed(1)} KB`);
 }
 console.log(`\n${images.length} WebP images, ${(total / 1024).toFixed(0)} KB total`);
+
+await import('./convert.mjs');

@@ -189,14 +189,3 @@ export function parliament(x, y, w, { body = '#E2E8F0', shade = '#CBD5E1', dark 
     <rect x="-8" y="116" width="216" height="6" rx="2" fill="${shade}"/>
   </g>`;
 }
-
-/** Briefcase mark used by the logo and app icons. */
-export function briefcaseMark(cx, cy, size, fill, cut = '#FFFFFF') {
-  const s = size / 100;
-  return `<g transform="translate(${cx - size / 2} ${cy - size / 2}) scale(${s})">
-    <path d="M36 24v-6a8 8 0 0 1 8-8h12a8 8 0 0 1 8 8v6" stroke="${fill}" stroke-width="8" fill="none" stroke-linecap="round"/>
-    <rect x="6" y="24" width="88" height="64" rx="13" fill="${fill}"/>
-    <path d="M6 50 Q50 62 94 50" stroke="${cut}" stroke-opacity=".38" stroke-width="5" fill="none"/>
-    <rect x="42" y="45" width="16" height="16" rx="4" fill="${cut}"/>
-  </g>`;
-}

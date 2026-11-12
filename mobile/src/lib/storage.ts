@@ -13,7 +13,17 @@ const log = createLogger('storage');
 const safeStorage: StateStorage = {
   getItem: async (name) => {
     try {
-      return await AsyncStorage.getItem(name);
+      const raw = await AsyncStorage.getItem(name);
+      if (raw === null) return null;
+      try {
+        JSON.parse(raw);
+      } catch {
+        // zustand would throw on this and never finish hydrating; start that store fresh instead.
+        log.warn(`discarding unreadable ${name}`);
+        await AsyncStorage.removeItem(name).catch(() => {});
+        return null;
+      }
+      return raw;
     } catch (e) {
       log.warn(`read failed for ${name}`, e);
       return null;
