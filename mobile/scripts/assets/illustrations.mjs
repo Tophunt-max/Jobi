@@ -1,18 +1,7 @@
-// Larger illustrations: brand mark, splash background, onboarding, home header, AI robot, eligibility, avatar.
-// The app icon, splash logo/laurels/building/wave and the first onboarding image are hand-made PNGs
-// in assets/source/, converted by convert.mjs.
-import { C, briefcaseMark, flag, glyph, linear, parliament, radial, shadow, svg } from './shapes.mjs';
-
-const brandGradient = (id) =>
-  linear(id, [
-    [0, C.blue500],
-    [1, C.blue800],
-  ], { x1: 0, y1: 0, x2: 1, y2: 1 });
-
-/** Gradient tile with a white briefcase (header + small brand mark). */
-export function logoMark() {
-  return svg(64, 64, `<rect width="64" height="64" rx="18" fill="url(#b)"/>${briefcaseMark(32, 33.5, 36, '#fff', C.blue700)}`, brandGradient('b'));
-}
+// Larger illustrations: splash background, onboarding, home header, AI robot, eligibility, avatar.
+// App icons, brand mark and splash pieces are in brand-art.mjs; the first onboarding image is a
+// hand-made PNG in assets/source/, converted by convert.mjs.
+import { C, flag, glyph, linear, parliament, radial, shadow, svg } from './shapes.mjs';
 
 /** Full-screen splash background: blue gradient and light rays. The building and wave are separate images. */
 export function splashBackground() {
@@ -277,22 +266,4 @@ export function emptyState() {
     [0, C.slate300, 0.9],
     [1, C.slate200, 0],
   ]));
-}
-
-// ---- App icons (PNG; stores require PNG) -----------------------------------------------
-
-export function adaptiveForeground() {
-  return svg(512, 512, briefcaseMark(256, 262, 230, '#fff', C.blue700));
-}
-
-export function adaptiveBackground() {
-  return svg(512, 512, `<rect width="512" height="512" fill="url(#b)"/>`, brandGradient('b'));
-}
-
-export function adaptiveMonochrome() {
-  return svg(432, 432, briefcaseMark(216, 222, 200, '#fff', '#000'));
-}
-
-export function favicon() {
-  return svg(48, 48, `<rect width="48" height="48" rx="12" fill="url(#b)"/>${briefcaseMark(24, 25, 28, '#fff', C.blue700)}`, brandGradient('b'));
 }

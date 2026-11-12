@@ -23,7 +23,6 @@ const SCALE = 3;
 /** [output path relative to assets/, svg string, options] */
 const images = [
   // brand
-  ['images/brand/logo-mark.webp', art.logoMark()],
   // splash + onboarding
   ['images/splash/background.webp', art.splashBackground(), { scale: 2, quality: 80 }],
   ['images/onboarding/eligibility.webp', art.onboardingEligibility()],
@@ -89,10 +88,6 @@ for (const tone of LIST_TONES) {
 }
 
 const pngs = [
-  ['app/android-icon-foreground.png', art.adaptiveForeground(), 1],
-  ['app/android-icon-background.png', art.adaptiveBackground(), 1],
-  ['app/android-icon-monochrome.png', art.adaptiveMonochrome(), 1],
-  ['app/favicon.png', art.favicon(), 1],
 ];
 
 async function render(svgText, scale) {

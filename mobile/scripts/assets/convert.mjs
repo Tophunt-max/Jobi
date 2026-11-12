@@ -1,40 +1,64 @@
-// Converts the hand-made PNG artwork in assets/source/ into the files the app uses.
+// Renders the brand artwork and converts hand-made PNGs (assets/source/) for the app.
 //
 //   npm run assets          (runs this after the drawn assets)
 //
 // In-app images become WebP at 3x their on-screen size. Store icons and the native splash stay
 // PNG because the stores and the splash plugin require PNG.
+//
+// The splash pieces and app icon were uploaded at 42–175 px (kept in assets/source/reference/).
+// They are redrawn as vectors in brand-art.mjs so they stay sharp at every size.
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets');
-const src = (p) => join(root, 'source', p);
-const SCALE = 3;
-/** Upscaling past this only adds file size; the source has no more detail to give. */
-const MAX_UPSCALE = 3;
+import * as brand from './brand-art.mjs';
 
-/**
- * [source, output, on-screen width in dp, on-screen height in dp]
- * Keep the dp sizes in step with the styles that show the image.
- */
-const WEBP = [
-  ['onboarding/jobs.png', 'images/onboarding/jobs.webp', 280, 280],
-  ['splash/logo.png', 'images/splash/logo.webp', 190, 128],
-  ['splash/laurel-left.png', 'images/splash/laurel-left.webp', 46, 82],
-  ['splash/laurel-right.png', 'images/splash/laurel-right.webp', 42, 82],
-  ['splash/government-building.png', 'images/splash/government-building.webp', 300, 174],
-  ['splash/tricolor-wave.png', 'images/splash/tricolor-wave.webp', 390, 172],
-];
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'assets');
+const SCALE = 3;
 
 const warnings = [];
+let total = 0;
 
-/**
- * AI and design-tool exports often leave near-invisible pixels (alpha 1–15) around the art.
- * They show up as a grey box on light backgrounds and stop trim() from working, so clear them.
- */
+async function write(rel, buf) {
+  const out = join(root, rel);
+  await mkdir(dirname(out), { recursive: true });
+  await writeFile(out, buf);
+  const { width, height } = await sharp(buf).metadata();
+  console.log(`${rel.padEnd(44)} ${String(width).padStart(4)}×${String(height).padEnd(4)} ${(buf.length / 1024).toFixed(1)} KB`);
+  return buf.length;
+}
+
+const webp = (img) => img.webp({ quality: 90, alphaQuality: 100, effort: 6, smartSubsample: true }).toBuffer();
+
+// ---- Vector brand artwork -------------------------------------------------------------
+/** [output, svg]; each svg carries its on-screen size in dp. */
+const VECTOR = [
+  ['images/splash/logo.webp', brand.logo()],
+  ['images/splash/laurel-left.webp', brand.laurel('left')],
+  ['images/splash/laurel-right.webp', brand.laurel('right')],
+  ['images/splash/government-building.webp', brand.governmentBuilding()],
+  ['images/splash/tricolor-wave.webp', brand.tricolorWave()],
+  ['images/brand/logo-mark.webp', brand.roundedIcon(64)],
+];
+for (const [rel, svgText] of VECTOR) {
+  total += await write(rel, await webp(sharp(Buffer.from(svgText), { density: 72 * SCALE })));
+}
+await write('app/icon.png', await sharp(Buffer.from(brand.appIcon())).flatten({ background: '#0B5FD8' }).png({ compressionLevel: 9 }).toBuffer());
+for (const [rel, svgText, size] of [
+  ['app/android-icon-background.png', brand.adaptiveBackground(), 432],
+  ['app/android-icon-foreground.png', brand.adaptiveForeground(), 432],
+  ['app/android-icon-monochrome.png', brand.adaptiveMonochrome(), 432],
+  ['app/favicon.png', brand.roundedIcon(48), 48],
+]) {
+  const density = 72 * (size / (size === 48 ? 48 : 432));
+  await write(rel, await sharp(Buffer.from(svgText), { density }).resize(size, size).png({ compressionLevel: 9 }).toBuffer());
+}
+await write('app/splash-icon.png', await sharp(Buffer.from(brand.splashIcon()), { density: 72 * 2 }).resize(800, 800).png({ compressionLevel: 9 }).toBuffer());
+
+// ---- Hand-made PNGs -------------------------------------------------------------------
+/** AI and design-tool exports often leave near-invisible pixels (alpha < 16); they show as a grey box. */
 const ALPHA_FLOOR = 16;
 async function clean(file) {
   const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -42,63 +66,17 @@ async function clean(file) {
   return sharp(data, { raw: info }).png();
 }
 
-/** Trims transparent borders and resizes to fit the box, never past MAX_UPSCALE. */
-async function fitted(file, boxW, boxH) {
+/** [source in assets/source/, output, on-screen width in dp, on-screen height in dp] */
+const PNG = [['onboarding/jobs.png', 'images/onboarding/jobs.webp', 280, 280]];
+for (const [from, to, dpW, dpH] of PNG) {
+  const file = join(root, 'source', from);
   const trimmed = await (await clean(file)).trim({ threshold: 1 }).toBuffer({ resolveWithObject: true });
   const { width, height } = trimmed.info;
-  const fit = Math.min(boxW / width, boxH / height);
-  const scale = Math.min(fit, MAX_UPSCALE);
-  if (fit > 1.5 && !warnings.some((w) => w.startsWith(file.replace(root + '/', '')))) warnings.push(`${file.replace(root + '/', '')}: ${width}×${height} px, needs about ${Math.ceil(width * fit)}×${Math.ceil(height * fit)} px to stay sharp`);
-  const w = Math.max(1, Math.round(width * scale));
-  const h = Math.max(1, Math.round(height * scale));
-  return sharp(trimmed.data).resize(w, h, { kernel: 'lanczos3' });
+  const fit = (Math.min((dpW * SCALE) / width, (dpH * SCALE) / height));
+  if (fit > 1) warnings.push(`source/${from}: ${width}×${height} px, export at least ${Math.ceil(width * fit)}×${Math.ceil(height * fit)} px`);
+  const scale = Math.min(fit, 1);
+  total += await write(to, await webp(sharp(trimmed.data).resize(Math.round(width * scale), Math.round(height * scale), { kernel: 'lanczos3' })));
 }
 
-let total = 0;
-for (const [from, to, dpW, dpH] of WEBP) {
-  const out = join(root, to);
-  await mkdir(dirname(out), { recursive: true });
-  const img = await fitted(src(from), dpW * SCALE, dpH * SCALE);
-  const buf = await img.webp({ quality: 88, alphaQuality: 100, effort: 6, smartSubsample: true }).toBuffer();
-  await writeFile(out, buf);
-  total += buf.length;
-  const { width, height } = await sharp(buf).metadata();
-  console.log(`${to.padEnd(44)} ${String(width).padStart(4)}×${String(height).padEnd(4)} ${(buf.length / 1024).toFixed(1)} KB`);
-}
-
-// App icon: full-bleed 1024 square. The source tile has rounded corners and a transparent rim,
-// so it sits on a matching blue gradient; iOS and the stores apply their own corner mask.
-{
-  const size = 1024;
-  const bg = Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#147DF3"/><stop offset="1" stop-color="#002B86"/></linearGradient></defs><rect width="${size}" height="${size}" fill="url(#g)"/></svg>`,
-  );
-  const tile = await (await clean(src('app/app-icon.png'))).trim({ threshold: 1 }).toBuffer({ resolveWithObject: true });
-  const scale = size / Math.min(tile.info.width, tile.info.height);
-  // Overscan pushes the source's rounded corners and light rim out of the square.
-  const w = Math.round(tile.info.width * scale * 1.14);
-  const h = Math.round(tile.info.height * scale * 1.14);
-  if (tile.info.width < size / 2) warnings.push(`source/app/app-icon.png: ${tile.info.width}×${tile.info.height} px, store icons need 1024×1024 px`);
-  const art = await sharp(tile.data).resize(w, h, { kernel: 'lanczos3' }).extract({ left: Math.round((w - size) / 2), top: Math.round((h - size) / 2), width: size, height: size }).toBuffer();
-  const buf = await sharp(bg).composite([{ input: art }]).flatten({ background: '#1D4ED8' }).png({ compressionLevel: 9 }).toBuffer();
-  await writeFile(join(root, 'app/icon.png'), buf);
-  console.log(`${'app/icon.png'.padEnd(44)} 1024×1024 ${(buf.length / 1024).toFixed(1)} KB`);
-}
-
-// Native splash logo: the dark wordmark needs a light card to be readable on the splash blue.
-{
-  const size = 400;
-  const card = Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect x="12" y="12" width="${size - 24}" height="${size - 24}" rx="88" fill="#FFFFFF"/></svg>`,
-  );
-  const logo = await (await fitted(src('splash/logo.png'), 300, 220)).png().toBuffer({ resolveWithObject: true });
-  const buf = await sharp(card)
-    .composite([{ input: logo.data, left: Math.round((size - logo.info.width) / 2), top: Math.round((size - logo.info.height) / 2) }])
-    .png({ compressionLevel: 9 })
-    .toBuffer();
-  await writeFile(join(root, 'app/splash-icon.png'), buf);
-  console.log(`${'app/splash-icon.png'.padEnd(44)} ${size}×${size} ${(buf.length / 1024).toFixed(1)} KB`);
-}
-
-console.log(`\n${WEBP.length} converted WebP images, ${(total / 1024).toFixed(0)} KB total`);
-if (warnings.length) console.log(`\nLow-resolution sources (will look soft on 3x screens):\n  ${warnings.join('\n  ')}`);
+console.log(`\n${VECTOR.length + PNG.length} brand/converted WebP images, ${(total / 1024).toFixed(0)} KB total`);
+if (warnings.length) console.log(`\nSources smaller than 3x their on-screen size (will look soft):\n  ${warnings.join('\n  ')}`);
